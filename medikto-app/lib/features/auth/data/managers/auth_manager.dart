@@ -1,7 +1,7 @@
 
 
 import 'dart:convert';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:medikto/core/constants/api_urls.dart';
@@ -30,101 +30,84 @@ Future<String> get token async {
   return t;
 }
 
-Future<ResponseData> performLogin(String phone) async {
-  Response response;
+Future<void> sendFirebaseOTP({
+  required String phone,
+  required Function(String verificationId, int? resendToken) onCodeSent,
+  required Function(FirebaseAuthException e) onVerificationFailed,
+}) async {
+  await FirebaseAuth.instance.verifyPhoneNumber(
+    phoneNumber: phone,
+    verificationCompleted: (PhoneAuthCredential credential) async {
+      // Auto-verification where available
+      try {
+        final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        final idToken = await userCredential.user?.getIdToken();
+        if (idToken != null) {
+          // If auto-verified, we can make the API call to backend to complete login
+          final response = await dioClient.tokenRef!.post(
+            ApiUrls.verifyOtp,
+            data: {"token": idToken},
+            options: Options(headers: {"Content-Type": "application/json"}),
+          );
+          if (response.statusCode == 200) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(StorageKeys.token, response.data['token']);
+          }
+        }
+      } catch (e) {
+        debugPrint("Firebase Auto-verification failed: $e");
+      }
+    },
+    verificationFailed: onVerificationFailed,
+    codeSent: onCodeSent,
+    codeAutoRetrievalTimeout: (String verificationId) {},
+  );
+}
 
+Future<ResponseData> verifyFirebaseOTP({
+  required String verificationId,
+  required String smsCode,
+}) async {
   try {
-      response = await dioClient.tokenRef!.post(
-        ApiUrls.login,
-        data: {"phone": phone},
-        options: Options(headers: {"Content-Type": "application/json"}),
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    final idToken = await userCredential.user?.getIdToken();
+
+    if (idToken == null) {
+      return ResponseData("Failed to retrieve Firebase ID Token", ResponseStatus.FAILED);
+    }
+
+    // Send ID Token to backend for JWT session creation
+    final response = await dioClient.tokenRef!.post(
+      ApiUrls.verifyOtp,
+      data: {"token": idToken},
+      options: Options(headers: {"Content-Type": "application/json"}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(StorageKeys.token, response.data['token']);
+
+      return ResponseData(
+        response.data['message'] ?? "Login successful",
+        ResponseStatus.SUCCESS,
+        data: response.data,
       );
-
-      print("URL: ${ApiUrls.login}");
-      print("STATUS CODE: ${response.statusCode}");
-      print("RESPONSE: ${response.data}");
-
-      if (response.statusCode == 200) {
-        return ResponseData(
-          response.data['message'],
-          ResponseStatus.SUCCESS,
-          data: response.data,
-        );
-
-        
     } else {
-      var message = "Unknown error";
-
-        if (response.data != null &&
-            response.data is Map &&
-            response.data.containsKey("message")) {
-        message = response.data['message'];
-      }
-
-        return ResponseData(message, ResponseStatus.FAILED);
-    }
-    } on DioException catch (e) {
-      print("DIO ERROR: ${e.response?.data}");
-      print("DIO STATUS: ${e.response?.statusCode}");
-
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        response.data['message'] ?? "Verification Failed",
         ResponseStatus.FAILED,
       );
-    } catch (e) {
-      print("ERROR: $e");
-
-      return ResponseData('Please check your internet', ResponseStatus.FAILED);
     }
+  } on FirebaseAuthException catch (e) {
+    return ResponseData(e.message ?? "Invalid OTP code", ResponseStatus.FAILED);
+  } catch (e) {
+    return ResponseData("Verification failed: $e", ResponseStatus.FAILED);
   }
-
-
-/// VERIFY OTP
-  Future<ResponseData> verifyOtp({
-    required String phone,
-    required String otp,
-  }) async {
-    Response response;
-
-    try {
-      response = await dioClient.tokenRef!.post(
-        ApiUrls.verifyOtp,
-        data: {"phone": phone, "otp": otp},
-        options: Options(headers: {"Content-Type": "application/json"}),
-      );
-
-      print("VERIFY OTP RESPONSE: ${response.data}");
-
-      if (response.statusCode == 200) {
-        /// SAVE TOKEN
-        final prefs = await SharedPreferences.getInstance();
-
-        await prefs.setString(StorageKeys.token, response.data['token']);
-
-        return ResponseData(
-          "OTP Verified Successfully",
-          ResponseStatus.SUCCESS,
-          data: response.data,
-        );
-      } else {
-        return ResponseData(
-          response.data['message'] ?? "OTP Verification Failed",
-          ResponseStatus.FAILED,
-        );
-      }
-    } on DioException catch (e) {
-      print("VERIFY OTP ERROR: ${e.response?.data}");
-
-      return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
-        ResponseStatus.FAILED,
-      );
-    } catch (e) {
-      print("ERROR: $e");
-
-      return ResponseData("Please check your internet", ResponseStatus.FAILED);
-    }
-  }
+}
 // Inside lib/features/auth/data/managers/auth_manager.dart
 
 Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) async {
@@ -137,7 +120,9 @@ Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) asyn
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return ResponseData("Account created successfully", ResponseStatus.SUCCESS);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(StorageKeys.token, response.data['token']);
+      return ResponseData("Account created successfully", ResponseStatus.SUCCESS, data: response.data);
     } else {
       final message = response.data?["message"] ?? "Registration failed";
       return ResponseData(message, ResponseStatus.FAILED);

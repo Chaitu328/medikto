@@ -55,9 +55,7 @@ const {
 } = require("../controllers/reportController");
 
 const {
-  sendOTP,
   verifyOTP,
-  resendOTP,
   register
 } = require("../controllers/authContoller");
 
@@ -85,9 +83,7 @@ const {
 
 
 // ================= AUTH =================
-router.post("/auth/sendOTP", sendOTP);
 router.post("/auth/verifyOTP", verifyOTP);
-router.post("/auth/resendOTP", resendOTP);
 router.post("/auth/register", register);
 
 

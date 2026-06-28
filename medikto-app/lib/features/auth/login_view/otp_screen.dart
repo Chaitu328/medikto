@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:medikto/bottom_bar.dart';
 import 'package:medikto/core/network/base_response.dart';
+import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:pinput/pinput.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String? phoneNumber;
-  const OtpScreen({super.key, this.phoneNumber});
+  final String verificationId;
+  const OtpScreen({super.key, this.phoneNumber, required this.verificationId});
 
   @override
   ConsumerState<OtpScreen> createState() => _OtpScreenState();
@@ -20,6 +23,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   bool _loading = false;
   String enteredOtp = "";
+  late String _activeVerificationId;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeVerificationId = widget.verificationId;
+  }
 
   // Dark Mode Palette
   static const Color darkBg = Color(0xFF121212);
@@ -33,7 +43,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     super.dispose();
   }
 
-Future<void> _verifyOtp() async {
+  Future<void> _verifyOtp() async {
     if (_loading) return;
 
     if (_pinController.text.length != 6) {
@@ -44,7 +54,7 @@ Future<void> _verifyOtp() async {
 
     final response = await ref
         .read(authProvider)
-        .verifyOtp(phone: widget.phoneNumber ?? "", otp: _pinController.text);
+        .verifyFirebaseOTP(verificationId: _activeVerificationId, smsCode: _pinController.text);
 
     setState(() => _loading = false);
 
@@ -53,17 +63,16 @@ Future<void> _verifyOtp() async {
     if (response.status == ResponseStatus.SUCCESS) {
       print("TOKEN SAVED SUCCESSFULLY");
 
-    Navigator.pushAndRemoveUntil(
-      context,
+      Navigator.pushAndRemoveUntil(
+        context,
         MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),
-      (route) => false,
-    );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message), backgroundColor: Colors.red),
+        (route) => false,
       );
+    } else {
+      AppToasts.showError(context, response.message);
+    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -168,8 +177,28 @@ Future<void> _verifyOtp() async {
                       style: TextStyle(color: Colors.white38, fontSize: 14),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        // Add Resend Logic
+                      onTap: () async {
+                        if (_loading) return;
+                        setState(() => _loading = true);
+                        try {
+                          await ref.read(authProvider).sendFirebaseOTP(
+                            phone: widget.phoneNumber ?? "",
+                            onCodeSent: (newVerificationId, _) {
+                              setState(() {
+                                _loading = false;
+                                _activeVerificationId = newVerificationId;
+                              });
+                              AppToasts.showSuccess(context, "OTP code resent successfully via Firebase");
+                            },
+                            onVerificationFailed: (FirebaseAuthException e) {
+                              setState(() => _loading = false);
+                              AppToasts.showError(context, e.message ?? "Resend failed");
+                            },
+                          );
+                        } catch (e) {
+                          setState(() => _loading = false);
+                          AppToasts.showError(context, "Failed to resend code: $e");
+                        }
                       },
                       child: const Text(
                         "Resend Code",

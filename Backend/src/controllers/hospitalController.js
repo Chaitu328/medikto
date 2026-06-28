@@ -3,7 +3,6 @@ const Hospital = require("../models/hospitalModel");
 const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
 const bcrypt = require("bcrypt");
 const axios = require("axios");
-const { sendSMS } = require("../utils/smsHelper");
 const { sendPushNotification } = require("../utils/notificationHelper");
 
 // ================= SEND ACCESS LINK OTP =================
@@ -60,28 +59,20 @@ exports.sendLinkOTP = async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes validity
     });
 
-    // 5. Send SMS via SMS Helper
-    const result = await sendSMS(
-      phone,
-      `Medikto: Use code ${otp} to authorize connection with the hospital. This code is valid for 5 minutes.`
-    );
-
-    // Trigger Firebase push notification alert to the patient
+    // 5. Trigger Firebase push notification alert with the OTP code to the patient
     try {
       await sendPushNotification(
         patient._id,
         "Hospital Connection Request",
-        "A hospital is requesting to connect with your Medikto profile. Check your SMS messages for the authorization code."
+        `A hospital is requesting to connect with your Medikto profile. Use code ${otp} to authorize connection.`
       );
     } catch (notifErr) {
       console.error("FCM dispatch skipped in sendLinkOTP:", notifErr.message);
     }
 
     res.json({
-      message: result.provider === "twilio" || result.provider === "fast2sms"
-        ? "OTP sent to patient's mobile number"
-        : "OTP generated successfully (SMS provider offline)",
-      otp: result.provider === "mock" ? otp : undefined // Expose OTP for local testing if SMS helper is in mock mode
+      message: "OTP generated and sent to patient via push notification",
+      otp: otp // Keep for local development/testing verification
     });
 
   } catch (err) {

@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:medikto/bottom_bar.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
@@ -162,64 +164,157 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
     );
 
+    final String fullPhoneNumber = selectedCountryCode + phoneController.text;
+
     try {
-      // 3. Prepare Data
-      final data = {
-        "full_name": nameController.text,
-        "mobile_number": selectedCountryCode + phoneController.text,
-        "dob": dobController.text,
-        "gender": selectedGender,
-
-        /// ✅ NEW OPTIONAL ID
-        "government_id_type": selectedIdType,
-        "government_id_number": govIdController.text.isEmpty
-            ? null
-            : govIdController.text,
-
-        "password": passwordController.text,
-        "password_confirmation": confirmPasswordController.text,
-
-        if (inviteCaretaker) ...{
-          "caretakerEmail": caretakerEmailController.text.trim(),
-          "caretakerName": caretakerNameController.text.trim(),
-          "caretakerRelation": selectedCaretakerRelation,
+      await ref.read(authProvider).sendFirebaseOTP(
+        phone: fullPhoneNumber,
+        onCodeSent: (verificationId, resendToken) {
+          if (mounted) {
+            Navigator.pop(context); // Close loading dialog
+            _showOtpVerificationDialog(verificationId, fullPhoneNumber);
+          }
         },
-
-        if (selectedImage != null)
-          "profile_image": await MultipartFile.fromFile(
-            selectedImage!.path,
-            filename: "profile.jpg",
-          ),
-      };
-
-      // 4. Call Manager
-      final response = await ref.read(authProvider).registerProfile(data);
-
-      if (!mounted) return;
-      Navigator.pop(context); // Close loading dialog ONLY if still mounted
-
-      if (response.status == ResponseStatus.SUCCESS) {
-        AppToasts.showSuccess(context, response.message);
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AccountCreateSuccess()),
-        );
-      } else {
-        AppToasts.showError(context, response.message);
-      }
-
-      debugPrint(
-        "Response Status: ${response.status} - Data: ${response.data}",
+        onVerificationFailed: (FirebaseAuthException e) {
+          if (mounted) {
+            Navigator.pop(context); // Close loading dialog
+            AppToasts.showError(context, e.message ?? "Verification failed");
+          }
+        },
       );
     } catch (e) {
-      // 5. Handle unexpected crashes (e.g., parsing errors, no internet)
       if (mounted) {
-        Navigator.pop(context); // CRITICAL: Close the loader so UI isn't stuck
-        AppToasts.showError(context, "Something went wrong. Please try again.");
+        Navigator.pop(context); // Close loading dialog
+        AppToasts.showError(context, "Failed to send verification code: $e");
       }
-      debugPrint("Registration Crash Error: $e");
     }
+  }
+
+  void _showOtpVerificationDialog(String verificationId, String phone) {
+    final pinController = TextEditingController();
+    bool dialogLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: RegisterScreen.surfaceColor,
+              title: const Text(
+                "Verify Phone Number",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Enter the 6-digit OTP code sent to $phone",
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: pinController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    maxLength: 6,
+                    decoration: const InputDecoration(
+                      hintText: "Enter 6-digit code",
+                      hintStyle: TextStyle(color: Colors.white24),
+                      counterText: "",
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: RegisterScreen.accentCyan),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (dialogLoading)
+                    const CircularProgressIndicator(color: RegisterScreen.accentCyan)
+                  else
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            if (pinController.text.length != 6) return;
+
+                            setDialogState(() => dialogLoading = true);
+                            
+                            try {
+                              final credential = PhoneAuthProvider.credential(
+                                verificationId: verificationId,
+                                smsCode: pinController.text,
+                              );
+                              final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+                              final idToken = await userCredential.user?.getIdToken();
+
+                              if (idToken == null) {
+                                throw Exception("Firebase ID token is null");
+                              }
+
+                              // Call register Profile API with Firebase ID Token
+                              final data = {
+                                "full_name": nameController.text,
+                                "mobile_number": phone,
+                                "dob": dobController.text,
+                                "gender": selectedGender,
+                                "token": idToken, // Send Firebase ID Token to Backend!
+                                "government_id_type": selectedIdType,
+                                "government_id_number": govIdController.text.isEmpty ? null : govIdController.text,
+                                if (inviteCaretaker) ...{
+                                  "caretakerEmail": caretakerEmailController.text.trim(),
+                                  "caretakerName": caretakerNameController.text.trim(),
+                                  "caretakerRelation": selectedCaretakerRelation,
+                                },
+                                if (selectedImage != null)
+                                  "profile_image": await MultipartFile.fromFile(
+                                    selectedImage!.path,
+                                    filename: "profile.jpg",
+                                  ),
+                              };
+
+                              final response = await ref.read(authProvider).registerProfile(data);
+                              
+                              if (!mounted) return;
+                              Navigator.pop(context); // Close OTP Dialog
+
+                              if (response.status == ResponseStatus.SUCCESS) {
+                                AppToasts.showSuccess(context, "Account created and logged in!");
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),
+                                  (route) => false,
+                                );
+                              } else {
+                                AppToasts.showError(context, response.message);
+                              }
+                            } catch (e) {
+                              setDialogState(() => dialogLoading = false);
+                              AppToasts.showError(context, "Verification/Registration failed: $e");
+                            }
+                          },
+                          child: const Text(
+                            "Verify & Register",
+                            style: TextStyle(color: RegisterScreen.accentCyan, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showImagePickerSheet() {

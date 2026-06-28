@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/core/network/base_response.dart';
@@ -150,38 +151,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     final String fullPhoneNumber = selectedCountryCode + phoneController.text;
 
-    // 2. Call the manager through the provider
-    final response = await ref
-        .read(authProvider)
-        .performLogin(fullPhoneNumber);
-
-    // 3. Pop loading dialog
-    if (mounted) Navigator.pop(context);
-
-    if (response.status == ResponseStatus.SUCCESS) {
-      AppToasts.showSuccess(context, response.message);
-      // 4. Navigate to OTP Screen
+    try {
+      await ref.read(authProvider).sendFirebaseOTP(
+        phone: fullPhoneNumber,
+        onCodeSent: (verificationId, resendToken) {
+          if (mounted) {
+            Navigator.pop(context); // Close loading dialog
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => OtpScreen(
+                  phoneNumber: fullPhoneNumber,
+                  verificationId: verificationId,
+                ),
+              ),
+            );
+            AppToasts.showSuccess(context, "OTP sent successfully via Firebase");
+          }
+        },
+        onVerificationFailed: (FirebaseAuthException e) {
+          if (mounted) {
+            Navigator.pop(context); // Close loading dialog
+            AppToasts.showError(context, e.message ?? "Verification failed");
+          }
+        },
+      );
+    } catch (e) {
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OtpScreen(phoneNumber: fullPhoneNumber),
-          ),
-        );
-
-        print("Response Data:------------>>> ${response.data}");
-      }
-    } else {
-      // 5. Show error message
-      if (mounted) {
-        AppToasts.showError(context, response.message);
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   SnackBar(
-        //     content: Text(response.message),
-        //     backgroundColor: Colors.redAccent,
-        //   ),
-        // );
-        print("Response Data:------------>>> ${response.data}");
+        Navigator.pop(context); // Close loading dialog
+        AppToasts.showError(context, "Failed to send verification code: $e");
       }
     }
   }
