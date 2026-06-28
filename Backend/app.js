@@ -5,7 +5,7 @@ const cors = require("cors");
 
 require("dotenv").config();
 
-const cron = require("node-cron"); 
+const cron = require("node-cron");
 
 require("./src/jobs/cleanupSelfies");
 
@@ -15,6 +15,17 @@ require("./src/jobs/reminder");
 
 const app = express();
 
+const admin = require("firebase-admin");
+try {
+  const serviceAccount = require("./med-vault-b69a6-firebase-adminsdk-fbsvc-96caddf0c4.json");
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  console.log("Firebase Admin SDK initialized successfully.");
+} catch (err) {
+  console.warn("Firebase Admin SDK initialization skipped or failed:", err.message);
+}
+
 app.use(cors());
 
 app.use(express.json());
@@ -22,12 +33,7 @@ app.use(express.json());
 connectDB();
 
 // Routes
-app.use("/api", require("./src/Routes/routes")); 
-
-cron.schedule("0 * * * *", () => {
-  console.log("Running cleanup job...");
-  deleteExpiredSelfies();
-});
+app.use("/api", require("./src/Routes/routes"));
 
 const PORT = process.env.PORT || 4000;
 
