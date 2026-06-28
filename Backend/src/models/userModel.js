@@ -5,6 +5,8 @@ const userSchema = new mongoose.Schema({
 
   phone: { type: String, unique: true },
 
+  email: { type: String, sparse: true },
+
   age: Number,
 
   gender: {
@@ -32,6 +34,7 @@ const userSchema = new mongoose.Schema({
         enum: [
           "admin",
           "user",
+          "guardian",
         ],
 
         default: "user",
@@ -50,7 +53,18 @@ const userSchema = new mongoose.Schema({
       relation: String,
       age: Number
     }
-  ]
+  ],
+
+  // Hospital Admin link
+  hospital: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" },
+
+  // Patient links to multiple hospitals
+  hospitals: [{ type: mongoose.Schema.Types.ObjectId, ref: "Hospital" }],
+
+  fcmToken: { type: String },
+
+  // List of patients monitored by this caretaker
+  guardianFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
 
 }, { timestamps: true });
 
