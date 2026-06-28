@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "696322298012-pp8e0eb4drhj70h7kdf78473cj45b416.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.medikto",
+            "certificate_hash": "f848e38356033345e732c187f3283226daed70c6"
+          }
+        },
+        {
           "client_id": "696322298012-khnr0pr0iphi4cfds2h9e069f5nu0u97.apps.googleusercontent.com",
           "client_type": 3
         }

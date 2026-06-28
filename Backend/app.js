@@ -43,11 +43,6 @@ connectDB();
 // Routes
 app.use("/api", require("./src/Routes/routes"));
 
-cron.schedule("0 * * * *", () => {
-  console.log("Running cleanup job...");
-  deleteExpiredSelfies();
-});
-
 const PORT = process.env.PORT || 4000;
 
 // Start server

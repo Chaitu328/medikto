@@ -21,11 +21,104 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController phoneController = TextEditingController();
   bool isButtonEnabled = false;
+  String selectedCountryCode = "+91";
 
   // Dark Mode Palette
   static const Color darkBg = Color(0xFF121212);
   static const Color surfaceColor = Color(0xFF1E1E1E);
   static const Color accentCyan = Color(0xFF81DEEA);
+
+  void _showCountryCodePicker() {
+    final List<Map<String, String>> countries = [
+      {"code": "+91", "name": "India"},
+      {"code": "+1", "name": "USA / Canada"},
+      {"code": "+44", "name": "United Kingdom"},
+      {"code": "+61", "name": "Australia"},
+      {"code": "+49", "name": "Germany"},
+      {"code": "+971", "name": "UAE"},
+      {"code": "+65", "name": "Singapore"},
+      {"code": "+33", "name": "France"},
+    ];
+
+    final customCodeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: surfaceColor,
+          title: const Text(
+            "Select Country Code",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ...countries.map((c) {
+                    return ListTile(
+                      title: Text(
+                        "${c['name']} (${c['code']})",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      trailing: selectedCountryCode == c['code']
+                          ? const Icon(Icons.check, color: accentCyan)
+                          : null,
+                      onTap: () {
+                        setState(() {
+                          selectedCountryCode = c['code']!;
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  }).toList(),
+                  const Divider(color: Colors.white24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: TextField(
+                      controller: customCodeController,
+                      style: const TextStyle(color: Colors.white),
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        hintText: "Enter custom code (e.g. +353)",
+                        hintStyle: TextStyle(color: Colors.white38),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: accentCyan),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CustomButton(
+                    buttonText: "Apply Custom Code",
+                    buttonColor: accentCyan,
+                    textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    onPressed: () {
+                      String code = customCodeController.text.trim();
+                      if (code.isNotEmpty) {
+                        if (!code.startsWith("+")) {
+                          code = "+$code";
+                        }
+                        setState(() {
+                          selectedCountryCode = code;
+                        });
+                      }
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -55,10 +148,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           const Center(child: CircularProgressIndicator(color: accentCyan)),
     );
 
+    final String fullPhoneNumber = selectedCountryCode + phoneController.text;
+
     // 2. Call the manager through the provider
     final response = await ref
         .read(authProvider)
-        .performLogin(phoneController.text);
+        .performLogin(fullPhoneNumber);
 
     // 3. Pop loading dialog
     if (mounted) Navigator.pop(context);
@@ -70,7 +165,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => OtpScreen(phoneNumber: phoneController.text),
+            builder: (_) => OtpScreen(phoneNumber: fullPhoneNumber),
           ),
         );
 
@@ -147,39 +242,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 /// 🔹 PHONE INPUT (Dark Mode Optimized)
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      alignment: Alignment.center,
-                      height: 54,
-                      width: size.width * 0.22,
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
+                    GestureDetector(
+                      onTap: _showCountryCodePicker,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        alignment: Alignment.center,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.05),
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Image.asset(
-                              "assets/images/flag.png",
-                              height: 18,
-                              width: 18,
-                              fit: BoxFit.contain,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.public,
+                              size: 18,
+                              color: Colors.white54,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "+91",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: accentCyan,
+                            const SizedBox(width: 6),
+                            Text(
+                              selectedCountryCode,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: accentCyan,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 2),
+                            const Icon(
+                              Icons.arrow_drop_down,
+                              color: Colors.white54,
+                              size: 20,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 

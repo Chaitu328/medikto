@@ -15,6 +15,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   static const Color surfaceColor = Color(0xFF1E1E1E);
   static const Color accentCyan = Color(0xFF81DEEA);
 
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -77,10 +80,36 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
                   SizedBox(height: size.height * 0.04),
 
-                  _buildField("New Password", "Enter your new password"),
+                  _buildField(
+                    "New Password",
+                    "Enter your new password",
+                    obscureText: _obscurePassword,
+                    suffix: Icon(
+                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.white54,
+                    ),
+                    suffixIconOnTap: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                   const SizedBox(height: 20),
 
-                  _buildField("Confirm Password", "Re-enter your new password"),
+                  _buildField(
+                    "Confirm Password",
+                    "Re-enter your new password",
+                    obscureText: _obscureConfirmPassword,
+                    suffix: Icon(
+                      _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.white54,
+                    ),
+                    suffixIconOnTap: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
+                  ),
                 ],
               ),
             ),
@@ -104,11 +133,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  Widget _buildField(String title, String hint) {
+  Widget _buildField(
+    String title,
+    String hint, {
+    required bool obscureText,
+    required Widget suffix,
+    required VoidCallback suffixIconOnTap,
+  }) {
     return AppTextFormFieldTitled(
       title: title,
       hintText: hint,
-      obscureText: true, // Standard for password fields
+      obscureText: obscureText,
+      suffix: suffix,
+      suffixIconOnTap: suffixIconOnTap,
       focusColor: accentCyan,
       fillColor: surfaceColor,
       color: Colors.white,

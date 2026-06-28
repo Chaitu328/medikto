@@ -1,8 +1,8 @@
 class ApiUrls {
   // Base URL
-  static const String baseUrl = "https://medikto.onrender.com/api"; // Production Render
+  // static const String baseUrl = "https://medikto.onrender.com/api"; // Production Render
   // static const String baseUrl = "http://10.0.2.2:4000/api"; // Local Android Emulator
-  // static const String baseUrl = "http://localhost:4000/api"; // Local iOS Simulator
+  static const String baseUrl = "http://localhost:4000/api"; // Local Server / iOS Simulator / Web / Android with adb reverse
 
   // Endpoints
   static const String register = "/auth/register";

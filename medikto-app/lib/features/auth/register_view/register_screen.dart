@@ -40,13 +40,114 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String selectedIdType = "Aadhaar";
   final govIdController = TextEditingController();
 
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  String selectedCountryCode = "+91";
+
   bool inviteCaretaker = false;
+
+  void _showCountryCodePicker() {
+    final List<Map<String, String>> countries = [
+      {"code": "+91", "name": "India"},
+      {"code": "+1", "name": "USA / Canada"},
+      {"code": "+44", "name": "United Kingdom"},
+      {"code": "+61", "name": "Australia"},
+      {"code": "+49", "name": "Germany"},
+      {"code": "+971", "name": "UAE"},
+      {"code": "+65", "name": "Singapore"},
+      {"code": "+33", "name": "France"},
+    ];
+
+    final customCodeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: RegisterScreen.surfaceColor,
+          title: const Text(
+            "Select Country Code",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ...countries.map((c) {
+                    return ListTile(
+                      title: Text(
+                        "${c['name']} (${c['code']})",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      trailing: selectedCountryCode == c['code']
+                          ? const Icon(Icons.check, color: RegisterScreen.accentCyan)
+                          : null,
+                      onTap: () {
+                        setState(() {
+                          selectedCountryCode = c['code']!;
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  }).toList(),
+                  const Divider(color: Colors.white24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: TextField(
+                      controller: customCodeController,
+                      style: const TextStyle(color: Colors.white),
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        hintText: "Enter custom code (e.g. +353)",
+                        hintStyle: TextStyle(color: Colors.white38),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: RegisterScreen.accentCyan),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CustomButton(
+                    buttonText: "Apply Custom Code",
+                    buttonColor: RegisterScreen.accentCyan,
+                    textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    onPressed: () {
+                      String code = customCodeController.text.trim();
+                      if (code.isNotEmpty) {
+                        if (!code.startsWith("+")) {
+                          code = "+$code";
+                        }
+                        setState(() {
+                          selectedCountryCode = code;
+                        });
+                      }
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
   final caretakerNameController = TextEditingController();
   final caretakerEmailController = TextEditingController();
   String selectedCaretakerRelation = "Son";
 
   Future<void> handleRegister() async {
     // 1. Basic Validation
+    if (phoneController.text.length != 10) {
+      AppToasts.showError(context, "Contact number must be exactly 10 digits");
+      return;
+    }
+
     if (passwordController.text != confirmPasswordController.text) {
       AppToasts.showError(context, "Passwords do not match");
       return;
@@ -65,7 +166,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       // 3. Prepare Data
       final data = {
         "full_name": nameController.text,
-        "mobile_number": phoneController.text,
+        "mobile_number": selectedCountryCode + phoneController.text,
         "dob": dobController.text,
         "gender": selectedGender,
 
@@ -283,12 +384,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             setState(() => selectedIdType = val);
                           },
                           selectedGender: selectedGender,
-
                           onGenderChanged: (value) {
                             setState(() {
                               selectedGender = value;
                             });
                           },
+                          obscurePassword: _obscurePassword,
+                          obscureConfirmPassword: _obscureConfirmPassword,
+                          toggleObscurePassword: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                          toggleObscureConfirmPassword: () {
+                            setState(() {
+                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                            });
+                          },
+                          selectedCountryCode: selectedCountryCode,
+                          onCountryCodeTap: _showCountryCodePicker,
                         ),
 
                         const SizedBox(height: 15),
@@ -467,6 +581,12 @@ class _FormFields extends StatelessWidget {
   final TextEditingController confirmPassCont;
   final String selectedGender;
   final Function(String) onGenderChanged;
+  final bool obscurePassword;
+  final bool obscureConfirmPassword;
+  final VoidCallback toggleObscurePassword;
+  final VoidCallback toggleObscureConfirmPassword;
+  final String selectedCountryCode;
+  final VoidCallback onCountryCodeTap;
   
   const _FormFields({
     required this.nameCont,
@@ -479,6 +599,12 @@ class _FormFields extends StatelessWidget {
     required this.onIdTypeChanged,
     required this.selectedGender,
     required this.onGenderChanged,
+    required this.obscurePassword,
+    required this.obscureConfirmPassword,
+    required this.toggleObscurePassword,
+    required this.toggleObscureConfirmPassword,
+    required this.selectedCountryCode,
+    required this.onCountryCodeTap,
   });
 
   static const Color surfaceColor = Color(0xFF1E1E1E);
@@ -544,15 +670,28 @@ class _FormFields extends StatelessWidget {
           fillColor: surfaceColor,
           color: Colors.white,
           textInputType: TextInputType.phone,
-          prefix: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              "+91",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: accentCyan,
-              ),
+          inputFormatters: [LengthLimitingTextInputFormatter(10)],
+          prefix: GestureDetector(
+            onTap: onCountryCodeTap,
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  selectedCountryCode,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: accentCyan,
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_drop_down,
+                  color: Colors.white54,
+                  size: 18,
+                ),
+                const SizedBox(width: 4),
+              ],
             ),
           ),
           borderColor: Colors.white10,
@@ -673,13 +812,29 @@ class _FormFields extends StatelessWidget {
 
         SizedBox(height: size.height * 0.01),
 
-        _buildField("New Password", "Enter your new password", passCont),
+        _buildField(
+          "New Password",
+          "Enter your new password",
+          passCont,
+          obscureText: obscurePassword,
+          suffix: Icon(
+            obscurePassword ? Icons.visibility : Icons.visibility_off,
+            color: Colors.white54,
+          ),
+          suffixIconOnTap: toggleObscurePassword,
+        ),
         SizedBox(height: size.height * 0.01),
 
         _buildField(
           "Confirm Password",
           "Re-enter your new password",
           confirmPassCont,
+          obscureText: obscureConfirmPassword,
+          suffix: Icon(
+            obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+            color: Colors.white54,
+          ),
+          suffixIconOnTap: toggleObscureConfirmPassword,
         ),
       ],
     );
@@ -688,8 +843,11 @@ class _FormFields extends StatelessWidget {
   Widget _buildField(
     String title,
     String hint,
-    TextEditingController controller,
-  ) {
+    TextEditingController controller, {
+    bool obscureText = false,
+    Widget? suffix,
+    VoidCallback? suffixIconOnTap,
+  }) {
     return AppTextFormFieldTitled(
       controller: controller, // Link the controller here
       title: title,
@@ -698,6 +856,9 @@ class _FormFields extends StatelessWidget {
       fillColor: surfaceColor,
       color: Colors.white,
       borderColor: Colors.white10,
+      obscureText: obscureText,
+      suffix: suffix,
+      suffixIconOnTap: suffixIconOnTap,
       hintStyle: const TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w400,

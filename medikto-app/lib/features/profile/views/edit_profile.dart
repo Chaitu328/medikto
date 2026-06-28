@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:medikto/core/network/base_response.dart';
@@ -28,6 +29,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   static const Color primaryBlue = Color(0xFF213598);
   File? selectedImage;
   final ImagePicker _picker = ImagePicker();
+  String selectedCountryCode = "+91";
 
   final firstNameController = TextEditingController();
   final phoneController = TextEditingController();
@@ -40,6 +42,98 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   bool isLoading = false;
   bool isDataLoaded = false;
+
+  void _showCountryCodePicker() {
+    final List<Map<String, String>> countries = [
+      {"code": "+91", "name": "India"},
+      {"code": "+1", "name": "USA / Canada"},
+      {"code": "+44", "name": "United Kingdom"},
+      {"code": "+61", "name": "Australia"},
+      {"code": "+49", "name": "Germany"},
+      {"code": "+971", "name": "UAE"},
+      {"code": "+65", "name": "Singapore"},
+      {"code": "+33", "name": "France"},
+    ];
+
+    final customCodeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: surfaceColor,
+          title: const Text(
+            "Select Country Code",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ...countries.map((c) {
+                    return ListTile(
+                      title: Text(
+                        "${c['name']} (${c['code']})",
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      trailing: selectedCountryCode == c['code']
+                          ? const Icon(Icons.check, color: accentCyan)
+                          : null,
+                      onTap: () {
+                        setState(() {
+                          selectedCountryCode = c['code']!;
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  }).toList(),
+                  const Divider(color: Colors.white24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: TextField(
+                      controller: customCodeController,
+                      style: const TextStyle(color: Colors.white),
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        hintText: "Enter custom code (e.g. +353)",
+                        hintStyle: TextStyle(color: Colors.white38),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: accentCyan),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CustomButton(
+                    buttonText: "Apply Custom Code",
+                    buttonColor: accentCyan,
+                    textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    onPressed: () {
+                      String code = customCodeController.text.trim();
+                      if (code.isNotEmpty) {
+                        if (!code.startsWith("+")) {
+                          code = "+$code";
+                        }
+                        setState(() {
+                          selectedCountryCode = code;
+                        });
+                      }
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -57,7 +151,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final ProfileModel profile = response.data;
 
       firstNameController.text = profile.firstName ?? "";
-      phoneController.text = profile.phone ?? "";
+      
+      String rawPhone = profile.phone ?? "";
+      if (rawPhone.startsWith("+")) {
+        if (rawPhone.length > 10) {
+          selectedCountryCode = rawPhone.substring(0, rawPhone.length - 10);
+          phoneController.text = rawPhone.substring(rawPhone.length - 10);
+        } else {
+          selectedCountryCode = "+91";
+          phoneController.text = rawPhone;
+        }
+      } else {
+        selectedCountryCode = "+91";
+        phoneController.text = rawPhone;
+      }
+
       bloodGroupController.text = profile.bloodGroup ?? "";
       ageController.text = profile.age?.toString() ?? "";
       heightController.text = profile.height?.toString() ?? "";
@@ -140,6 +248,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
 
 Future<void> updateProfile() async {
+    if (phoneController.text.trim().length != 10) {
+      AppToasts.showError(context, "Contact number must be exactly 10 digits");
+      return;
+    }
+
     if (isLoading) return;
 
     setState(() {
@@ -151,7 +264,7 @@ Future<void> updateProfile() async {
           .read(profileProvider)
           .updateProfile(
             firstName: firstNameController.text.trim(),
-            phone: phoneController.text.trim(),
+            phone: selectedCountryCode + phoneController.text.trim(),
             bloodGroup: bloodGroupController.text.trim(),
             gender: selectedGender.toLowerCase(),
             age: ageController.text.trim(),
@@ -385,22 +498,34 @@ Future<void> updateProfile() async {
 
                   AppTextFormFieldTitled(
                     controller: phoneController,
-                    
                     title: "Contact",
                     hintText: "Enter phone number",
                     focusColor: accentCyan,
                     fillColor: surfaceColor,
                     color: Colors.white,
                     textInputType: TextInputType.phone,
-                    prefix: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        "+91",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: accentCyan,
-                        ),
+                    inputFormatters: [LengthLimitingTextInputFormatter(10)],
+                    prefix: GestureDetector(
+                      onTap: _showCountryCodePicker,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            selectedCountryCode,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: accentCyan,
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_drop_down,
+                            color: Colors.white54,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
                       ),
                     ),
                     borderColor: Colors.white10,
