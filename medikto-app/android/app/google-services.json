@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "696322298012",
+    "project_id": "med-vault-b69a6",
+    "storage_bucket": "med-vault-b69a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:696322298012:android:ae66d5fc6ce4ec6ab3dd59",
+        "android_client_info": {
+          "package_name": "com.example.medikto"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "696322298012-cjm219fp7jrektlie1dd5mth85rr4s08.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.medikto",
+            "certificate_hash": "c2ff39b69a1c2b9ec5fcd8f669609683df07a9a7"
+          }
+        },
+        {
+          "client_id": "696322298012-fbb80b49s6h4u721qdtv753fj6n48k1s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.medikto",
+            "certificate_hash": "8c6c67e357e814a01ea49434628b9d35b63ab9a8"
+          }
+        },
+        {
+          "client_id": "696322298012-khnr0pr0iphi4cfds2h9e069f5nu0u97.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZH9anYn4T1ghiB0QZnHYHxATzedSDlt8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "696322298012-khnr0pr0iphi4cfds2h9e069f5nu0u97.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const auth = require("../middlewares/authmiddleware");
 
 const upload = require("../utils/multer");
 
@@ -8,8 +9,20 @@ const {
   getAllUsers,
   updateProfile,
   addFamilyMember,
-  updateSubscription
+  updateSubscription,
+  getConnectedHospitals,
+  unlinkHospital,
+  updateFCMToken,
+  inviteCaretaker,
+  getCaretakers,
+  deleteCaretaker,
+  getCaretakerPatients
 } = require("../controllers/userController");
+
+const {
+  sendLinkOTP,
+  verifyAndLink
+} = require("../controllers/hospitalController");
 
 const {
   addMedication,
@@ -44,7 +57,8 @@ const {
 const {
   sendOTP,
   verifyOTP,
-  resendOTP
+  resendOTP,
+  register
 } = require("../controllers/authContoller");
 
 const {
@@ -74,25 +88,39 @@ const {
 router.post("/auth/sendOTP", sendOTP);
 router.post("/auth/verifyOTP", verifyOTP);
 router.post("/auth/resendOTP", resendOTP);
+router.post("/auth/register", register);
 
 
 // ================= USER =================
-router.get("/profile", getProfile);
-router.get("/users", getAllUsers);
-router.put("/profile", upload.single("image"), updateProfile);
-router.post("/family-members", addFamilyMember);
+router.get("/profile", auth, getProfile);
+router.get("/users", auth, getAllUsers);
+router.put("/profile", auth, auth.blockGuardianWrite, upload.single("image"), updateProfile);
+router.post("/family-members", auth, auth.blockGuardianWrite, addFamilyMember);
 router.put("/subscription", updateSubscription);
+router.put("/profile/fcm-token", auth, updateFCMToken);
+
+// ================= HOSPITAL LINKS =================
+router.post("/hospitals/send-link-otp", auth, sendLinkOTP);
+router.post("/hospitals/verify-link", auth, verifyAndLink);
+router.get("/profile/hospitals", auth, getConnectedHospitals);
+router.delete("/profile/hospitals/:hospitalId", auth, unlinkHospital);
+
+// ================= CARETAKERS / OBSERVERS =================
+router.post("/profile/caretakers/invite", auth, inviteCaretaker);
+router.get("/profile/caretakers", auth, getCaretakers);
+router.delete("/profile/caretakers/:id", auth, deleteCaretaker);
+router.get("/profile/caretakers/patients", auth, getCaretakerPatients);
 
 
 // ================= MEDICATION =================
-router.post("/medications", addMedication);
-router.get("/medications", getMedications);
-router.get("/today", getTodaySchedule);
-router.put("/medications/:id", updateMedication);
-router.delete("/medications/:id", deleteMedication);
-router.put("/dose/:doseId/taken", markAsTaken);
-router.post("/dose/:doseId/verify", upload.single("file"), verifyWithSelfie);
-router.delete("/dose/:doseId/selfie", deleteSelfie);
+router.post("/medications", auth, auth.blockGuardianWrite, addMedication);
+router.get("/medications", auth, getMedications);
+router.get("/today", auth, getTodaySchedule);
+router.put("/medications/:id", auth, auth.blockGuardianWrite, updateMedication);
+router.delete("/medications/:id", auth, auth.blockGuardianWrite, deleteMedication);
+router.put("/dose/:doseId/taken", auth, auth.blockGuardianWrite, markAsTaken);
+router.post("/dose/:doseId/verify", auth, auth.blockGuardianWrite, upload.single("file"), verifyWithSelfie);
+router.delete("/dose/:doseId/selfie", auth, auth.blockGuardianWrite, deleteSelfie);
 
 //====== admin ==========
 router.put("/admin/recover-selfie/:id" , recoverSelfie)
@@ -109,29 +137,29 @@ router.get("/admin/deleted-selfies" , getDeletedSelfies)
 
 
 // ================= REPORTS =================
-router.post("/reports", upload.single("file"), uploadReport);
-router.get("/reports", getReports);
-router.get("/reports/type/:type", getReportsByType);
-router.get("/reports/:id", getReportById);
-router.delete("/reports/:id", deleteReport);
+router.post("/reports", auth, auth.blockGuardianWrite, upload.single("file"), uploadReport);
+router.get("/reports", auth, getReports);
+router.get("/reports/type/:type", auth, getReportsByType);
+router.get("/reports/:id", auth, getReportById);
+router.delete("/reports/:id", auth, auth.blockGuardianWrite, deleteReport);
 
 
 // ================= VITALS =================
-router.get("/vitals", getVitals);
-router.get("/vitals/:id", getVitalById);
-router.put("/vitals/:id", updateVital);
-router.delete("/vitals/:id", deleteVital);
-router.post("/vitals/blood-pressure", addBloodPressure);
-router.post("/vitals/heart-rate", addHeartRate);
-router.post("/vitals/temperature", addTemperature);
-router.post("/vitals/sugar", addSugar);
+router.get("/vitals", auth, getVitals);
+router.get("/vitals/:id", auth, getVitalById);
+router.put("/vitals/:id", auth, auth.blockGuardianWrite, updateVital);
+router.delete("/vitals/:id", auth, auth.blockGuardianWrite, deleteVital);
+router.post("/vitals/blood-pressure", auth, auth.blockGuardianWrite, addBloodPressure);
+router.post("/vitals/heart-rate", auth, auth.blockGuardianWrite, addHeartRate);
+router.post("/vitals/temperature", auth, auth.blockGuardianWrite, addTemperature);
+router.post("/vitals/sugar", auth, auth.blockGuardianWrite, addSugar);
 
 
 // ================= PRESCRIPTIONS =================
-router.post("/prescriptions", upload.single("file"), addPrescription);
-router.get("/prescriptions", getPrescriptions);
-router.get("/prescriptions/:id", getPrescriptionById);
-router.delete("/prescriptions/:id", deletePrescription);
+router.post("/prescriptions", auth, auth.blockGuardianWrite, upload.single("file"), addPrescription);
+router.get("/prescriptions", auth, getPrescriptions);
+router.get("/prescriptions/:id", auth, getPrescriptionById);
+router.delete("/prescriptions/:id", auth, auth.blockGuardianWrite, deletePrescription);
 
 
 // ================= DASHBOARD =================

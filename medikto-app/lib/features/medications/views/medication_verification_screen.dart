@@ -58,7 +58,7 @@ class _MedicationVerificationScreenState
   String selectedDosageAmount = "Morning"; // Default radio value
   String selectedUnit = "mg";
 
-  final List<String> units = ["mg", "ml", "tablet", "capsule"];
+  final List<String> units = ["mg", "ml", "gm"];
   // List<String> selectedDosageTimings = [];
   // Replace your old _buildDosageRow() with this layout
   List<MedicationTiming> selectedDosageTimings = [];
@@ -91,7 +91,11 @@ class _MedicationVerificationScreenState
       dosageController.text = med.dosage?.toString() ?? "";
       instructionsController.text = med.instructions ?? "";
 
-      selectedUnit = med.unit ?? "mg";
+      if (units.contains(med.unit)) {
+        selectedUnit = med.unit!;
+      } else {
+        selectedUnit = "mg";
+      }
 
       remindersEnabled = med.notifications ?? true;
 
@@ -576,6 +580,23 @@ class _MedicationVerificationScreenState
                 onPressed: isLoading
                     ? null
                     : () async {
+                        final name = medicationNameController.text.trim();
+                        final dosageStr = dosageController.text.trim();
+                        final dosage = int.tryParse(dosageStr);
+
+                        if (name.isEmpty) {
+                          AppToasts.showError(context, "Please enter a medication name");
+                          return;
+                        }
+                        if (dosageStr.isEmpty || dosage == null || dosage <= 0) {
+                          AppToasts.showError(context, "Please enter a valid dosage quantity");
+                          return;
+                        }
+                        if (selectedDosageTimings.isEmpty) {
+                          AppToasts.showError(context, "Please add at least one dosage timing");
+                          return;
+                        }
+
                         setState(() {
                           isLoading = true;
                         });

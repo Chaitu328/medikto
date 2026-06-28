@@ -12,6 +12,7 @@ class ProfileModel {
   final String? subscription;
   final List<dynamic>? familyMembers;
   final String? createdAt;
+  final String? role;
 
   ProfileModel({
     this.id,
@@ -27,6 +28,7 @@ class ProfileModel {
     this.subscription,
     this.familyMembers,
     this.createdAt,
+    this.role,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,7 @@ class ProfileModel {
       subscription: json['subscription'],
       familyMembers: json['familyMembers'],
       createdAt: json['createdAt'],
+      role: json['role'],
     );
   }
 }

@@ -40,6 +40,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String selectedIdType = "Aadhaar";
   final govIdController = TextEditingController();
 
+  bool inviteCaretaker = false;
+  final caretakerNameController = TextEditingController();
+  final caretakerEmailController = TextEditingController();
+  String selectedCaretakerRelation = "Son";
+
   Future<void> handleRegister() async {
     // 1. Basic Validation
     if (passwordController.text != confirmPasswordController.text) {
@@ -72,6 +77,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
         "password": passwordController.text,
         "password_confirmation": confirmPasswordController.text,
+
+        if (inviteCaretaker) ...{
+          "caretakerEmail": caretakerEmailController.text.trim(),
+          "caretakerName": caretakerNameController.text.trim(),
+          "caretakerRelation": selectedCaretakerRelation,
+        },
 
         if (selectedImage != null)
           "profile_image": await MultipartFile.fromFile(
@@ -260,7 +271,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                         SizedBox(height: size.height * 0.04),
 
-                        /// 🔹 FORM FIELDS
                         _FormFields(
                           nameCont: nameController,
                           phoneCont: phoneController,
@@ -281,6 +291,86 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           },
                         ),
 
+                        const SizedBox(height: 15),
+
+                        /// 🔹 CARETAKER CHECKBOX
+                        Theme(
+                          data: Theme.of(context).copyWith(
+                            unselectedWidgetColor: Colors.white24,
+                          ),
+                          child: CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text(
+                              "Invite a Caretaker / Relative",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white70,
+                              ),
+                            ),
+                            subtitle: const Text(
+                              "Allow a relative (e.g. Son, Spouse) to monitor your medications and vitals in read-only mode.",
+                              style: TextStyle(fontSize: 12, color: Colors.white38),
+                            ),
+                            value: inviteCaretaker,
+                            activeColor: const Color(0xFF81DEEA),
+                            checkColor: Colors.black,
+                            onChanged: (val) {
+                              setState(() {
+                                inviteCaretaker = val ?? false;
+                              });
+                            },
+                          ),
+                        ),
+
+                        if (inviteCaretaker) ...[
+                          const SizedBox(height: 12),
+                          _buildCaretakerField("Caretaker Full Name", "Enter caretaker name", caretakerNameController),
+                          const SizedBox(height: 12),
+                          _buildCaretakerField("Caretaker Email", "Enter caretaker email", caretakerEmailController, keyboardType: TextInputType.emailAddress),
+                          const SizedBox(height: 15),
+                          const Text(
+                            "Relationship",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white10),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedCaretakerRelation,
+                                dropdownColor: const Color(0xFF1E1E1E),
+                                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
+                                style: const TextStyle(color: Colors.white, fontSize: 16),
+                                items: [
+                                  "Son",
+                                  "Daughter",
+                                  "Spouse",
+                                  "Parents",
+                                  "Sibling",
+                                  "Caretaker",
+                                  "Friend"
+                                ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() => selectedCaretakerRelation = val);
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+
                         SizedBox(height: size.height * 0.02),
                       ],
                     ),
@@ -290,21 +380,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 /// 🔥 BOTTOM SECTION
                 _BottomSection(
                   size: size,
-                  // onRegister: () => handleRegister(),
-                  onRegister: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AccountCreateSuccess(),
-                      ),
-                    );
-                  },
+                  onRegister: handleRegister,
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCaretakerField(
+    String title,
+    String hint,
+    TextEditingController controller, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return AppTextFormFieldTitled(
+      controller: controller,
+      title: title,
+      hintText: hint,
+      focusColor: const Color(0xFF81DEEA),
+      fillColor: const Color(0xFF1E1E1E),
+      color: Colors.white,
+      borderColor: Colors.white10,
+      textInputType: keyboardType,
+      hintStyle: const TextStyle(fontSize: 16, color: Colors.white24),
+      titleTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
     );
   }
 }

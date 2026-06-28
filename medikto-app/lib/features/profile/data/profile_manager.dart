@@ -150,4 +150,107 @@ class ProfileManager {
       return ResponseData("Please check your internet", ResponseStatus.FAILED);
     }
   }
+
+  /// FETCH CONNECTED HOSPITALS
+  Future<ResponseData> getConnectedHospitals() async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get("/profile/hospitals");
+      if (response.statusCode == 200) {
+        return ResponseData(
+          "Hospitals fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to fetch hospitals", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  /// DISCONNECT HOSPITAL
+  Future<ResponseData> disconnectHospital(String hospitalId) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.delete("/profile/hospitals/$hospitalId");
+      if (response.statusCode == 200) {
+        return ResponseData(
+          "Hospital disconnected successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to disconnect hospital", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  /// FETCH MONITORED PATIENTS (FOR GUARDIANS)
+  Future<ResponseData> getMonitoredPatients() async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get("/profile/caretakers/patients");
+      if (response.statusCode == 200) {
+        return ResponseData(
+          "Patients fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to fetch patients", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  /// INVITE CARETAKER (FOR PATIENTS)
+  Future<ResponseData> inviteCaretaker({
+    required String email,
+    required String relation,
+    String? phone,
+  }) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.post(
+        "/profile/caretakers/invite",
+        data: {
+          "email": email,
+          "relation": relation,
+          "phone": phone,
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ResponseData(
+          "Caretaker invited successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to invite caretaker", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
 }

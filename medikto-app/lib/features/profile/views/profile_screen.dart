@@ -12,6 +12,7 @@ import 'package:medikto/features/profile/change_password_view/change_password_sc
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:medikto/features/profile/views/edit_profile.dart';
+import 'package:medikto/features/profile/views/connected_hospitals_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -503,6 +504,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     },
                     icon: Icons.key_outlined,
                     title: "Change Password",
+                    trailing: Icons.arrow_forward_ios,
+                  ),
+                ],
+              ),
+
+              SizedBox(height: screenSize.height * 0.02),
+
+              /// 🔹 Connected Hospitals
+              _buildSection(
+                title: "Hospital Access",
+                children: [
+                  _ListItem(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ConnectedHospitalsScreen(),
+                        ),
+                      );
+                    },
+                    icon: Icons.local_hospital_outlined,
+                    title: "Manage Hospital Access",
                     trailing: Icons.arrow_forward_ios,
                   ),
                 ],

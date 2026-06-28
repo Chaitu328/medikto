@@ -7,6 +7,9 @@ import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/widgets/form_field_widget.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/features/home/add_reports/widgets/latest_vital_header.dart';
+import 'package:medikto/features/profile/data/profile_provider.dart';
+import 'package:medikto/features/profile/models/profile_model.dart';
 
 class AddHeartRateScreen extends ConsumerStatefulWidget {
   const AddHeartRateScreen({super.key});
@@ -150,6 +153,7 @@ class _AddHeartRateScreenState extends ConsumerState<AddHeartRateScreen> {
 
     if (response.status == ResponseStatus.SUCCESS) {
       AppToasts.showSuccess(context, response.message);
+      ref.invalidate(getVitalsProvider);
 
       Navigator.pushAndRemoveUntil(
         context,
@@ -163,6 +167,9 @@ class _AddHeartRateScreenState extends ConsumerState<AddHeartRateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profileAsync = ref.watch(getProfileProvider);
+    final isGuardian = profileAsync.value?.data is ProfileModel && (profileAsync.value!.data as ProfileModel).role == 'guardian';
+
     return Scaffold(
       backgroundColor: darkBg,
       appBar: CustomAppBar(
@@ -187,17 +194,23 @@ class _AddHeartRateScreenState extends ConsumerState<AddHeartRateScreen> {
                       constraints: BoxConstraints(
                         minHeight: constraints.maxHeight,
                       ),
-                      // DynamicFormSection now uses our dark textfield logic
-                      child: DynamicFormSection(
-                        fields: hrFields,
-                        controllers: [
-                          heartRateController,
-                          notesController,
-                          dateController,
-                          timeController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const LatestVitalHeader(vitalType: "heartRate"),
+                          const SizedBox(height: 10),
+                          DynamicFormSection(
+                            fields: hrFields,
+                            controllers: [
+                              heartRateController,
+                              notesController,
+                              dateController,
+                              timeController,
+                            ],
+                            onDateTap: selectDate,
+                            onTimeTap: selectTime,
+                          ),
                         ],
-                        onDateTap: selectDate,
-                        onTimeTap: selectTime,
                       ),
                     ),
                   );
@@ -206,25 +219,26 @@ class _AddHeartRateScreenState extends ConsumerState<AddHeartRateScreen> {
             ),
 
             /// 🔥 Bottom Button (Fixed)
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                child: RepaintBoundary(
-                  child: CustomButton(
-                    onPressed: isLoading ? null : addHeartRate,
-                    buttonText: isLoading ? "Please wait..." : "Add Record",
-                    // buttonText: "Add Record",
-                    buttonColor: accentCyan, // High visibility Cyan
-                    textStyle: const TextStyle(
-                      color: Colors.black, // Dark text for contrast
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+            if (!isGuardian)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                  child: RepaintBoundary(
+                    child: CustomButton(
+                      onPressed: isLoading ? null : addHeartRate,
+                      buttonText: isLoading ? "Please wait..." : "Add Record",
+                      // buttonText: "Add Record",
+                      buttonColor: accentCyan, // High visibility Cyan
+                      textStyle: const TextStyle(
+                        color: Colors.black, // Dark text for contrast
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

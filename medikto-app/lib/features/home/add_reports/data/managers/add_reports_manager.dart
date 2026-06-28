@@ -5,6 +5,8 @@ import 'package:medikto/core/constants/api_urls.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/dio_client.dart';
 import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
+import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
+import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
 import 'dart:convert';
 
 class AddReportsManager {
@@ -365,6 +367,104 @@ class AddReportsManager {
     } catch (e) {
       print("ERROR => $e");
 
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> getReports() async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get(ApiUrls.uploadMedicalReport);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        final reports = data.map((e) => MedicalReportModel.fromJson(e)).toList();
+        return ResponseData(
+          "Reports fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: reports,
+        );
+      } else {
+        return ResponseData("Failed to fetch reports", ResponseStatus.FAILED);
+      }
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> getReportById(String id) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get("${ApiUrls.uploadMedicalReport}/$id");
+      if (response.statusCode == 200) {
+        final report = MedicalReportModel.fromJson(response.data);
+        return ResponseData(
+          "Report fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: report,
+        );
+      } else {
+        return ResponseData("Failed to fetch report", ResponseStatus.FAILED);
+      }
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> getPrescriptions() async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get(ApiUrls.addPrescription);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        final prescriptions = data.map((e) => PrescriptionModel.fromJson(e)).toList();
+        return ResponseData(
+          "Prescriptions fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: prescriptions,
+        );
+      } else {
+        return ResponseData("Failed to fetch prescriptions", ResponseStatus.FAILED);
+      }
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> getPrescriptionById(String id) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get("${ApiUrls.addPrescription}/$id");
+      if (response.statusCode == 200) {
+        final prescription = PrescriptionModel.fromJson(response.data);
+        return ResponseData(
+          "Prescription fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: prescription,
+        );
+      } else {
+        return ResponseData("Failed to fetch prescription", ResponseStatus.FAILED);
+      }
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
       return ResponseData("Please check your internet", ResponseStatus.FAILED);
     }
   }

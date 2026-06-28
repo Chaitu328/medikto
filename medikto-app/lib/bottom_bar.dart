@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/network/notification_manager.dart';
 import 'package:medikto/features/home/home_view/home_screen.dart';
 import 'package:medikto/features/profile/views/profile_screen.dart';
 import 'package:medikto/features/medications/views/medications_screen.dart';
@@ -27,6 +28,9 @@ class _BaseBottomNavigationPageState extends State<BaseBottomNavigationPage> {
   void initState() {
     super.initState();
     _currentIndex = widget.index ?? 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationManager().registerFCMToken();
+    });
   }
 
   void _onItemTapped(int index) {

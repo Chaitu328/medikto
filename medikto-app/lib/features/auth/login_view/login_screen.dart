@@ -7,6 +7,9 @@ import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:medikto/features/auth/login_view/otp_screen.dart';
 import 'package:medikto/features/auth/register_view/register_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:medikto/core/utils/storage_keys.dart';
+import 'package:medikto/bottom_bar.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -270,13 +273,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   // onPressed: isButtonEnabled
                   //     ? () {
                   //         Navigator.push(
-                  //           context,
-                  //           MaterialPageRoute(
-                  //             builder: (_) => const OtpScreen(),
-                  //           ),
-                  //         );
-                  //       }
-                  //     : null,
                   buttonText: "Send OTP",
                   buttonColor: isButtonEnabled
                       ? accentCyan
@@ -285,6 +281,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: isButtonEnabled ? Colors.black : Colors.white24,
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Center(
+                  child: TextButton(
+                    onPressed: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString(StorageKeys.token, "mock_dev_token");
+                      if (mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BaseBottomNavigationPage(),
+                          ),
+                          (route) => false,
+                        );
+                      }
+                    },
+                    child: const Text(
+                      "Bypass Authentication (Dev Mode)",
+                      style: TextStyle(
+                        color: accentCyan,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -7,6 +7,9 @@ import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/widgets/form_field_widget.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/features/home/add_reports/widgets/latest_vital_header.dart';
+import 'package:medikto/features/profile/data/profile_provider.dart';
+import 'package:medikto/features/profile/models/profile_model.dart';
 
 class AddBodyTemparatureScreen extends ConsumerStatefulWidget {
   const AddBodyTemparatureScreen({super.key});
@@ -75,6 +78,7 @@ class _AddBodyTemparatureScreenState
 
     if (response.status == ResponseStatus.SUCCESS) {
       AppToasts.showSuccess(context, response.message);
+      ref.invalidate(getVitalsProvider);
 
       Navigator.pushAndRemoveUntil(
         context,
@@ -168,6 +172,9 @@ class _AddBodyTemparatureScreenState
 
   @override
   Widget build(BuildContext context) {
+    final profileAsync = ref.watch(getProfileProvider);
+    final isGuardian = profileAsync.value?.data is ProfileModel && (profileAsync.value!.data as ProfileModel).role == 'guardian';
+
     return Scaffold(
       backgroundColor: darkBg,
       appBar: CustomAppBar(
@@ -192,17 +199,23 @@ class _AddBodyTemparatureScreenState
                       constraints: BoxConstraints(
                         minHeight: constraints.maxHeight,
                       ),
-                      // This will now use the dark mode text field logic we implemented in DynamicFormSection
-                      child: DynamicFormSection(
-                        fields: btFields,
-                        controllers: [
-                          temparatureController,
-                          notesController,
-                          dateController,
-                          timeController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const LatestVitalHeader(vitalType: "temperature"),
+                          const SizedBox(height: 10),
+                          DynamicFormSection(
+                            fields: btFields,
+                            controllers: [
+                              temparatureController,
+                              notesController,
+                              dateController,
+                              timeController,
+                            ],
+                            onDateTap: selectDate,
+                            onTimeTap: selectTime,
+                          ),
                         ],
-                        onDateTap: selectDate,
-                        onTimeTap: selectTime,
                       ),
                     ),
                   );
@@ -211,26 +224,27 @@ class _AddBodyTemparatureScreenState
             ),
 
             /// 🔥 Bottom Button (Fixed)
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                child: RepaintBoundary(
-                  child: CustomButton(
-                    onPressed: isLoading ? null : addTemperature,
-                    buttonText: isLoading ? "Please wait..." : "Add Record",
-                    buttonColor:
-                        accentCyan, // High visibility Cyan for dark mode
-                    textStyle: const TextStyle(
-                      color: Colors
-                          .black, // Dark text for maximum contrast on Cyan
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+            if (!isGuardian)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                  child: RepaintBoundary(
+                    child: CustomButton(
+                      onPressed: isLoading ? null : addTemperature,
+                      buttonText: isLoading ? "Please wait..." : "Add Record",
+                      buttonColor:
+                          accentCyan, // High visibility Cyan for dark mode
+                      textStyle: const TextStyle(
+                        color: Colors
+                            .black, // Dark text for maximum contrast on Cyan
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

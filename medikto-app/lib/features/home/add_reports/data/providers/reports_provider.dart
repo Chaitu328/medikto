@@ -43,3 +43,19 @@ final addPrescriptionProvider =
             file: data["file"],
           );
     });
+
+final getReportsProvider = FutureProvider<ResponseData>((ref) async {
+  return ref.read(reportsProvider).getReports();
+});
+
+final getReportByIdProvider = FutureProvider.family<ResponseData, String>((ref, id) async {
+  return ref.read(reportsProvider).getReportById(id);
+});
+
+final getPrescriptionsProvider = FutureProvider<ResponseData>((ref) async {
+  return ref.read(reportsProvider).getPrescriptions();
+});
+
+final getPrescriptionByIdProvider = FutureProvider.family<ResponseData, String>((ref, id) async {
+  return ref.read(reportsProvider).getPrescriptionById(id);
+});

@@ -7,6 +7,9 @@ import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/widgets/form_field_widget.dart';
+import 'package:medikto/features/home/add_reports/widgets/latest_vital_header.dart';
+import 'package:medikto/features/profile/data/profile_provider.dart';
+import 'package:medikto/features/profile/models/profile_model.dart';
 
 class AddSugarLevelsScreen extends ConsumerStatefulWidget {
   const AddSugarLevelsScreen({super.key});
@@ -76,6 +79,7 @@ class _AddSugarLevelsScreenState extends ConsumerState<AddSugarLevelsScreen> {
 
     if (response.status == ResponseStatus.SUCCESS) {
       AppToasts.showSuccess(context, response.message);
+      ref.invalidate(getVitalsProvider);
 
       Navigator.pushAndRemoveUntil(
         context,
@@ -177,6 +181,9 @@ class _AddSugarLevelsScreenState extends ConsumerState<AddSugarLevelsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profileAsync = ref.watch(getProfileProvider);
+    final isGuardian = profileAsync.value?.data is ProfileModel && (profileAsync.value!.data as ProfileModel).role == 'guardian';
+
     return Scaffold(
       backgroundColor: darkBg,
 
@@ -205,18 +212,23 @@ class _AddSugarLevelsScreenState extends ConsumerState<AddSugarLevelsScreen> {
                         minHeight: constraints.maxHeight,
                       ),
 
-                      child: DynamicFormSection(
-                        fields: slFields,
-
-                        controllers: [
-                          sugarController,
-                          notesController,
-                          dateController,
-                          timeController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const LatestVitalHeader(vitalType: "sugar"),
+                          const SizedBox(height: 10),
+                          DynamicFormSection(
+                            fields: slFields,
+                            controllers: [
+                              sugarController,
+                              notesController,
+                              dateController,
+                              timeController,
+                            ],
+                            onDateTap: selectDate,
+                            onTimeTap: selectTime,
+                          ),
                         ],
-
-                        onDateTap: selectDate,
-                        onTimeTap: selectTime,
                       ),
                     ),
                   );
@@ -224,28 +236,29 @@ class _AddSugarLevelsScreenState extends ConsumerState<AddSugarLevelsScreen> {
               ),
             ),
 
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+            if (!isGuardian)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
 
-                child: RepaintBoundary(
-                  child: CustomButton(
-                    onPressed: isLoading ? null : addSugar,
+                  child: RepaintBoundary(
+                    child: CustomButton(
+                      onPressed: isLoading ? null : addSugar,
 
-                    buttonText: isLoading ? "Please wait..." : "Add Record",
+                      buttonText: isLoading ? "Please wait..." : "Add Record",
 
-                    buttonColor: accentCyan,
+                      buttonColor: accentCyan,
 
-                    textStyle: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      textStyle: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

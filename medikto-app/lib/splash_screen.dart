@@ -50,7 +50,16 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     /// CHECK TOKEN EXPIRY
-    bool isExpired = JwtDecoder.isExpired(token);
+    bool isExpired = false;
+    try {
+      if (token.startsWith("mock_")) {
+        isExpired = false;
+      } else {
+        isExpired = JwtDecoder.isExpired(token);
+      }
+    } catch (_) {
+      isExpired = !token.startsWith("mock_");
+    }
 
     print("TOKEN EXPIRED => $isExpired");
 

@@ -149,6 +149,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     final profile = profileAsync.value?.data is ProfileModel
         ? profileAsync.value!.data as ProfileModel
         : null;
+    final isGuardian = profile?.role == 'guardian';
+
     return Scaffold(
       backgroundColor: darkBg,
       appBar: _buildAppBar(profile),
@@ -170,7 +172,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    RepaintBoundary(child: _buildAddMedicationCard()),
+                    if (!isGuardian)
+                      RepaintBoundary(child: _buildAddMedicationCard()),
                   ]),
                 ),
               ),
@@ -318,6 +321,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                               isLast: index == filteredMedications.length - 1,
                               // isCurrent: index == 0,
                               isCurrent: isCurrent,
+                              isGuardian: isGuardian,
                               onMarkTaken: () async {
                                 final doseId = scheduleId;
 
@@ -665,6 +669,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     required bool isCurrent,
     required VoidCallback onMarkTaken,
     required VoidCallback onVerifyWithSelfie,
+    bool isGuardian = false,
   }) {
     bool isTaken = item.isTaken;
 
@@ -753,7 +758,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                   const SizedBox(height: 12),
 
                   /// 🔥 ACTION BUTTONS WITH ICONS FIXED
-                  if (!isTaken && isCurrent) ...[
+                  if (!isTaken && isCurrent && !isGuardian) ...[
                     SizedBox(
                       width: double.infinity,
                       height: 42,

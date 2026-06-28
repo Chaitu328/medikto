@@ -3,6 +3,9 @@ const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const bcrypt = require("bcrypt");
+const { sendSMS } = require("../utils/smsHelper");
+const CaretakerInvite = require("../models/caretakerInviteModel");
+const { sendInviteEmail } = require("../utils/emailHelper");
 
 // ================= SEND OTP =================
 exports.sendOTP = async (
@@ -105,32 +108,16 @@ exports.sendOTP = async (
     });
 
     // ================= SEND SMS =================
-    await axios.post(
-      "https://www.fast2sms.com/dev/bulkV2",
-
-      {
-        route: "q",
-
-        message: `Medikto Verification Code: ${otp}. This OTP is valid for 5 minutes. Do not share it with anyone.`,
-
-        numbers: phone,
-      },
-
-      {
-        headers: {
-          authorization:
-            process.env
-              .FAST2SMS_API_KEY,
-
-          "Content-Type":
-            "application/json",
-        },
-      }
+    const result = await sendSMS(
+      phone,
+      `Medikto Verification Code: ${otp}. This OTP is valid for 5 minutes. Do not share it with anyone.`
     );
 
     res.json({
-      message:
-        "OTP sent successfully",
+      message: result.provider === "twilio" || result.provider === "fast2sms"
+        ? "OTP sent successfully"
+        : "OTP generated successfully (SMS provider offline)",
+      otp: result.provider === "mock" ? otp : undefined // Expose for testing
     });
   } catch (err) {
     console.error(
@@ -288,6 +275,9 @@ exports.verifyOTP =
 
       await user.save();
 
+      // Check for pending caretaker invitations
+      await linkPendingCaretakerInvites(user);
+
       // ================= JWT TOKEN =================
       const token =
         jwt.sign(
@@ -365,3 +355,112 @@ exports.resendOTP =
         });
     }
   };
+
+// ================= REGISTER USER =================
+exports.register = async (req, res) => {
+  try {
+    const { full_name, mobile_number } = req.body;
+
+    const phone = mobile_number || req.body.phone;
+    const name = full_name || req.body.firstName || req.body.name;
+
+    if (!phone || !name) {
+      return res.status(400).json({ message: "Name and Phone number are required" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ phone });
+    if (existingUser) {
+      return res.status(400).json({ message: "User with this phone number already exists. Please log in." });
+    }
+
+    // Create the user but set isVerified to false
+    const newUser = await User.create({
+      phone,
+      firstName: name,
+      role: "user",
+      isVerified: false
+    });
+
+    // If caretaker details are provided during patient registration
+    const { caretakerEmail, caretakerName, caretakerRelation } = req.body;
+    if (caretakerEmail && caretakerName) {
+      try {
+        await CaretakerInvite.create({
+          patientId: newUser._id,
+          email: caretakerEmail.trim().toLowerCase(),
+          relation: caretakerRelation || "Caretaker",
+          status: "pending"
+        });
+        await sendInviteEmail(caretakerEmail.trim().toLowerCase(), name, caretakerRelation || "Caretaker");
+      } catch (inviteErr) {
+        console.error("Caretaker invite dispatch failed during signup:", inviteErr.message);
+      }
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const hashedOTP = await bcrypt.hash(otp.toString(), 10);
+
+    // Save OTP
+    await OTP.deleteMany({ phone });
+    await OTP.create({
+      phone,
+      otp: hashedOTP,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    });
+
+    // Send SMS
+    const result = await sendSMS(
+      phone,
+      `Medikto Verification Code: ${otp}. Valid for 5 minutes.`
+    );
+
+    res.status(201).json({
+      success: true,
+      message: result.provider === "twilio" || result.provider === "fast2sms"
+        ? "OTP sent successfully"
+        : "Registration initiated. Verification OTP generated.",
+      otp: result.provider === "mock" ? otp : undefined // For local dev testing
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ================= LINK PENDING CARETAKER INVITATIONS =================
+async function linkPendingCaretakerInvites(user) {
+  try {
+    const queryConditions = [
+      { phone: user.phone },
+      { email: user.phone }
+    ];
+    if (user.email) {
+      queryConditions.push({ email: user.email.toLowerCase().trim() });
+    }
+
+    const invites = await CaretakerInvite.find({
+      $or: queryConditions,
+      status: "pending"
+    });
+
+    if (invites.length > 0) {
+      user.role = "guardian";
+      if (!user.guardianFor) {
+        user.guardianFor = [];
+      }
+      for (const invite of invites) {
+        if (!user.guardianFor.includes(invite.patientId)) {
+          user.guardianFor.push(invite.patientId);
+        }
+        invite.status = "accepted";
+        await invite.save();
+      }
+      await user.save();
+      console.log(`User ${user._id} auto-promoted to caretaker guardian role.`);
+    }
+  } catch (err) {
+    console.error("linkPendingCaretakerInvites error:", err.message);
+  }
+}

@@ -199,6 +199,7 @@ class _AddPrescriptionFileScreenState
 
     if (response.status == ResponseStatus.SUCCESS) {
       AppToasts.showSuccess(context, response.message);
+      ref.invalidate(getPrescriptionsProvider);
 
       Navigator.pushAndRemoveUntil(
         context,

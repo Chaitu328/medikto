@@ -13,6 +13,8 @@ import 'package:medikto/features/home/notifications/notification_screen.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
 import 'package:medikto/features/medications/models/adherence_model.dart';
 import 'package:medikto/features/medications/models/today_scheduled_model.dart';
+import 'package:medikto/core/network/dio_client.dart';
+import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
@@ -31,6 +33,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   static const Color surfaceColor = Color(0xFF1E1E1E);
 
   String selectedPeriod = "Morning"; // Default selection
+
+  List<dynamic> monitoredPatients = [];
+  bool isLoadingPatients = false;
+  String? selectedPatientId;
+
+  Future<void> _fetchMonitoredPatients() async {
+    if (isLoadingPatients) return;
+    setState(() {
+      isLoadingPatients = true;
+    });
+
+    try {
+      final response = await ref.read(profileProvider).getMonitoredPatients();
+      if (response.status == ResponseStatus.SUCCESS && response.data is List) {
+        setState(() {
+          monitoredPatients = response.data as List;
+          if (monitoredPatients.isNotEmpty && selectedPatientId == null) {
+            // Set first patient as active observer channel
+            selectedPatientId = monitoredPatients.first['_id'];
+            DioClient.activePatientId = selectedPatientId;
+            
+            // Re-fetch data for the newly bound patient context
+            _onRefresh();
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading monitored patients: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingPatients = false;
+        });
+      }
+    }
+  }
 
   DateTime? _parseMedicationTime(String? time) {
     if (time == null || time.isEmpty) return null;
@@ -181,6 +219,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final profile = profileAsync.value?.data is ProfileModel
         ? profileAsync.value!.data as ProfileModel
         : null;
+
+    if (profile != null && profile.role == "guardian" && monitoredPatients.isEmpty && !isLoadingPatients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchMonitoredPatients();
+      });
+    }
 
     // final medicationsAsync = ref.watch(getMedicationsProvider);
     final todayAsync = ref.watch(getTodayScheduleProvider);
@@ -918,6 +962,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(Size size, ProfileModel? profile) {
+    final isGuardian = profile?.role == "guardian";
+
     return AppBar(
       toolbarHeight: 80,
       elevation: 0,
@@ -943,27 +989,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(width: 12),
 
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Hello ${profile?.firstName ?? "User"}!",
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+            child: isGuardian
+                ? (monitoredPatients.isEmpty
+                    ? const Text(
+                        "No patients linked",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                        ),
+                      )
+                    : DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedPatientId,
+                          dropdownColor: const Color(0xFF1E1E1E),
+                          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF81DEEA), size: 20),
+                          isExpanded: true,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          items: monitoredPatients.map<DropdownMenuItem<String>>((patient) {
+                            final name = patient['firstName'] ?? "Patient";
+                            final phone = patient['phone'] ?? "";
+                            return DropdownMenuItem<String>(
+                              value: patient['_id'],
+                              child: Text(
+                                "$name ($phone)",
+                                style: const TextStyle(color: Colors.white, fontSize: 15),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null && val != selectedPatientId) {
+                              setState(() {
+                                selectedPatientId = val;
+                                DioClient.activePatientId = val;
+                              });
+                              _onRefresh();
+                            }
+                          },
+                        ),
+                      ))
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Hello ${profile?.firstName ?? "User"}!",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
 
-                const Text(
-                  "Ready for your checkup?",
-                  style: TextStyle(fontSize: 11, color: Colors.white54),
-                ),
-              ],
-            ),
+                      const Text(
+                        "Ready for your checkup?",
+                        style: TextStyle(fontSize: 11, color: Colors.white54),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),

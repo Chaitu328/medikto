@@ -27,6 +27,8 @@ class DioClient {
 
   String token = "";
 
+  static String? activePatientId;
+
   Future<String> _getAuthorizationToken() async {
     prefs ??= await SharedPreferences.getInstance();
     token = prefs?.getString(StorageKeys.token) ?? "";
@@ -53,6 +55,7 @@ Future<void> logoutUser() async {
 
     /// CLEAR IN-MEMORY TOKEN
     token = "";
+    activePatientId = null;
 
     /// CLEAR DIO AUTH HEADER
     _dio?.options.headers.clear();
@@ -94,6 +97,10 @@ Future<void> logoutUser() async {
       final token = await _getAuthorizationToken();
       if (token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
+      }
+
+      if (activePatientId != null) {
+        options.queryParameters['patientId'] = activePatientId;
       }
 
       return handler.next(options);

@@ -4,10 +4,10 @@ import 'package:medikto/features/home/add_reports/health_data/add_blood_pressure
 import 'package:medikto/features/home/add_reports/health_data/add_body_temparature.dart';
 import 'package:medikto/features/home/add_reports/health_data/add_heart_rate.dart';
 import 'package:medikto/features/home/add_reports/health_data/add_sugar_levels.dart';
-import 'package:medikto/features/home/add_reports/health_records/add_medicine_reports.dart';
-import 'package:medikto/features/home/add_reports/health_records/add_prescription_file.dart';
 import 'package:medikto/features/home/notifications/notification_screen.dart';
 import 'package:medikto/features/home/widgets/health_data_card.dart';
+import 'package:medikto/features/home/add_reports/health_records/medical_reports_list_screen.dart';
+import 'package:medikto/features/home/add_reports/health_records/prescriptions_list_screen.dart';
 
 class AddReportsScreen extends StatefulWidget {
   const AddReportsScreen({super.key});
@@ -78,9 +78,9 @@ class _AddReportsScreenState extends State<AddReportsScreen> {
   Widget _getHealthRecordScreen(int index) {
     switch (index) {
       case 0:
-        return const AddMedicalMedicationsScreen();
+        return const MedicalReportsListScreen();
       case 1:
-        return const AddPrescriptionFileScreen();
+        return const PrescriptionsListScreen();
       default:
         return const SizedBox();
     }
