@@ -55,3 +55,20 @@ Medikto operates a role-based access control (RBAC) model across three segments:
 ## 🏃 Quick Start Guides
 * For mobile setup, build commands, and release compiles, see: 👉 **[MOBILE_SETUP.md](file:///d:/medikto/MOBILE_SETUP.md)**
 * For a comprehensive list of modifications implemented inside this repository, see: 👉 **[CHANGELOG.md](file:///d:/medikto/CHANGELOG.md)**
+
+---
+
+## 📝 Next Steps for Debugging (Next Day)
+During the latest pairing session, we successfully resolved the onboarding cache persistence and enabled Android HTTP cleartext traffic. The remaining tasks for the next day are:
+
+1. **Verify VPS Server Connection Port 3028**:
+   - The VPS host (`161.248.223.165`) is active and pingable.
+   - However, connections to `http://161.248.223.165:3028/api` are failing/timing out.
+   - **Action**: Check if the Node.js backend service is running on the VPS, and ensure that port `3028` is allowed in the VPS firewall (e.g., `ufw` or AWS security groups).
+2. **Verify Mobile-to-VPS Backend Integration**:
+   - Re-run the mobile app on the phone using:
+     ```bash
+     flutter run -d R9ZT6066TJF
+     ```
+   - Tap **"Bypass Authentication (Dev Mode)"** on the Login screen to bypass the temporary Firebase SMS quota limit and get a mock user session token.
+   - Trace the logs in the console to confirm that schedule and vitals fetching requests are hitting the VPS backend successfully.
