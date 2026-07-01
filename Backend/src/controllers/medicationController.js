@@ -34,6 +34,7 @@ exports.addMedication = async (req, res) => {
     }
 
     const medication = await Medication.create({
+      user: req.user.id,
       name,
       dosage,
       unit,
@@ -45,6 +46,7 @@ exports.addMedication = async (req, res) => {
     const today = getTodayDate();
 
     const doses = timings.map((t) => ({
+      user: req.user.id,
       medication: medication._id,
       name,
       dosage: `${dosage}${unit}`,
@@ -70,12 +72,11 @@ exports.addMedication = async (req, res) => {
 // ================= GET MEDICATIONS =================
 exports.getMedications = async (req, res) => {
   try {
+    // Caretakers can view their patient's medications via ?patientId=...
+    const userId = req.query.patientId || req.user.id;
 
-    const meds = await Medication.find()
-      // .populate("user")
-      .sort({
-        createdAt: -1
-      });
+    const meds = await Medication.find({ user: userId })
+      .sort({ createdAt: -1 });
 
     res.json(meds);
 
@@ -111,24 +112,20 @@ exports.getMedications = async (req, res) => {
 
 exports.getTodaySchedule = async (req, res) => {
   try {
-
     // Get selected date from query
-    const selectedDate =
-      req.query.date;
+    const selectedDate = req.query.date;
 
-    // If no date sent use today
-    const date =
-      selectedDate ||
-      getTodayDate();
+    // If no date sent, use today
+    const date = selectedDate || getTodayDate();
 
-    // Fetch schedules date-wise
+    // Caretakers can view their patient's schedule via ?patientId=...
+    const userId = req.query.patientId || req.user.id;
+
+    // Fetch doses filtered by user and date
     const doses = await Dose.find({
+      user: userId,
       date: date,
-    })
-      // .populate("user")
-      .sort({
-        time: 1,
-      });
+    }).sort({ time: 1 });
 
     res.status(200).json({
       success: true,
@@ -138,12 +135,7 @@ exports.getTodaySchedule = async (req, res) => {
     });
 
   } catch (err) {
-
-    console.log(
-      "SCHEDULE ERROR:",
-      err.message
-    );
-
+    console.log("SCHEDULE ERROR:", err.message);
     res.status(500).json({
       success: false,
       error: err.message,
@@ -199,9 +191,38 @@ exports.verifyWithSelfie = async (req, res) => {
       });
     }
 
-    const result = await cloudinary.uploader.upload(req.file.path);
-
+    // --- Build timestamp overlay text for selfie ---
     const now = new Date();
+    const timeStr = now.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+    const dateStr = now.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+    // Upload to Cloudinary with text stamp baked into the image
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      transformation: [
+        { width: 800, crop: "limit" },
+        {
+          overlay: {
+            font_family: "Arial",
+            font_size: 28,
+            font_weight: "bold",
+            text: `Medikto | ${timeStr} | ${dateStr}`,
+          },
+          color: "white",
+          gravity: "south_west",
+          x: 16,
+          y: 16,
+          opacity: 90,
+        },
+      ],
+    });
 
     dose.status = "taken";
     dose.takenAt = now;
@@ -209,9 +230,7 @@ exports.verifyWithSelfie = async (req, res) => {
     dose.verifiedAt = now;
     dose.proofImage = result.secure_url;
 
-    const user = await User.findById(
-  dose.user
-);
+    const user = await User.findById(dose.user || req.user.id);
 
 const expiryAt = new Date();
 

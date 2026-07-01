@@ -130,9 +130,18 @@ class MedicationManager {
       print("TODAY SCHEDULE RESPONSE => ${response.data}");
 
       if (response.statusCode == 200) {
-        final List data = response.data;
+        // Backend returns { success, schedules: [...] } — extract the list safely
+        List rawList;
+        final data = response.data;
+        if (data is List) {
+          rawList = data;
+        } else if (data is Map && data['schedules'] != null) {
+          rawList = data['schedules'] as List;
+        } else {
+          rawList = [];
+        }
 
-        final todayList = data
+        final todayList = rawList
             .map((e) => TodayScheduleModel.fromJson(e))
             .toList();
 

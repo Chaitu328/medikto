@@ -1,27 +1,61 @@
 const cron = require("node-cron");
-const Medication = require("../models/medicationModel");
+const Dose = require("../models/doseModel");
+const { sendPushNotification } = require("../utils/notificationHelper");
 
+// ==========================================
+// MEDICATION REMINDER CRON JOB
+// Runs every minute. Checks for pending doses
+// due at the current time and fires FCM alerts.
+// ==========================================
 cron.schedule("* * * * *", async () => {
   try {
     const now = new Date();
 
-    const currentTime = now.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
+    // Build a 12-hour time string to match stored dose times (e.g. "08:30 AM")
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 should be 12
+    const currentTime12 = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+    const currentTime12NoZero = `${hours}:${minutes} ${ampm}`;
 
-    console.log("Checking time:", currentTime);
+    // Build today's date string (YYYY-MM-DD) to match stored dose dates
+    const today = now.toISOString().split("T")[0];
 
-    const meds = await Medication.find({
-      "schedule.time": currentTime
-    });
+    console.log(`[Reminder] Checking pending doses at ${currentTime12} on ${today}`);
 
-    meds.forEach(med => {
-      console.log(`Reminder for user ${med.user} at ${currentTime}`);
-    });
+    // Find all pending doses for the current date and matching times
+    const dueDoses = await Dose.find({
+      date: today,
+      time: { $in: [currentTime12, currentTime12NoZero] },
+      status: "pending",
+    }).populate("user", "firstName phone fcmToken");
+
+    if (dueDoses.length === 0) {
+      return; // Nothing due right now
+    }
+
+    console.log(`[Reminder] Found ${dueDoses.length} due dose(s). Sending notifications...`);
+
+    // Send a push notification for each due dose
+    for (const dose of dueDoses) {
+      if (!dose.user) continue;
+
+      const userName = dose.user.firstName || dose.user.phone || "User";
+      const title = "💊 Medication Reminder";
+      const body = `Hi ${userName}, it's time to take your ${dose.name} (${dose.dosage}).`;
+      const data = {
+        doseId: dose._id.toString(),
+        medicineName: dose.name || "",
+        dosage: dose.dosage || "",
+        time: dose.time || "",
+      };
+
+      await sendPushNotification(dose.user._id.toString(), title, body, data);
+    }
 
   } catch (err) {
-    console.error("Cron error:", err);
+    console.error("[Reminder] Cron error:", err.message);
   }
 });

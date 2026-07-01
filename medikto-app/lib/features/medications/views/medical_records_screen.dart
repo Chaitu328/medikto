@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/core/network/base_response.dart';
@@ -305,6 +306,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
               parent: BouncingScrollPhysics(),
             ),
             children: [
+              _buildComplianceChart(records),
               _buildStatsSection(records),
 
               ...grouped.keys.map(
@@ -318,6 +320,216 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
           ),
         );
       },
+    );
+  }
+
+  /// 🔹 WEEKLY COMPLIANCE LINE CHART
+  Widget _buildComplianceChart(List<Map<String, dynamic>> items) {
+    // Group records by date and compute taken/missed/pending counts per day
+    final Map<String, Map<String, int>> byDate = {};
+    for (final item in items) {
+      final dateStr = item['dateString'] as String? ?? '';
+      byDate.putIfAbsent(
+        dateStr,
+        () => {'taken': 0, 'missed': 0, 'pending': 0},
+      );
+      final status = (item['status'] as String).toLowerCase();
+      if (byDate[dateStr]!.containsKey(status)) {
+        byDate[dateStr]![status] = byDate[dateStr]![status]! + 1;
+      }
+    }
+
+    // Take the last 7 days (sorted)
+    final sortedDates = byDate.keys.toList()
+      ..sort((a, b) {
+        final df = DateFormat('d MMM yyyy, EEEE');
+        try {
+          return df.parse(a).compareTo(df.parse(b));
+        } catch (_) {
+          return 0;
+        }
+      });
+    final last7 = sortedDates.length > 7
+        ? sortedDates.sublist(sortedDates.length - 7)
+        : sortedDates;
+
+    // Build fl_chart spot lists
+    final takenSpots = <FlSpot>[];
+    final missedSpots = <FlSpot>[];
+    final pendingSpots = <FlSpot>[];
+    for (int i = 0; i < last7.length; i++) {
+      final d = byDate[last7[i]]!;
+      takenSpots.add(FlSpot(i.toDouble(), d['taken']!.toDouble()));
+      missedSpots.add(FlSpot(i.toDouble(), d['missed']!.toDouble()));
+      pendingSpots.add(FlSpot(i.toDouble(), d['pending']!.toDouble()));
+    }
+
+    // Short day labels for x-axis
+    List<String> shortLabels(List<String> dates) {
+      return dates.map((d) {
+        try {
+          final parsed = DateFormat('d MMM yyyy, EEEE').parse(d);
+          return DateFormat('EEE').format(parsed);
+        } catch (_) {
+          return d.length > 3 ? d.substring(0, 3) : d;
+        }
+      }).toList();
+    }
+
+    final labels = shortLabels(last7);
+
+    LineChartBarData _line(List<FlSpot> spots, Color color) {
+      return LineChartBarData(
+        spots: spots,
+        isCurved: true,
+        color: color,
+        barWidth: 2.5,
+        isStrokeCapRound: true,
+        dotData: FlDotData(
+          show: true,
+          getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
+            radius: 4,
+            color: color,
+            strokeWidth: 1.5,
+            strokeColor: Colors.black,
+          ),
+        ),
+        belowBarData: BarAreaData(
+          show: true,
+          color: color.withOpacity(0.08),
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Weekly Compliance',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              Row(
+                children: [
+                  _chartLegend(Colors.greenAccent, 'Taken'),
+                  const SizedBox(width: 10),
+                  _chartLegend(Colors.redAccent, 'Missed'),
+                  const SizedBox(width: 10),
+                  _chartLegend(Colors.orangeAccent, 'Pending'),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 160,
+            child: last7.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No data yet',
+                      style: TextStyle(color: textGrey, fontSize: 12),
+                    ),
+                  )
+                : LineChart(
+                    LineChartData(
+                      minY: 0,
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        getDrawingHorizontalLine: (_) => FlLine(
+                          color: Colors.white.withOpacity(0.06),
+                          strokeWidth: 1,
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 24,
+                            getTitlesWidget: (v, _) => Text(
+                              v.toInt().toString(),
+                              style: const TextStyle(
+                                color: textGrey,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 1,
+                            getTitlesWidget: (v, _) {
+                              final idx = v.toInt();
+                              if (idx < 0 || idx >= labels.length) {
+                                return const SizedBox.shrink();
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  labels[idx],
+                                  style: const TextStyle(
+                                    color: textGrey,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      lineBarsData: [
+                        _line(takenSpots, Colors.greenAccent),
+                        _line(missedSpots, Colors.redAccent),
+                        _line(pendingSpots, Colors.orangeAccent),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chartLegend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(color: textGrey, fontSize: 9),
+        ),
+      ],
     );
   }
 
@@ -515,7 +727,11 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
             // --- VERIFICATION PHOTO ---
             GestureDetector(
               onTap: () async {
-                if (item['proofImage'] == null) {
+                if (item['proofImage'] != null) {
+                  // Verified — open full-screen stamped selfie viewer
+                  _showSelfieViewer(context, item['proofImage'] as String, item['name'] as String);
+                } else {
+                  // Not yet verified — go to selfie verification flow
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -529,7 +745,6 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                   );
 
                   if (result == true) {
-                    // await ref.refresh(getTodayScheduleProvider.future);
                     ref.invalidate(getTodayScheduleProvider);
 
                     if (mounted) {
@@ -589,7 +804,109 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     );
   }
 
+  /// 🔹 Full-Screen Stamped Selfie Viewer
+  void _showSelfieViewer(BuildContext context, String imageUrl, String medicineName) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        height: MediaQuery.of(context).size.height * 0.92,
+        decoration: const BoxDecoration(
+          color: Color(0xFF0D1117),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.verified_user, color: Color(0xFF4FD1C5), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '$medicineName — Verified Proof',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Color(0xFF30363D), height: 1),
+            // Selfie image
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 3.0,
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(color: Color(0xFF4FD1C5)),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(Icons.broken_image_outlined, color: Colors.white38, size: 48),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Timestamp info footer
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF161B22),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF30363D)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Color(0xFF4FD1C5), size: 14),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Date, time and Medikto branding are permanently stamped on this image.',
+                      style: TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _statusBadge(String status) {
+
     Color color = status == "Taken"
         ? Colors.greenAccent
         : (status == "Missed" ? Colors.redAccent : Colors.orangeAccent);
