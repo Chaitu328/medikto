@@ -133,6 +133,105 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
       });
     }
   }
+
+  bool _isDoseEarly(TodayScheduleModel schedule) {
+    if (schedule.date == null || schedule.time == null) return false;
+    try {
+      final now = DateTime.now();
+
+      final dateParts = schedule.date!.split("-");
+      if (dateParts.length < 3) return false;
+      final year = int.parse(dateParts[0]);
+      final month = int.parse(dateParts[1]);
+      final day = int.parse(dateParts[2]);
+
+      final cleanTime = schedule.time!.trim();
+      final isPM = cleanTime.toUpperCase().endsWith("PM");
+      final isAM = cleanTime.toUpperCase().endsWith("AM");
+      final timePart = cleanTime.replaceAll(RegExp(r'[a-zA-Z\s]'), '');
+      final timeParts = timePart.split(":");
+      if (timeParts.length < 2) return false;
+      
+      int hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+
+      if (isPM && hour < 12) hour += 12;
+      if (isAM && hour == 12) hour = 0;
+
+      final scheduled = DateTime(year, month, day, hour, minute);
+
+      final diff = scheduled.difference(now);
+      if (diff.inMinutes > 10) {
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error checking early dose: $e");
+    }
+    return false;
+  }
+
+  Future<bool> _showEarlyWarningDialog(BuildContext context, TodayScheduleModel schedule) async {
+    int minutesEarly = 0;
+    try {
+      final now = DateTime.now();
+      final dateParts = schedule.date!.split("-");
+      final year = int.parse(dateParts[0]);
+      final month = int.parse(dateParts[1]);
+      final day = int.parse(dateParts[2]);
+      final cleanTime = schedule.time!.trim();
+      final isPM = cleanTime.toUpperCase().endsWith("PM");
+      final isAM = cleanTime.toUpperCase().endsWith("AM");
+      final timePart = cleanTime.replaceAll(RegExp(r'[a-zA-Z\s]'), '');
+      final timeParts = timePart.split(":");
+      int hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      if (isPM && hour < 12) hour += 12;
+      if (isAM && hour == 12) hour = 0;
+      final scheduled = DateTime(year, month, day, hour, minute);
+      minutesEarly = scheduled.difference(now).inMinutes;
+    } catch (_) {}
+
+    String timeLabel = minutesEarly >= 60 
+        ? "${(minutesEarly / 60).floor()} hour(s) and ${minutesEarly % 60} minute(s)"
+        : "$minutesEarly minute(s)";
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 28),
+            SizedBox(width: 10),
+            Text("Early Dose Alert", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          "This dose of ${schedule.name} is scheduled for ${schedule.time}.\n\n"
+          "You are marking it as taken $timeLabel early.\n\n"
+          "Taking medications too early can be unsafe. Are you sure you want to log this dose now?",
+          style: const TextStyle(color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white30)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orangeAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes, Log Early", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final medicationsAsync = ref.watch(getMedicationsProvider);
@@ -325,6 +424,11 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                               onMarkTaken: () async {
                                 final doseId = scheduleId;
 
+                                if (_isDoseEarly(schedule)) {
+                                  final proceed = await _showEarlyWarningDialog(context, schedule);
+                                  if (!proceed) return;
+                                }
+
                                 setState(() {
                                   loadingDoseIds.add(doseId);
                                 });
@@ -346,10 +450,12 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                                 }
                               },
                               onVerifyWithSelfie: () async {
-                                // final doseId = todayList.length > index
-                                //     ? todayList[index].id ?? ""
-                                //     : "";
                                 final doseId = scheduleId;
+
+                                if (_isDoseEarly(schedule)) {
+                                  final proceed = await _showEarlyWarningDialog(context, schedule);
+                                  if (!proceed) return;
+                                }
 
                                 final result = await Navigator.push(
                                   context,

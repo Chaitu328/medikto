@@ -18,6 +18,7 @@ import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:medikto/features/home/notifications/notification_provider.dart';
 import 'package:medikto/features/home/notifications/notification_model.dart';
 
@@ -39,6 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   List<dynamic> monitoredPatients = [];
   bool isLoadingPatients = false;
   String? selectedPatientId;
+  StreamSubscription<RemoteMessage>? _fcmSubscription;
 
   Future<void> _fetchMonitoredPatients() async {
     if (isLoadingPatients) return;
@@ -184,6 +186,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // optional small delay for smooth UX
     await Future.delayed(const Duration(milliseconds: 600));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh notifications list automatically in real-time when foreground push is received
+    _fcmSubscription = FirebaseMessaging.onMessage.listen((message) {
+      if (mounted) {
+        ref.invalidate(getNotificationsProvider);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _fcmSubscription?.cancel();
+    super.dispose();
   }
 
   Color _getStatusColor(String status) {
@@ -1064,11 +1083,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       actions: [
         IconButton(
-          onPressed: () {
-            Navigator.push(
+          onPressed: () async {
+            await Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => NotificationScreen()),
+              MaterialPageRoute(builder: (context) => const NotificationScreen()),
             );
+            ref.invalidate(getNotificationsProvider);
           },
           icon: Badge(
             isLabelVisible: hasUnread,

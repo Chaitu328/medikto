@@ -8,8 +8,7 @@ const { sendInviteEmail } = require("../utils/emailHelper");
 
 exports.getProfile = async (req, res) => {
   try {
-    // Get first user (without auth and user id)
-    const user = await User.findOne().select("-password");
+    const user = await User.findById(req.user.id).select("-password");
 
     if (!user) {
       return res.status(404).json({
