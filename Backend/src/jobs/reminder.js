@@ -55,6 +55,8 @@ cron.schedule("* * * * *", async () => {
       const timeStr = parts[1].replace(/^0/, ""); // "2:30 PM"
       const timeStrWithZero = parts[1]; // "02:30 PM"
 
+      console.log(`[Reminder] Checking dose "${dose.name}" for user ${dose.user.firstName || dose.user.phone} (${tz}). Scheduled: ${dose.date} ${dose.time}. Evaluated Local: ${userLocalDate} ${timeStrWithZero} (${timeStr})`);
+
       if (dose.date === userLocalDate && 
           (dose.time === timeStr || dose.time === timeStrWithZero)) {
         

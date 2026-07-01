@@ -71,7 +71,8 @@ class NotificationManager {
       if (dioClient.ref != null) {
         String timezone = "UTC";
         try {
-          timezone = await FlutterTimezone.getLocalTimezone();
+          final tzInfo = await FlutterTimezone.getLocalTimezone();
+          timezone = tzInfo.identifier;
         } catch (tzErr) {
           if (kDebugMode) print("Error fetching timezone: $tzErr");
         }
