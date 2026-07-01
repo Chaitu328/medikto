@@ -29,8 +29,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final prefs = await SharedPreferences.getInstance();
 
+    // 🛠️ TEMPORARY FOR TESTING: Force clear SharedPreferences on startup
+    // (Uncomment the line below when you want to force test onboarding again)
+    // await prefs.clear();
+
     /// CHECK ONBOARDING
     final onboardingDone = prefs.getBool(StorageKeys.onboardingDone) ?? false;
+    debugPrint("ONBOARDING DONE => $onboardingDone");
 
     /// FIRST INSTALL
     if (!onboardingDone) {
@@ -41,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
     /// CHECK TOKEN
     final token = prefs.getString(StorageKeys.token);
 
-    print("SAVED TOKEN => $token");
+    debugPrint("SAVED TOKEN => $token");
 
     /// NO TOKEN
     if (token == null || token.isEmpty) {
@@ -61,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen> {
       isExpired = !token.startsWith("mock_");
     }
 
-    print("TOKEN EXPIRED => $isExpired");
+    debugPrint("TOKEN EXPIRED => $isExpired");
 
     if (isExpired) {
       /// REMOVE EXPIRED TOKEN

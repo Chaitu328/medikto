@@ -1,3 +1,11 @@
+const dns = require("dns");
+
+// Set custom DNS servers
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
+// Prefer IPv4
+dns.setDefaultResultOrder("ipv4first");
+
 const express = require("express");
 const connectDB = require("./src/config/db");
 const cors = require("cors");
