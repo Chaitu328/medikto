@@ -46,6 +46,46 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     super.dispose();
   }
 
+  String _getEarlyTakenLabel(String? dateStr, String? timeStr, String? takenAtStr) {
+    if (dateStr == null || timeStr == null || takenAtStr == null) return "Taken";
+    try {
+      final takenAt = DateTime.parse(takenAtStr).toLocal();
+      final dateParts = dateStr.split("-");
+      if (dateParts.length < 3) return "Taken";
+      final year = int.parse(dateParts[0]);
+      final month = int.parse(dateParts[1]);
+      final day = int.parse(dateParts[2]);
+
+      final cleanTime = timeStr.trim();
+      final isPM = cleanTime.toUpperCase().endsWith("PM");
+      final isAM = cleanTime.toUpperCase().endsWith("AM");
+      final timePart = cleanTime.replaceAll(RegExp(r'[a-zA-Z\s]'), '');
+      final timeParts = timePart.split(":");
+      if (timeParts.length < 2) return "Taken";
+      
+      int hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+
+      if (isPM && hour < 12) hour += 12;
+      if (isAM && hour == 12) hour = 0;
+
+      final scheduled = DateTime(year, month, day, hour, minute);
+
+      final diff = scheduled.difference(takenAt);
+      if (diff.inMinutes > 10) {
+        if (diff.inHours >= 1) {
+          final hrs = diff.inHours;
+          final mins = diff.inMinutes % 60;
+          return "Early (${hrs}h ${mins}m)";
+        }
+        return "Early (${diff.inMinutes}m)";
+      }
+    } catch (e) {
+      debugPrint("Error calculating early offset: $e");
+    }
+    return "Taken";
+  }
+
   List<Map<String, dynamic>> _convertRecords(
     List<TodayScheduleModel> schedules,
   ) {
@@ -62,7 +102,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
         "dateString": parsedDate != null
             ? DateFormat("d MMM yyyy, EEEE").format(parsedDate)
             : "",
-        "status": _formatStatus(item.status ?? ""),
+        "status": item.status?.toLowerCase() == "taken"
+            ? _getEarlyTakenLabel(item.date, item.time, item.takenAt)
+            : _formatStatus(item.status ?? ""),
         "isVerified": item.verified ?? false,
         "proofImage": item.proofImage,
       };
