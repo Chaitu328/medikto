@@ -30,6 +30,7 @@ exports.uploadReport = async (req, res) => {
     const fileUrl = req.file.path;
 
     const report = await Report.create({
+      user: req.user.id,
       title,
       description,
       condition: normalizedCondition,
@@ -53,9 +54,9 @@ exports.uploadReport = async (req, res) => {
 exports.getReports =
   async (req, res) => {
     try {
-
+      const userId = req.query.patientId || req.user.id;
       const reports =
-        await Report.find()
+        await Report.find({ user: userId })
           // .populate("user")
           .sort({
             date: -1,
@@ -78,8 +79,8 @@ exports.getReports =
 
 exports.getReportById = async (req, res) => {
   try {
-
-    const report = await Report.findById(req.params.id);
+    const userId = req.query.patientId || req.user.id;
+    const report = await Report.findOne({ _id: req.params.id, user: userId });
 
     if (!report) {
       return res.status(404).json({
@@ -108,7 +109,7 @@ exports.updateReport = async (req, res) => {
       date
     } = req.body;
 
-    const report = await Report.findById(req.params.id);
+    const report = await Report.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!report) {
       return res.status(404).json({
@@ -157,7 +158,7 @@ exports.updateReport = async (req, res) => {
 exports.deleteReport = async (req, res) => {
   try {
 
-    const report = await Report.findById(req.params.id);
+    const report = await Report.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!report) {
       return res.status(404).json({
@@ -183,9 +184,10 @@ exports.deleteReport = async (req, res) => {
 
 exports.getReportsByType = async (req, res) => {
   try {
-
+    const userId = req.query.patientId || req.user.id;
     const reports = await Report.find({
-      type: req.params.type
+      type: req.params.type,
+      user: userId
     }).sort({
       date: -1
     });

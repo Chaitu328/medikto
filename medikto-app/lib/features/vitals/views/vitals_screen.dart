@@ -8,6 +8,7 @@ import 'package:medikto/features/home/notifications/notification_screen.dart';
 import 'package:medikto/features/home/widgets/health_data_card.dart';
 import 'package:medikto/features/home/add_reports/health_records/medical_reports_list_screen.dart';
 import 'package:medikto/features/home/add_reports/health_records/prescriptions_list_screen.dart';
+import 'package:medikto/features/home/add_reports/health_records/health_records_hub_screen.dart';
 
 class AddReportsScreen extends StatefulWidget {
   const AddReportsScreen({super.key});
@@ -134,6 +135,100 @@ class _AddReportsScreenState extends State<AddReportsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
+
+                // Prominent Medical Documents Hub Card
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 8, bottom: 20),
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E2A38), Color(0xFF141F2C)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        height: 52,
+                        width: 52,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF81DEEA).withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.folder_shared_outlined,
+                          color: Color(0xFF81DEEA),
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Medical Documents Hub",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              "Search, filter, and share your reports & prescriptions instantly.",
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const HealthRecordsHubScreen(),
+                                  ),
+                                );
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    "Open Hub",
+                                    style: TextStyle(
+                                      color: Color(0xFF81DEEA),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.arrow_forward,
+                                    color: Color(0xFF81DEEA),
+                                    size: 14,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
                 /// 🔹 Health Data Header
                 const Text(

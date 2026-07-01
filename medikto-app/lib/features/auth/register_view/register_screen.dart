@@ -11,6 +11,7 @@ import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:medikto/features/auth/register_view/account_create_success.dart';
 import 'package:medikto/features/auth/widgets/gender_selection_widget.dart';
+import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -413,10 +414,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         statusBarIconBrightness: Brightness.light, // White icons for dark mode
       ),
       child: SafeArea(
-        top: false,
+        top: true,
         bottom: true,
         child: Scaffold(
           backgroundColor: RegisterScreen.darkBg,
+          appBar: CustomAppBar(
+            title: "",
+            backgroundColor: RegisterScreen.darkBg,
+            showBackButton: true,
+            onBack: () => Navigator.pop(context),
+          ),
           body: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             child: Column(
