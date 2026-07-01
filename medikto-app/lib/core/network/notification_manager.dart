@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:medikto/core/network/dio_client.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 // Background message handler
 @pragma('vm:entry-point')
@@ -68,9 +69,19 @@ class NotificationManager {
 
       // Check if dioClient has a base authorization token (user is authenticated)
       if (dioClient.ref != null) {
+        String timezone = "UTC";
+        try {
+          timezone = await FlutterTimezone.getLocalTimezone();
+        } catch (tzErr) {
+          if (kDebugMode) print("Error fetching timezone: $tzErr");
+        }
+
         final response = await dioClient.ref!.put(
           "/profile/fcm-token",
-          data: {"fcmToken": token},
+          data: {
+            "fcmToken": token,
+            "timezone": timezone,
+          },
         );
         if (kDebugMode) {
           print("FCM Token registration on backend response: ${response.statusCode}");

@@ -260,16 +260,21 @@ exports.unlinkHospital = async (req, res) => {
 // ================= PATIENT: UPDATE FCM TOKEN =================
 exports.updateFCMToken = async (req, res) => {
   try {
-    const { fcmToken } = req.body;
+    const { fcmToken, timezone } = req.body;
     const userId = req.user.id;
 
     if (!fcmToken) {
       return res.status(400).json({ message: "FCM token is required" });
     }
 
+    const updateFields = { fcmToken };
+    if (timezone) {
+      updateFields.timezone = timezone;
+    }
+
     const user = await User.findByIdAndUpdate(
       userId,
-      { fcmToken },
+      updateFields,
       { new: true }
     ).select("-password");
 

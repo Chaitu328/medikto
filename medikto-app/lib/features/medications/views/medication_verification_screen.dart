@@ -214,6 +214,7 @@ class _MedicationVerificationScreenState
                       final time = await showTimePicker(
                         context: context,
                         initialTime: pickedTime!,
+                        initialEntryMode: TimePickerEntryMode.input,
                         builder: (BuildContext context, Widget? child) {
                           return Theme(
                             data: Theme.of(context).copyWith(

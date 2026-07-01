@@ -32,6 +32,7 @@ class _TimingsSectionState extends State<TimingsSection> {
     final picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
+      initialEntryMode: TimePickerEntryMode.input,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(

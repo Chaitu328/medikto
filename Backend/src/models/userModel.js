@@ -63,6 +63,8 @@ const userSchema = new mongoose.Schema({
 
   fcmToken: { type: String },
 
+  timezone: { type: String, default: "UTC" },
+
   // List of patients monitored by this caretaker
   guardianFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
 

@@ -10,50 +10,69 @@ const { sendPushNotification } = require("../utils/notificationHelper");
 cron.schedule("* * * * *", async () => {
   try {
     const now = new Date();
+    const utcDateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD in UTC
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    // Build a 12-hour time string to match stored dose times (e.g. "08:30 AM")
-    let hours = now.getHours();
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12; // 0 should be 12
-    const currentTime12 = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-    const currentTime12NoZero = `${hours}:${minutes} ${ampm}`;
+    // Find pending doses within a 3-day window of UTC now
+    const pendingDoses = await Dose.find({
+      date: { $in: [yesterday, utcDateStr, tomorrow] },
+      status: "pending"
+    }).populate("user", "firstName phone fcmToken timezone");
 
-    // Build today's date string (YYYY-MM-DD) to match stored dose dates
-    const today = now.toISOString().split("T")[0];
-
-    console.log(`[Reminder] Checking pending doses at ${currentTime12} on ${today}`);
-
-    // Find all pending doses for the current date and matching times
-    const dueDoses = await Dose.find({
-      date: today,
-      time: { $in: [currentTime12, currentTime12NoZero] },
-      status: "pending",
-    }).populate("user", "firstName phone fcmToken");
-
-    if (dueDoses.length === 0) {
-      return; // Nothing due right now
+    if (pendingDoses.length === 0) {
+      return;
     }
 
-    console.log(`[Reminder] Found ${dueDoses.length} due dose(s). Sending notifications...`);
-
-    // Send a push notification for each due dose
-    for (const dose of dueDoses) {
+    for (const dose of pendingDoses) {
       if (!dose.user) continue;
 
-      const userName = dose.user.firstName || dose.user.phone || "User";
-      const title = "💊 Medication Reminder";
-      const body = `Hi ${userName}, it's time to take your ${dose.name} (${dose.dosage}).`;
-      const data = {
-        type: "medicine",
-        doseId: dose._id.toString(),
-        medicineName: dose.name || "",
-        dosage: dose.dosage || "",
-        time: dose.time || "",
-      };
+      const tz = dose.user.timezone || "UTC";
 
-      await sendPushNotification(dose.user._id.toString(), title, body, data);
+      let localStr;
+      try {
+        localStr = now.toLocaleString("en-US", {
+          timeZone: tz,
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', hour12: true
+        });
+      } catch (tzErr) {
+        localStr = now.toLocaleString("en-US", {
+          timeZone: "UTC",
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', hour12: true
+        });
+      }
+
+      // Parse output e.g. "07/01/2026, 02:30 PM"
+      const parts = localStr.split(", ");
+      if (parts.length < 2) continue;
+
+      const dateParts = parts[0].split("/");
+      if (dateParts.length < 3) continue;
+
+      const userLocalDate = `${dateParts[2]}-${dateParts[0]}-${dateParts[1]}`; // YYYY-MM-DD
+      const timeStr = parts[1].replace(/^0/, ""); // "2:30 PM"
+      const timeStrWithZero = parts[1]; // "02:30 PM"
+
+      if (dose.date === userLocalDate && 
+          (dose.time === timeStr || dose.time === timeStrWithZero)) {
+        
+        console.log(`[Reminder] Timezone triggered: User ${dose.user._id} (${tz}) matches scheduled time ${dose.time} at user local date ${userLocalDate}`);
+        
+        const userName = dose.user.firstName || dose.user.phone || "User";
+        const title = "💊 Medication Reminder";
+        const body = `Hi ${userName}, it's time to take your ${dose.name} (${dose.dosage}).`;
+        const data = {
+          type: "medicine",
+          doseId: dose._id.toString(),
+          medicineName: dose.name || "",
+          dosage: dose.dosage || "",
+          time: dose.time || "",
+        };
+
+        await sendPushNotification(dose.user._id.toString(), title, body, data);
+      }
     }
 
   } catch (err) {
