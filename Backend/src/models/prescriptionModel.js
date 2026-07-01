@@ -6,11 +6,11 @@ const reminderSchema = new mongoose.Schema({
 });
 
 const prescriptionSchema = new mongoose.Schema({
-  // user: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "User",
-  //   required: true
-  // },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
 
   medicineName: {
     type: String,

@@ -55,6 +55,7 @@ exports.addBloodPressure = async (req, res) => {
     const status = getBPStatus(systolic, diastolic);
 
     const record = await Vitals.create({
+      user: req.user.id,
       type: "bloodPressure",
       bloodPressure: {
         systolic,
@@ -90,6 +91,7 @@ exports.addHeartRate = async (req, res) => {
     const status = getHeartRateStatus(heartRate);
 
     const record = await Vitals.create({
+      user: req.user.id,
       type: "heartRate",
       heartRate,
       heartRateStatus: status,
@@ -125,6 +127,7 @@ exports.addTemperature = async (req, res) => {
     const status = getTemperatureStatus(tempC);
 
     const record = await Vitals.create({
+      user: req.user.id,
       type: "temperature",
       temperature,
       temperatureStatus: status,
@@ -158,6 +161,7 @@ exports.addSugar = async (req, res) => {
     const status = getSugarStatus(sugarLevel);
 
     const record = await Vitals.create({
+      user: req.user.id,
       type: "sugar",
       sugarLevel,
       sugarStatus: status,
@@ -178,9 +182,9 @@ exports.addSugar = async (req, res) => {
 exports.getVitals =
   async (req, res) => {
     try {
-
+      const userId = req.query.patientId || req.user.id;
       const vitals =
-        await Vitals.find()
+        await Vitals.find({ user: userId })
           // .populate("user")
           .sort({
             recordedAt: -1,
@@ -202,8 +206,8 @@ exports.getVitals =
 
 exports.getVitalById = async (req, res) => {
   try {
-
-    const vital = await Vitals.findById(req.params.id);
+    const userId = req.query.patientId || req.user.id;
+    const vital = await Vitals.findOne({ _id: req.params.id, user: userId });
 
     if (!vital) {
       return res.status(404).json({
@@ -224,8 +228,7 @@ exports.getVitalById = async (req, res) => {
 
 exports.updateVital = async (req, res) => {
   try {
-
-    const vital = await Vitals.findById(req.params.id);
+    const vital = await Vitals.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!vital) {
       return res.status(404).json({
@@ -322,8 +325,7 @@ exports.updateVital = async (req, res) => {
 
 exports.deleteVital = async (req, res) => {
   try {
-
-    const vital = await Vitals.findById(req.params.id);
+    const vital = await Vitals.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!vital) {
       return res.status(404).json({

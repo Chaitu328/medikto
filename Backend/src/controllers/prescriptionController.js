@@ -36,6 +36,7 @@ exports.addPrescription = async (req, res) => {
     }
 
     const prescription = await Prescription.create({
+      user: req.user.id,
       medicineName,
       dosageInstructions,
       reminders: parsedReminders,
@@ -55,9 +56,9 @@ exports.addPrescription = async (req, res) => {
 exports.getPrescriptions =
   async (req, res) => {
     try {
-
+      const userId = req.query.patientId || req.user.id;
       const data =
-        await Prescription.find()
+        await Prescription.find({ user: userId })
           // .populate("user")
           .sort({
             createdAt: -1,
@@ -79,7 +80,8 @@ exports.getPrescriptions =
 
 exports.getPrescriptionById = async (req, res) => {
   try {
-    const data = await Prescription.findById(req.params.id);
+    const userId = req.query.patientId || req.user.id;
+    const data = await Prescription.findOne({ _id: req.params.id, user: userId });
 
     if (!data) {
       return res.status(404).json({ message: "Not found" });
@@ -102,7 +104,7 @@ exports.updatePrescription = async (req, res) => {
       reminders
     } = req.body;
 
-    const prescription = await Prescription.findById(req.params.id);
+    const prescription = await Prescription.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!prescription) {
       return res.status(404).json({ message: "Not found" });
@@ -138,7 +140,7 @@ exports.updatePrescription = async (req, res) => {
 
 exports.deletePrescription = async (req, res) => {
   try {
-    const data = await Prescription.findById(req.params.id);
+    const data = await Prescription.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!data) {
       return res.status(404).json({ message: "Not found" });
