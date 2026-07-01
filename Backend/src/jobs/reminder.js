@@ -46,6 +46,7 @@ cron.schedule("* * * * *", async () => {
       const title = "💊 Medication Reminder";
       const body = `Hi ${userName}, it's time to take your ${dose.name} (${dose.dosage}).`;
       const data = {
+        type: "medicine",
         doseId: dose._id.toString(),
         medicineName: dose.name || "",
         dosage: dose.dosage || "",

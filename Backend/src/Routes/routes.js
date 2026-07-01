@@ -81,6 +81,12 @@ const {
   getAdherence,
 } = require("../controllers/dashboardController");
 
+const {
+  getNotifications,
+  markAsRead,
+  markAllAsRead
+} = require("../controllers/notificationController");
+
 
 // ================= AUTH =================
 router.post("/auth/verifyOTP", verifyOTP);
@@ -160,5 +166,10 @@ router.delete("/prescriptions/:id", auth, auth.blockGuardianWrite, deletePrescri
 
 // ================= DASHBOARD =================
 router.get("/adherence", getAdherence);
+
+// ================= NOTIFICATIONS =================
+router.get("/notifications", auth, getNotifications);
+router.put("/notifications/:id/read", auth, markAsRead);
+router.put("/notifications/read-all", auth, markAllAsRead);
 
 module.exports = router;

@@ -1,96 +1,169 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:medikto/core/network/base_response.dart';
+import 'package:medikto/core/network/toast_utils.dart';
+import 'package:medikto/features/home/notifications/notification_model.dart';
+import 'package:medikto/features/home/notifications/notification_provider.dart';
 
-class NotificationScreen extends StatefulWidget {
+class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
 
   @override
-  State<NotificationScreen> createState() => _NotificationScreenState();
+  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> {
-  // Theme Colors consistent with your dashboard
+class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   static const Color darkBg = Color(0xFF121212);
   static const Color surfaceColor = Color(0xFF1E1E1E);
   static const Color accentCyan = Color(0xFF81DEEA);
 
-  // Mock Data
-  final List<Map<String, dynamic>> notifications = [
-    {
-      "title": "Medication Reminder",
-      "body": "It's time to take your Metformin 500mg dose.",
-      "time": "Just now",
-      "type": "medicine",
-      "isRead": false,
-    },
-    {
-      "title": "Report Uploaded",
-      "body": "Your Blood Panel results from Diagnostics Center are now available.",
-      "time": "2 hours ago",
-      "type": "report",
-      "isRead": false,
-    },
-    {
-      "title": "Abnormal Pulse Detected",
-      "body": "Your heart rate was slightly higher than normal (98 Bpm).",
-      "time": "5 hours ago",
-      "type": "alert",
-      "isRead": true,
-    },
-    {
-      "title": "Subscription Active",
-      "body": "Welcome to Medikto Premium! Enjoy your exclusive features.",
-      "time": "Yesterday",
-      "type": "system",
-      "isRead": true,
-    },
-  ];
+  String _getTimeAgo(DateTime dateTime) {
+    final diff = DateTime.now().difference(dateTime.toLocal());
+    if (diff.inDays > 7) {
+      return DateFormat("dd MMM").format(dateTime.toLocal());
+    } else if (diff.inDays >= 1) {
+      return "${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago";
+    } else if (diff.inHours >= 1) {
+      return "${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago";
+    } else if (diff.inMinutes >= 1) {
+      return "${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''} ago";
+    } else {
+      return "Just now";
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    final response = await ref.read(notificationManagerProvider).markAllNotificationsAsRead();
+    if (response.status == ResponseStatus.SUCCESS) {
+      ref.invalidate(getNotificationsProvider);
+      if (mounted) {
+        AppToasts.showSuccess(context, "All notifications marked as read");
+      }
+    } else {
+      if (mounted) {
+        AppToasts.showError(context, response.message);
+      }
+    }
+  }
+
+  Future<void> _markAsRead(String id) async {
+    final response = await ref.read(notificationManagerProvider).markNotificationAsRead(id);
+    if (response.status == ResponseStatus.SUCCESS) {
+      ref.invalidate(getNotificationsProvider);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final notificationsAsync = ref.watch(getNotificationsProvider);
+
     return Scaffold(
       backgroundColor: darkBg,
       appBar: _buildAppBar(),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          const SliverToBoxAdapter(child: SizedBox(height: 10)),
-          
-          /// 🔹 Header Section
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Recent Updates",
-                    style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text("Mark all as read", style: TextStyle(color: accentCyan, fontSize: 12)),
-                  )
-                ],
-              ),
-            ),
-          ),
+      body: RefreshIndicator(
+        color: accentCyan,
+        backgroundColor: surfaceColor,
+        onRefresh: () async {
+          ref.invalidate(getNotificationsProvider);
+        },
+        child: notificationsAsync.when(
+          data: (responseData) {
+            final List<AppNotificationModel> list =
+                (responseData.data as List?)?.cast<AppNotificationModel>() ?? [];
 
-          /// 🔹 Notification List (Optimized with SliverList)
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = notifications[index];
-                  return _NotificationTile(item: item);
-                },
-                childCount: notifications.length,
-              ),
+            if (list.isEmpty) {
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.notifications_off_outlined, size: 56, color: Colors.white24),
+                          SizedBox(height: 16),
+                          Text(
+                            "No Notifications Yet",
+                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            "You will see your medication alerts and report updates here.",
+                            style: TextStyle(color: Colors.white30, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                
+                /// 🔹 Header Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Recent Updates",
+                          style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                        TextButton(
+                          onPressed: _markAllAsRead,
+                          child: const Text("Mark all as read", style: TextStyle(color: accentCyan, fontSize: 12)),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+
+                /// 🔹 Notification List
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final item = list[index];
+                        return _NotificationTile(
+                          item: item,
+                          timeAgo: _getTimeAgo(item.createdAt),
+                          onTap: () => _markAsRead(item.id),
+                        );
+                      },
+                      childCount: list.length,
+                    ),
+                  ),
+                ),
+                
+                const SliverToBoxAdapter(child: SizedBox(height: 50)),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator(color: accentCyan)),
+          error: (err, st) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  "Unable to load notifications",
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(err.toString(), style: const TextStyle(color: Colors.white38, fontSize: 12)),
+              ],
             ),
           ),
-          
-          const SliverToBoxAdapter(child: SizedBox(height: 50)),
-        ],
+        ),
       ),
     );
   }
@@ -118,16 +191,24 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 }
 
-/// ✅ High Performance Notification Tile
 class _NotificationTile extends StatelessWidget {
-  final Map<String, dynamic> item;
-  const _NotificationTile({required this.item});
+  final AppNotificationModel item;
+  final String timeAgo;
+  final VoidCallback onTap;
+
+  const _NotificationTile({
+    required this.item,
+    required this.timeAgo,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    bool isRead = item['isRead'];
+    bool isRead = item.isRead;
 
-    return RepaintBoundary(
+    return InkWell(
+      onTap: isRead ? null : onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -146,10 +227,10 @@ class _NotificationTile extends StatelessWidget {
               height: 45,
               width: 45,
               decoration: BoxDecoration(
-                color: _getIconColor(item['type']).withOpacity(0.1),
+                color: _getIconColor(item.type).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(_getIcon(item['type']), color: _getIconColor(item['type']), size: 22),
+              child: Icon(_getIcon(item.type), color: _getIconColor(item.type), size: 22),
             ),
             const SizedBox(width: 15),
             
@@ -163,7 +244,7 @@ class _NotificationTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          item['title'],
+                          item.title,
                           style: TextStyle(
                             color: isRead ? Colors.white70 : Colors.white,
                             fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
@@ -172,14 +253,14 @@ class _NotificationTile extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        item['time'],
+                        timeAgo,
                         style: const TextStyle(color: Colors.white38, fontSize: 11),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    item['body'],
+                    item.body,
                     style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
                   ),
                 ],

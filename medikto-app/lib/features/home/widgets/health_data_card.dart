@@ -4,7 +4,15 @@ class HealthDataCard extends StatefulWidget {
   final String? title;
   final String? image;
   final GestureTapCallback? onTap;
-  const HealthDataCard({super.key, this.image, this.onTap, this.title});
+  final String? value;
+
+  const HealthDataCard({
+    super.key,
+    this.image,
+    this.onTap,
+    this.title,
+    this.value,
+  });
 
   @override
   State<HealthDataCard> createState() => _HealthDataCardState();
@@ -20,7 +28,6 @@ class _HealthDataCardState extends State<HealthDataCard> {
       onTap: () => widget.onTap?.call(),
       child: Container(
         padding: const EdgeInsets.all(12),
-        // ✅ No fixed height/width: allows parent Grid to control sizing
         decoration: BoxDecoration(
           color: surfaceColor,
           borderRadius: BorderRadius.circular(16),
@@ -39,47 +46,51 @@ class _HealthDataCardState extends State<HealthDataCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min, // ✅ Prevents vertical expansion
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ✅ Title: No Maxlines, just Clip
                   Text(
                     widget.title ?? "",
-                    // softWrap:
-                    //     false, // 🔥 Prevents text from wrapping to next line
-                    overflow:
-                        TextOverflow.clip, // 🔥 Clips the text as requested
+                    overflow: TextOverflow.clip,
                     style: const TextStyle(
                       fontSize: 13, 
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(
-                    height: 4,
-                  ), // Reduced spacing to prevent vertical overflow
-                  // ✅ Responsive Add Row
+                  const SizedBox(height: 4),
+                  
+                  // Responsive Add or Value Row
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(
-                          Icons.add_circle_outline,
-                          color: accentCyan,
-                          size: 18,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          "Add",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: accentCyan,
+                    child: widget.value != null && widget.value!.isNotEmpty
+                        ? Text(
+                            widget.value!,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: accentCyan,
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(
+                                Icons.add_circle_outline,
+                                color: accentCyan,
+                                size: 18,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                "Add",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentCyan,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
