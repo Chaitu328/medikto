@@ -1,0 +1,210 @@
+MEDIKTO HEALTH APPLICATION COMPARISON REPORT
+=============================================
+
+This report compares the original requirements and mockups from "Medikto App Flow 2.pdf" and "Medikto Health App Changes.pdf" against the current implementation in the source code across the Backend, Mobile App (Flutter), and Admin Panel (Vite + React) modules.
+
+1. Existing Changes (Implemented)
+----------------------------------
+This section lists requirements present in the design/flow documents, categorized by status and mapped to codebase components.
+
+[Onboarding & Brand System]
+* Splash Screen & Heart Lock Icon
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files:
+    - Mobile: medikto-app/lib/splash_screen.dart (renders lock icon, handles routing)
+    - Assets: medikto-app/assets/images/onboarding1.png
+* Welcome & Introduction Screens
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/onboarding/views/welcome_screen.dart, onboarding_screens.dart
+* Onboarding Feature Bullet Points (ABDM and Family Accounts removed, "Medicine Reminders" added)
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/onboarding/views/overall_features_screen.dart (maps to Page 6 annotations)
+* Logo Design
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/assets/images/item1_selected.png, item1.png, other asset resources
+
+[Authentication & Account Creation]
+* Login & Register Selection Screen
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/auth/login_view/login_screen.dart, register_screen.dart
+* OTP Dispatch and Verification Screens
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App, Backend
+  - Relevant Files:
+    - Mobile: medikto-app/lib/features/auth/login_view/otp_screen.dart (receives 6-digit pin input)
+    - Backend: Backend/src/controllers/authContoller.js (verifyOTP, register), routes.js
+* Registration Profiles (Name, Contact, Gender, Age, Password inputs)
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/auth/register_view/register_screen.dart
+* ABHA Card Setup / ABDM Links Removal
+  - Status: ✅ Fully Implemented (Correctly removed as annotated in mockup pages 10, 17, 46, 48, 50)
+  - Module: Mobile App, Backend
+  - Relevant Files: Removed from mobile EditProfile / Register pages and backend schemas
+* Account Created Success Screen
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/auth/register_view/account_create_success.dart
+
+[Navigation Layout]
+* Bottom Navigation Menu Structure
+  - Status: ⚠️ Partially Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/bottom_bar.dart
+  - Details: Consolidated from a 5-tab bar (Home, Reports, +, Vitals, Profile) into a 4-tab bar (Home, Medications, Add Reports, Profile). Vitals and Reports lists are combined into "Add Reports" (Health Hub) to improve UX.
+
+[Medication Reminder & Compliance]
+* Add Medication Form
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App, Backend
+  - Relevant Files:
+    - Mobile: medikto-app/lib/features/medications/views/medication_verification_screen.dart
+    - Backend: Backend/src/controllers/medicationController.js (addMedication)
+* Units Selection Validation
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/medications/views/medication_verification_screen.dart (Line 61 restricts options to "mg", "ml", "gm" as requested, removing "Tablet" and "Capsule" options)
+* Dose confirmation & Mark as Taken
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App, Backend
+  - Relevant Files:
+    - Mobile: medikto-app/lib/features/home/home_view/home_screen.dart (Schedule Items check action)
+    - Backend: Backend/src/controllers/medicationController.js (markAsTaken)
+* Selfie Verification Option for Doses
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App, Backend
+  - Relevant Files:
+    - Mobile: medikto-app/lib/features/medications/views/selfie_verfication_medicine.dart
+    - Backend: Backend/src/controllers/medicationController.js (verifyWithSelfie)
+* Auto-deletion of Selfies after 48 hours (Free/Basic)
+  - Status: ✅ Fully Implemented
+  - Module: Backend
+  - Relevant Files: Backend/src/jobs/cleanupSelfies.js
+  - Details: Cron running hourly soft-deletes expired proofImage files
+* Taken Logs History Screen
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/medications/views/activity_history_screen.dart
+* Selfie Expiry for Premium Plan
+  - Status: ⚠️ Partially Implemented
+  - Module: Backend
+  - Relevant Files: Backend/src/controllers/medicationController.js (verifyWithSelfie)
+  - Details: Premium selfies delete after 3 months (instead of indefinite retention).
+* Visual Timestamp Stamp Overlay on Selfie Photos
+  - Status: ❌ Not Implemented
+  - Module: Mobile App, Backend
+  - Details: No overlay is stamped on upload; timestamp is metadata-only.
+* Medication Compliance Graph in Mobile App
+  - Status: ❌ Not Implemented
+  - Module: Mobile App
+  - Details: The log screen shows list items but no compliance adherence graph.
+* Notifications Reminders
+  - Status: ⚠️ Partially Implemented
+  - Module: Backend
+  - Relevant Files: Backend/src/jobs/reminder.js
+  - Details: Triggers basic console logging, no robust task scheduler for active delivery of notifications.
+
+[Vitals Tracking]
+* Quick Health Look (BP, Pulse, Sugar, Temperature) on Home
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/home/home_view/home_screen.dart
+* Vitals History Line Graphs
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/vitals/views/vitals_track_details.dart (uses fl_chart)
+* Vitals Entry Forms
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App, Backend
+  - Relevant Files: medikto-app/lib/features/home/add_reports/health_data/...
+* Latest Vitals Measurement Header
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/home/add_reports/widgets/latest_vital_header.dart
+
+[Health Reports & Files]
+* Medical/Lab/Vaccination/Prescription Upload Forms
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App, Backend
+  - Relevant Files: medikto-app/lib/features/home/add_reports/health_records/...
+* Reports Action sheets (Download, Share, Copy Link, Delete)
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/medications/widgets/reports_action_sheet.dart
+* Reports renaming and position
+  - Status: ⚠️ Partially Implemented
+  - Module: Mobile App
+  - Details: Shifted below medications, but named "Add Reports" / "Health Hub" rather than exact "prescription and reports" wording.
+
+[Subscription Plans & Settings]
+* Subscription Presentation Screen
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/home/premium_plans_views/premium_plans.dart
+* Edit Profile & Password Changes
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App, Backend
+  - Relevant Files: medikto-app/lib/features/profile/views/edit_profile.dart, change_password_screen.dart
+* Delete Account trigger
+  - Status: ✅ Fully Implemented
+  - Module: Mobile App
+  - Relevant Files: medikto-app/lib/features/profile/views/profile_screen.dart
+* WASA Compliance
+  - Status: ❌ Not Implemented
+  - Module: Mobile App, Backend
+  - Details: No accessibility audits/compliance checks implemented.
+
+2. New Changes (Not Present in Documents)
+------------------------------------------
+Features present in the code but not mentioned in the PDFs.
+
+* Mobile App:
+  - Caretaker (Guardian) Patient Selection Switcher: Monitored patients dropdown on the dashboard top bar (home_screen.dart).
+  - Caretaker Query Interceptor: DioClient automatically appends patientId parameter on all requests when a patient profile is active.
+  - Guardian Read-Only Locks: Forms disable add/edit options when a guardian is browsing.
+  - Manage Connected Hospitals Access Screen: connected_hospitals_screen.dart view list and revoke button.
+  - Bypass Authentication developer action: login bypass in login_screen.dart, splash token-skip rules.
+  - Firebase Cloud Messaging integration: notification_manager.dart setups.
+
+* Admin Panel:
+  - Roster of patient compliance metrics (average, missed, high-risk flags) inside ComplianceTracker.jsx.
+  - Deleted Selfies Log: View auto-deleted or admin-deleted selfies with instant recover actions.
+  - Patient vital curves viewer (Vitals.jsx).
+  - Admin authentication screen (Login.jsx).
+  - Medication schedules manager for patient records.
+
+* Backend:
+  - Hospital Isolation Query Rules: Enforced in user list queries.
+  - Connected Hospital OTP flow routes (/hospitals/send-link-otp, /hospitals/verify-link).
+  - Guardian invite mappings & caretaker invitations (caretakerInviteModel.js, emailHelper.js).
+  - Guardian middleware blocker (blockGuardianWrite checks).
+  - Twilio SMS helper classes (smsHelper.js).
+  - Admin selfie recovery endpoints.
+  - FCM Server SDK setup and notifications dispatchers.
+  - Adherence dashboard calculator query.
+
+3. Modified Features
+---------------------
+Features implemented differently from original requirements.
+- Navigation Consolidated: Combine separate Reports & Vitals tabs into Health Hub to simplify layout.
+- Premium Photo Expiry Cap: Imposed a 3-month storage limit on premium verifications rather than storing them indefinitely.
+- Split Reports Files: Reports and Prescriptions are managed as separate collections and list screens rather than a single database collection.
+
+4. Missing Features
+--------------------
+- Visual stamp of date/time on selfie photos.
+- Medication Compliance Adherence Chart in Mobile App.
+- WASA Compliance validation.
+
+5. Summary
+-----------
+- Total documented features: 17
+- Fully implemented features: 10
+- Partially implemented features: 4
+- Missing features: 3
+- Newly added features not documented: 18 (distributed across Mobile App, Admin, and Backend)

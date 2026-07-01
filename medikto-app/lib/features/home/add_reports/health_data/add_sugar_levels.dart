@@ -95,6 +95,7 @@ class _AddSugarLevelsScreenState extends ConsumerState<AddSugarLevelsScreen> {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      initialEntryMode: TimePickerEntryMode.input,
       builder: (context, child) {
         return Theme(
           data: ThemeData.dark().copyWith(

@@ -180,12 +180,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         "Notifications",
         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
       ),
-      actions: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.settings_outlined, color: Colors.white70),
-        ),
-        const SizedBox(width: 10),
+      actions: const [
+        SizedBox(width: 10),
       ],
     );
   }

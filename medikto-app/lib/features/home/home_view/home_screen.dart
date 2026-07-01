@@ -18,6 +18,8 @@ import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
+import 'package:medikto/features/home/notifications/notification_provider.dart';
+import 'package:medikto/features/home/notifications/notification_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -254,9 +256,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ? adherenceAsync.value!.data as AdherenceModel
         : null;
 
+    final notificationsAsync = ref.watch(getNotificationsProvider);
+    final notifications = (notificationsAsync.value?.data as List?)?.cast<AppNotificationModel>() ?? [];
+    final hasUnread = notifications.any((n) => !n.isRead);
+
     return Scaffold(
       backgroundColor: darkBg,
-      appBar: _buildAppBar(size, profile),
+      appBar: _buildAppBar(size, profile, hasUnread),
       body: RefreshIndicator(
         color: const Color(0xFF81DEEA),
         backgroundColor: darkBg,
@@ -961,7 +967,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(Size size, ProfileModel? profile) {
+  PreferredSizeWidget _buildAppBar(Size size, ProfileModel? profile, bool hasUnread) {
     final isGuardian = profile?.role == "guardian";
 
     return AppBar(
@@ -1064,8 +1070,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               MaterialPageRoute(builder: (context) => NotificationScreen()),
             );
           },
-          icon: const Badge(
-            child: Icon(Icons.notifications, color: Color(0xFF81DEEA)),
+          icon: Badge(
+            isLabelVisible: hasUnread,
+            child: const Icon(Icons.notifications, color: Color(0xFF81DEEA)),
           ),
         ),
 
