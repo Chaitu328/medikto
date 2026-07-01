@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/health_data/add_blood_pressure.dart';
 import 'package:medikto/features/home/add_reports/health_data/add_body_temparature.dart';
@@ -9,15 +10,17 @@ import 'package:medikto/features/home/widgets/health_data_card.dart';
 import 'package:medikto/features/home/add_reports/health_records/medical_reports_list_screen.dart';
 import 'package:medikto/features/home/add_reports/health_records/prescriptions_list_screen.dart';
 import 'package:medikto/features/home/add_reports/health_records/health_records_hub_screen.dart';
+import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
+import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
 
-class AddReportsScreen extends StatefulWidget {
+class AddReportsScreen extends ConsumerStatefulWidget {
   const AddReportsScreen({super.key});
 
   @override
-  State<AddReportsScreen> createState() => _AddReportsScreenState();
+  ConsumerState<AddReportsScreen> createState() => _AddReportsScreenState();
 }
 
-class _AddReportsScreenState extends State<AddReportsScreen> {
+class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
   static const Color darkBg = Color(0xFF121212);
 
   // final List<Map<String, dynamic>> vitalsList = const [
@@ -97,6 +100,53 @@ class _AddReportsScreenState extends State<AddReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final vitalsAsync = ref.watch(getVitalsProvider);
+
+    // Extract latest values
+    String latestBP = "";
+    String latestHR = "";
+    String latestTemp = "";
+    String latestSugar = "";
+
+    vitalsAsync.whenData((responseData) {
+      final List<VitalsModel> vitals =
+          (responseData.data as List?)?.cast<VitalsModel>() ?? [];
+
+      try {
+        final bp = vitals.firstWhere((e) => e.type == "bloodPressure");
+        if (bp.systolic != null && bp.diastolic != null) {
+          latestBP = "${bp.systolic}/${bp.diastolic} mmHg";
+        }
+      } catch (_) {}
+
+      try {
+        final hr = vitals.firstWhere((e) => e.type == "heartRate");
+        if (hr.heartRate != null) {
+          latestHR = "${hr.heartRate} BPM";
+        }
+      } catch (_) {}
+
+      try {
+        final temp = vitals.firstWhere((e) => e.type == "temperature");
+        if (temp.temperature != null) {
+          latestTemp = "${temp.temperature} °F";
+        }
+      } catch (_) {}
+
+      try {
+        final sugar = vitals.firstWhere((e) => e.type == "sugar");
+        if (sugar.sugarLevel != null) {
+          latestSugar = "${sugar.sugarLevel} mg/dL";
+        }
+      } catch (_) {}
+    });
+
+    final Map<int, String> latestValues = {
+      0: latestBP,
+      1: latestHR,
+      2: latestTemp,
+      3: latestSugar,
+    };
 
     return Scaffold(
       backgroundColor: darkBg,
@@ -241,7 +291,7 @@ class _AddReportsScreenState extends State<AddReportsScreen> {
                 ),
                 SizedBox(height: size.height * 0.02),
 
-                _buildGrid(healthData, true),
+                _buildGrid(healthData, true, latestValues),
 
                 SizedBox(height: size.height * 0.03),
         
@@ -268,7 +318,7 @@ class _AddReportsScreenState extends State<AddReportsScreen> {
     );
   }
 
-  Widget _buildGrid(List<Map<String, String>> data, bool isHealthData) {
+  Widget _buildGrid(List<Map<String, String>> data, bool isHealthData, [Map<int, String>? values]) {
     return GridView.builder(
       itemCount: data.length,
       shrinkWrap: true,
@@ -280,9 +330,11 @@ class _AddReportsScreenState extends State<AddReportsScreen> {
         mainAxisExtent: 90,
       ),
       itemBuilder: (context, index) {
+        final String? val = isHealthData && values != null ? values[index] : null;
         return HealthDataCard(
           title: data[index]["name"]!,
           image: data[index]["image"]!,
+          value: val,
           onTap: () {
             Navigator.push(
               context,

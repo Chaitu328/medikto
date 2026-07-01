@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 const User = require("../models/userModel");
+const Notification = require("../models/notificationModel");
 
 /**
  * Dispatches a push notification to a specific user via Firebase Cloud Messaging.
@@ -11,6 +12,19 @@ const User = require("../models/userModel");
  */
 exports.sendPushNotification = async (userId, title, body, data = {}) => {
   try {
+    // 1. Save notification record in database first for inbox history
+    try {
+      await Notification.create({
+        user: userId,
+        title: title.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, "").trim(), // Strip emojis for title
+        body: body,
+        type: data.type || "system",
+        isRead: false
+      });
+    } catch (dbErr) {
+      console.error(`Failed to store notification log in DB for user ${userId}:`, dbErr.message);
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       console.warn(`Push notification failed: User with ID ${userId} not found.`);

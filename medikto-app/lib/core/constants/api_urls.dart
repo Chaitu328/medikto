@@ -30,4 +30,7 @@ class ApiUrls {
   static const String addPrescription = "/prescriptions";
   static const String adherence = "/adherence";
 
+  static const String getNotifications = "/notifications";
+  static String markNotificationAsRead(String id) => "/notifications/$id/read";
+  static const String markAllNotificationsAsRead = "/notifications/read-all";
 }
