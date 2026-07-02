@@ -23,12 +23,8 @@ exports.verifyOTP = async (req, res) => {
     let user = await User.findOne({ phone });
 
     if (!user) {
-      // Create user if they do not exist
-      const isAdmin = phone === "+919704855196" || phone === "9704855196";
-      user = await User.create({
-        phone,
-        role: isAdmin ? "admin" : "user",
-        isVerified: true
+      return res.status(400).json({
+        message: "This phone number is not registered. Please sign up first."
       });
     } else {
       user.isVerified = true;
