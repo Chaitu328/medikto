@@ -5,6 +5,8 @@
 
 # Node modules
 node_modules/
+CHANGELOG.md
+MOBILE_SETUP.md
 
 # Logs
 npm-debug.log*
