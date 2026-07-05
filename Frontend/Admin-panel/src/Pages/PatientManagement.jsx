@@ -34,6 +34,26 @@ export default function Patients() {
 
   const itemsPerPage = 8;
 
+  // HOSPITAL LINK MODAL STATE
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [hospitalLinkModalOpen, setHospitalLinkModalOpen] = useState(false);
+  const [otpPhone, setOtpPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpSuccess, setOtpSuccess] = useState(false);
+  const [otpError, setOtpError] = useState("");
+
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+
+const isGuardian = role === "guardian";
+const isAdmin = role === "admin";
+const isSuperAdmin = role === "superadmin";
+
+ const gridClass = isGuardian
+    ? "grid grid-cols-7 gap-4"
+    : "grid grid-cols-8 gap-4";
+
   useEffect(() => {
     fetchPatients();
   }, []);
@@ -43,16 +63,9 @@ export default function Patients() {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        "http://localhost:4000/api/users"
-      );
+      const response = await api.get("/users");
 
-      const data = await response.json();
-
-      console.log("API DATA:", data);
-
-      // SAFE USERS
-      const patientData = Array.isArray(data?.users) ? data.users : [];
+      const patientData = Array.isArray(response?.data?.users) ? response.data.users : Array.isArray(response?.data) ? response.data : [];
 
       setPatients(patientData);
     } catch (error) {
@@ -223,6 +236,68 @@ const compliancePercent =
           100
       )
     : 0;
+
+  // HOSPITAL LINK MODAL HANDLERS
+  const openHospitalLinkModal = (patient) => {
+    setSelectedPatient(patient);
+    setOtpPhone(patient?.phone || "");
+    setOtpCode("");
+    setOtpSent(false);
+    setOtpSuccess(false);
+    setOtpError("");
+    setHospitalLinkModalOpen(true);
+  };
+
+  const closeHospitalLinkModal = () => {
+    setHospitalLinkModalOpen(false);
+    setSelectedPatient(null);
+    setOtpPhone("");
+    setOtpCode("");
+    setOtpSent(false);
+    setOtpSuccess(false);
+    setOtpError("");
+  };
+
+  const sendLinkOTP = async () => {
+    if (!otpPhone) {
+      setOtpError("Phone number is required");
+      return;
+    }
+    try {
+      setOtpLoading(true);
+      setOtpError("");
+      await api.post("/hospitals/send-link-otp", { phone: otpPhone });
+      setOtpSent(true);
+    } catch (error) {
+      setOtpError(error?.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const verifyLinkOTP = async () => {
+    if (!otpCode || otpCode.length < 4) {
+      setOtpError("Please enter a valid OTP");
+      return;
+    }
+    try {
+      setOtpLoading(true);
+      setOtpError("");
+      await api.post("/hospitals/verify-link", {
+        phone: otpPhone,
+        otp: otpCode,
+      });
+      setOtpSuccess(true);
+      setTimeout(() => {
+        closeHospitalLinkModal();
+        fetchPatients();
+      }, 1500);
+    } catch (error) {
+      setOtpError(error?.response?.data?.message || "Failed to verify OTP");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   // SKELETON LOADING
   if (loading) {
@@ -494,23 +569,29 @@ const compliancePercent =
       {/* TABLE */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
         {/* TABLE HEADER */}
-        <div className="grid grid-cols-7 gap-4 px-6 py-4 bg-[#F8FAFC] border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-[#64748B] sticky top-0 z-10">
-          <div className="flex items-center">Patient ID</div>
+<div
+  className={`${gridClass} px-6 py-4 bg-[#F8FAFC] border-b border-slate-200`}
+>          <div className="flex items-center">Patient ID</div>
           <div className="flex items-center">Name</div>
           <div className="flex items-center">Age / Gender</div>
           <div className="flex items-center">Contact</div>
           <div className="flex items-center">Subscription</div>
           <div className="flex items-center">Compliance</div>
           <div className="flex items-center">Last Activity</div>
+          {!isGuardian && (
+  <div className="flex items-center">
+    Actions
+  </div>
+)}
         </div>
 
         {/* ROWS */}
         {paginatedPatients.length > 0 ? (
           paginatedPatients.map((patient, index) => (
-            <div
-              key={patient?._id || index}
-              className="grid grid-cols-7 gap-4 px-6 py-5 border-b border-slate-100 items-center hover:bg-[#F8FAFC]/80 transition-all duration-200 group cursor-pointer"
-            >
+<div
+  key={patient?._id || index}
+  className={`${gridClass} px-6 py-5 border-b border-slate-100 items-center hover:bg-[#F8FAFC]/80 transition-all duration-200 group cursor-pointer`}
+>
               {/* ID */}
               <div className="flex items-center">
                 <span className="text-[#2563EB] font-semibold text-sm bg-[#2563EB]/5 px-2.5 py-1 rounded-lg group-hover:bg-[#2563EB]/10 transition-colors duration-200">
@@ -642,6 +723,29 @@ const compliancePercent =
                     })
                   : "Recently"}
               </div>
+
+              {/* ACTIONS */}
+              <div className="flex items-center">
+               {!isGuardian && (
+  patient?.hospitals?.length > 0 ? (
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+    >
+      Linked
+    </span>
+  ) : (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        openHospitalLinkModal(patient);
+      }}
+      className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg px-3 py-2 text-xs font-semibold transition-all shadow-sm"
+    >
+      Link Hospital
+    </button>
+  )
+)}
+              </div>
             </div>
           ))
         ) : (
@@ -728,6 +832,166 @@ const compliancePercent =
           </div>
         </div>
       </div>
+
+      {/* HOSPITAL LINK MODAL */}
+{!isGuardian &&
+ hospitalLinkModalOpen &&
+ selectedPatient && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={closeHospitalLinkModal}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-[500px] overflow-hidden">
+            {/* Header */}
+            <div className="px-8 pt-8 pb-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-bold text-[#0F172A]">
+                  Link Patient To Hospital
+                </h2>
+                <button
+                  onClick={closeHospitalLinkModal}
+                  className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors duration-200"
+                >
+                  <X className="w-4 h-4 text-[#64748B]" />
+                </button>
+              </div>
+              <p className="text-sm text-[#64748B] leading-relaxed">
+                Connect this patient securely using OTP verification.
+              </p>
+            </div>
+
+            {/* Patient Card */}
+            <div className="px-8 pb-6">
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200/60">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#2563EB]/20 to-[#10B981]/20 flex items-center justify-center flex-shrink-0">
+                  <UserCircle className="w-6 h-6 text-[#2563EB]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-[#0F172A] text-sm truncate">
+                    {selectedPatient?.firstName || selectedPatient?.name || "Unknown"}
+                  </h3>
+                  <p className="text-xs text-[#64748B] truncate">
+                    {selectedPatient?.phone || "No phone"}
+                  </p>
+                </div>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    (selectedPatient?.subscription || "").toLowerCase() === "premium"
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                      : (selectedPatient?.subscription || "").toLowerCase() === "basic"
+                      ? "bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/20"
+                      : "bg-slate-100 text-[#64748B] border border-slate-200/60"
+                  }`}
+                >
+                  {(selectedPatient?.subscription || "").toLowerCase() === "premium" && (
+                    <Crown className="w-3 h-3" />
+                  )}
+                  {selectedPatient?.subscription || "Free"}
+                </span>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-8 pb-8">
+              {otpSuccess ? (
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+                    <svg
+                      className="w-8 h-8 text-emerald-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-[#0F172A] mb-1">
+                    Hospital linked successfully
+                  </h3>
+                  <p className="text-sm text-[#64748B]">
+                    Closing in a moment...
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {/* Step 1: Phone */}
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      value={otpPhone}
+                      readOnly
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-4 text-sm text-[#0F172A] outline-none cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Step 2: OTP or Send Button */}
+                  {!otpSent ? (
+                    <button
+                      onClick={sendLinkOTP}
+                      disabled={otpLoading}
+                      className="w-full h-12 rounded-xl bg-[#2563EB] text-white text-sm font-semibold hover:bg-[#1D4ED8] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {otpLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Send OTP"
+                      )}
+                    </button>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
+                          Enter OTP
+                        </label>
+                        <input
+                          type="text"
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          placeholder="6-digit OTP"
+                          maxLength={6}
+                          className="w-full h-12 rounded-xl border border-slate-200 bg-white pl-4 pr-4 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all duration-200 text-center tracking-[0.5em] font-semibold"
+                        />
+                      </div>
+
+                      <button
+                        onClick={verifyLinkOTP}
+                        disabled={otpLoading || otpCode.length < 4}
+                        className="w-full h-12 rounded-xl bg-[#2563EB] text-white text-sm font-semibold hover:bg-[#1D4ED8] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {otpLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Verify & Link Hospital"
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {otpError && (
+                    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200/60 text-red-700 text-sm font-medium">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {otpError}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

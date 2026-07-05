@@ -94,8 +94,9 @@ export default function VitalsPage() {
  const filteredVitals = useMemo(() => {
   return vitals.filter((item) => {
     const patient =
-      users.find((u) => u._id === item?.user) || {};
-
+  item?.user?.firstName
+    ? item.user
+    : users.find((u) => u._id === item?.user) || {};
     const patientName =
       patient?.firstName ||
       patient?.phone ||
@@ -152,13 +153,11 @@ const latestTemp = [...filteredVitals]
   )[0];
 
   const latestPatient =
-  users.find(
-    (u) =>
-      u._id === latestBP?.user ||
-      u._id === latestHeart?.user ||
-      u._id === latestSugar?.user ||
-      u._id === latestTemp?.user
-  ) || {};
+  latestBP?.user ||
+  latestHeart?.user ||
+  latestSugar?.user ||
+  latestTemp?.user ||
+  {};
   // ================= CUSTOM TOOLTIP =================
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -547,12 +546,14 @@ const latestTemp = [...filteredVitals]
     filteredVitals.forEach((item) => {
 
       const userId =
-        item?.user || "unknown-user";
+  item?.user?._id || item?.user || "unknown-user";
 
       if (!groupedVitals[userId]) {
         groupedVitals[userId] = {
           patient:
-            users.find((u) => u._id === userId) || {},
+  item?.user?.firstName
+    ? item.user
+    : users.find((u) => u._id === userId) || {},
 
           bloodPressure: null,
           heartRate: null,

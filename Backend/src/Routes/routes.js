@@ -21,7 +21,13 @@ const {
 
 const {
   sendLinkOTP,
-  verifyAndLink
+  verifyAndLink,
+  createHospitalWithAdmin,
+  getHospitals,
+  getHospitalById,
+  updateHospital,
+  updateHospitalStatus,
+  deleteHospital
 } = require("../controllers/hospitalController");
 
 const {
@@ -56,7 +62,11 @@ const {
 
 const {
   verifyOTP,
-  register
+  register,
+  adminLogin,
+  changePassword,
+    toggleAdminStatus,
+  deleteAdmin,
 } = require("../controllers/authContoller");
 
 const {
@@ -87,10 +97,59 @@ const {
   markAllAsRead
 } = require("../controllers/notificationController");
 
+const {
+  loginSuccess,
+} = require("../controllers/superadminController");
+
+const {
+  createGuardian,
+   guardianLogin,
+    changeGuardianPassword,
+    getGuardianInvitations,
+    acceptInvitation,
+    rejectInvitation,
+       getAllGuardians
+} = require("../controllers/guardianController");
+
+const passport = require("passport");
 
 // ================= AUTH =================
 router.post("/auth/verifyOTP", verifyOTP);
 router.post("/auth/register", register);
+
+// ================= ADMIN AUTH (HOSPITAL ADMINS) =================
+router.post("/admin/login", adminLogin);
+router.put("/admin/change-password", auth, changePassword);
+router.patch(
+  "/admins/:id/status",
+  auth,
+  toggleAdminStatus
+);
+
+router.delete(
+  "/admins/:id",
+  auth,
+  deleteAdmin
+);
+
+// ================= SUPER ADMIN GOOGLE AUTH =================
+
+// Login with Google
+router.get(
+  "/superadmin/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+  })
+);
+
+// Google Callback
+router.get(
+  "/superadmin/google/callback",
+  passport.authenticate("google", {
+    session: false,
+  }),
+  loginSuccess
+);
 
 
 // ================= USER =================
@@ -107,11 +166,52 @@ router.post("/hospitals/verify-link", auth, verifyAndLink);
 router.get("/profile/hospitals", auth, getConnectedHospitals);
 router.delete("/profile/hospitals/:hospitalId", auth, unlinkHospital);
 
+// ================= SUPER ADMIN HOSPITAL MANAGEMENT =================
+router.post("/hospitals/create-with-admin", auth, createHospitalWithAdmin);
+router.get("/hospitals", auth, getHospitals);
+router.get("/hospitals/:id", auth, getHospitalById);
+router.put("/hospitals/:id", auth, updateHospital);
+router.patch("/hospitals/:id/status", auth, updateHospitalStatus);
+router.delete("/hospitals/:id", auth, deleteHospital);
+
 // ================= CARETAKERS / OBSERVERS =================
-router.post("/profile/caretakers/invite", auth, inviteCaretaker);
+// router.post("/profile/caretakers/invite", auth, inviteCaretaker);
 router.get("/profile/caretakers", auth, getCaretakers);
-router.delete("/profile/caretakers/:id", auth, deleteCaretaker);
-router.get("/profile/caretakers/patients", auth, getCaretakerPatients);
+// router.delete("/profile/caretakers/:id", auth, deleteCaretaker);
+// router.get("/profile/caretakers/patients", auth, getCaretakerPatients);
+router.post(
+  "/guardians/create",
+  auth,
+  createGuardian
+);
+router.post("/guardian/login", guardianLogin);
+router.put(
+    "/guardian/change-password",
+    auth,
+    changeGuardianPassword
+);
+
+router.get(
+    "/guardian/invitations",
+    auth,
+    getGuardianInvitations
+);
+
+router.post(
+    "/guardian/invitations/:id/accept",
+    auth,
+    acceptInvitation
+);
+router.post(
+    "/guardian/invitations/:id/reject",
+    auth,
+    rejectInvitation
+);
+router.get(
+    "/guardians",
+    auth,
+    getAllGuardians
+);
 
 
 // ================= MEDICATION =================
@@ -125,9 +225,9 @@ router.post("/dose/:doseId/verify", auth, auth.blockGuardianWrite, upload.single
 router.delete("/dose/:doseId/selfie", auth, auth.blockGuardianWrite, deleteSelfie);
 
 //====== admin ==========
-router.put("/admin/recover-selfie/:id" , recoverSelfie)
-router.delete("/admin/delete-selfie/:id" , adminDeleteSelfie)
-router.get("/admin/deleted-selfies" , getDeletedSelfies)
+router.put("/admin/recover-selfie/:id", auth, recoverSelfie);
+router.delete("/admin/delete-selfie/:id", auth, adminDeleteSelfie);
+router.get("/admin/deleted-selfies", auth, getDeletedSelfies);
 
 
 // ================= LOGS ================= 

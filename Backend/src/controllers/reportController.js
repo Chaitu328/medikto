@@ -2,6 +2,10 @@ const PLAN_LIMITS = require("../utils/planLimits");
 const User = require("../models/userModel");
 const Report = require("../models/reportModel");
 const cloudinary = require("../config/cloudinary");
+const {
+  buildUserAccessFilter,
+  shouldPopulateUser,
+} = require("../utils/accessControl");
 
 
 const formatDate = (date) => {
@@ -54,13 +58,16 @@ exports.uploadReport = async (req, res) => {
 exports.getReports =
   async (req, res) => {
     try {
-      const userId = req.query.patientId || req.user.id;
-      const reports =
-        await Report.find({ user: userId })
-          // .populate("user")
-          .sort({
-            date: -1,
-          });
+      const filter = await buildUserAccessFilter(req, req.query.patientId);
+      const query = Report.find(filter).sort({
+        date: -1,
+      });
+
+      if (shouldPopulateUser(req)) {
+        query.populate("user", "firstName phone email profilePic subscription hospitals");
+      }
+
+      const reports = await query;
 
       res.json(reports);
 
@@ -79,8 +86,14 @@ exports.getReports =
 
 exports.getReportById = async (req, res) => {
   try {
-    const userId = req.query.patientId || req.user.id;
-    const report = await Report.findOne({ _id: req.params.id, user: userId });
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+    const query = Report.findOne({ _id: req.params.id, ...filter });
+
+    if (shouldPopulateUser(req)) {
+      query.populate("user", "firstName phone email profilePic subscription hospitals");
+    }
+
+    const report = await query;
 
     if (!report) {
       return res.status(404).json({
@@ -109,7 +122,8 @@ exports.updateReport = async (req, res) => {
       date
     } = req.body;
 
-    const report = await Report.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+    const report = await Report.findOne({ _id: req.params.id, ...filter });
 
     if (!report) {
       return res.status(404).json({
@@ -158,11 +172,12 @@ exports.updateReport = async (req, res) => {
 exports.deleteReport = async (req, res) => {
   try {
 
-    const report = await Report.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+    const report = await Report.findOne({ _id: req.params.id, ...filter });
 
     if (!report) {
-      return res.status(404).json({
-        message: "Report not found"
+      return res.status(403).json({
+        message: "Access denied"
       });
     }
 
@@ -184,13 +199,19 @@ exports.deleteReport = async (req, res) => {
 
 exports.getReportsByType = async (req, res) => {
   try {
-    const userId = req.query.patientId || req.user.id;
-    const reports = await Report.find({
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+    const query = Report.find({
       type: req.params.type,
-      user: userId
+      ...filter
     }).sort({
       date: -1
     });
+
+    if (shouldPopulateUser(req)) {
+      query.populate("user", "firstName phone email profilePic subscription hospitals");
+    }
+
+    const reports = await query;
 
     res.json(reports);
 

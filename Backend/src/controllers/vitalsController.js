@@ -1,4 +1,8 @@
 const Vitals = require("../models/vitalsModel");
+const {
+  buildUserAccessFilter,
+  shouldPopulateUser,
+} = require("../utils/accessControl");
 
 // Combine date + time from frontend
 const getDateTime = (date, time) => {
@@ -182,13 +186,16 @@ exports.addSugar = async (req, res) => {
 exports.getVitals =
   async (req, res) => {
     try {
-      const userId = req.query.patientId || req.user.id;
-      const vitals =
-        await Vitals.find({ user: userId })
-          // .populate("user")
-          .sort({
-            recordedAt: -1,
-          });
+      const filter = await buildUserAccessFilter(req, req.query.patientId);
+      const query = Vitals.find(filter).sort({
+        recordedAt: -1,
+      });
+
+      if (shouldPopulateUser(req)) {
+        query.populate("user", "firstName phone email profilePic subscription hospitals");
+      }
+
+      const vitals = await query;
 
       res.json(vitals);
 
@@ -206,8 +213,14 @@ exports.getVitals =
 
 exports.getVitalById = async (req, res) => {
   try {
-    const userId = req.query.patientId || req.user.id;
-    const vital = await Vitals.findOne({ _id: req.params.id, user: userId });
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+    const query = Vitals.findOne({ _id: req.params.id, ...filter });
+
+    if (shouldPopulateUser(req)) {
+      query.populate("user", "firstName phone email profilePic subscription hospitals");
+    }
+
+    const vital = await query;
 
     if (!vital) {
       return res.status(404).json({

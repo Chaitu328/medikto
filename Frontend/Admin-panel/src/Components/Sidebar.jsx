@@ -11,74 +11,211 @@ import {
   Activity,
   Delete,
   Trash2,
+  Building2,
+  UserPlus,
+  ShieldCheck,
 } from "lucide-react";
 
 import { NavLink } from "react-router-dom";
 
-const menuItems = [
+const role = localStorage.getItem("role");
+
+
+
+const superAdminMenu = [
   {
     icon: LayoutDashboard,
     label: "Dashboard",
     path: "/",
   },
-
+  {
+    icon: Users,
+    label: "Admins",
+    path: "/admins",
+  },
+  {
+    icon: Building2,
+    label: "Hospitals",
+    path: "/hospitals",
+  },
+  // {
+  //   icon: UserPlus,
+  //   label: "Hospital Requests",
+  //   path: "/hospital-requests",
+  // },
+  {
+    icon: ShieldCheck,
+    label: "Caretakers",
+    path: "/caretakers",
+  },
   {
     icon: Users,
     label: "Patients",
     path: "/patients",
   },
-
   {
     icon: Pill,
     label: "Medications",
     path: "/medications",
   },
-
   {
     icon: Calendar,
     label: "Schedule",
     path: "/today-schedule",
   },
-
-  {
-    icon: Trash2,
-    label: "DeletedSelfie",
-    path:"/deletedselfie",
-  },
-
   {
     icon: FileText,
     label: "Prescriptions",
     path: "/prescriptions",
   },
-
   {
     icon: ClipboardList,
     label: "Reports",
     path: "/reports",
   },
-
   {
     icon: HeartPulse,
     label: "Vitals",
     path: "/vitals",
   },
-
   {
     icon: CheckCircle2,
-    label: "Compliance Tracking",
+    label: "Compliance",
+    path: "/compliance",
+  },
+  {
+    icon: Trash2,
+    label: "Deleted Selfies",
+    path: "/deletedselfie",
+  },
+  {
+    icon: Settings,
+    label: "Settings",
+    path: "/settings",
+  },
+];
+
+const adminMenu = [
+  {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    path: "/",
+  },
+  {
+    icon: Users,
+    label: "Patients",
+    path: "/patients",
+  },
+  // {
+  //   icon: UserPlus,
+  //   label: "Hospital Requests",
+  //   path: "/hospital-requests",
+  // },
+  {
+    icon: ShieldCheck,
+    label: "Caretakers",
+    path: "/caretakers",
+  },
+  {
+    icon: Pill,
+    label: "Medications",
+    path: "/medications",
+  },
+  {
+    icon: Calendar,
+    label: "Schedule",
+    path: "/today-schedule",
+  },
+  {
+    icon: FileText,
+    label: "Prescriptions",
+    path: "/prescriptions",
+  },
+  {
+    icon: ClipboardList,
+    label: "Reports",
+    path: "/reports",
+  },
+  {
+    icon: HeartPulse,
+    label: "Vitals",
+    path: "/vitals",
+  },
+  {
+    icon: CheckCircle2,
+    label: "Compliance",
     path: "/compliance",
   },
 ];
+
+const guardianMenu = [
+  {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    path: "/",
+  },
+  {
+    icon: ClipboardList,
+    label: "Pending Requests",
+    path: "/pendingrequests"
+  },
+  {
+    icon: Users,
+    label: "My Patients",
+    path: "/patients",
+  },
+  {
+    icon: Pill,
+    label: "Medications",
+    path: "/medications",
+  },
+  {
+    icon: Calendar,
+    label: "Schedule",
+    path: "/today-schedule",
+  },
+  {
+    icon: FileText,
+    label: "Prescriptions",
+    path: "/prescriptions",
+  },
+  {
+    icon: ClipboardList,
+    label: "Reports",
+    path: "/reports",
+  },
+  {
+    icon: HeartPulse,
+    label: "Vitals",
+    path: "/vitals",
+  },
+  {
+    icon: Settings,
+    label: "Settings",
+    path: "/settings",
+  },
+];
+
+// const role = (localStorage.getItem("role") || "").toLowerCase();
+
+const menuItems =
+  role === "superadmin"
+    ? superAdminMenu
+    : role === "guardian"
+    ? guardianMenu
+    : adminMenu;
 
 export default function Sidebar() {
   return (
     <aside className="w-[260px] h-screen bg-white border-r border-gray-200 flex flex-col px-4 py-6 fixed left-0 top-0">
       {/* LOGO */}
       <div className="flex items-center gap-3 px-3 mb-10">
-        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-          <Activity className="text-white w-5 h-5" />
-        </div>
+          <div className="w-12 h-12 rounded-2xl bg-black backdrop-blur flex items-center justify-center">
+  <img
+    src="/Medikto.logo.png"
+    alt="Medikto Healthcare"
+    className="w-full max-w-md xl:max-w-lg object-contain drop-shadow-2xl"
+  />          </div>
 
         <div>
           <h1 className="text-[22px] font-bold text-blue-600">
@@ -92,7 +229,9 @@ export default function Sidebar() {
       </div>
 
       {/* MENU */}
-      <nav className="flex flex-col gap-2">
+      <nav
+  className="flex-1 flex flex-col gap-2 overflow-y-auto scrollbar-hide pr-1"
+>
         {menuItems.map((item, index) => {
           const Icon = item.icon;
 
@@ -126,12 +265,12 @@ export default function Sidebar() {
       </nav>
 
       {/* SETTINGS */}
-      <div className="mt-auto">
+      {/* <div className="mt-auto">
         <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 w-full">
           <Settings className="w-5 h-5" />
           Settings
         </button>
-      </div>
+      </div> */}
     </aside>
   );
 }

@@ -1,4 +1,8 @@
 const Dose = require("../models/doseModel");
+const {
+  buildUserAccessFilter,
+  shouldPopulateUser,
+} = require("../utils/accessControl");
 
 exports.getAdherence = async (req, res) => {
   try {
@@ -9,14 +13,26 @@ exports.getAdherence = async (req, res) => {
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
     // Filter for last 7 days
+    const accessFilter = req.user
+      ? await buildUserAccessFilter(req, req.query.patientId)
+      : {};
+
     const filter = {
+      ...accessFilter,
       createdAt: {
         $gte: sevenDaysAgo,
       },
     };
 
-    // Removed populate
-    const doses = await Dose.find(filter);
+    const query = Dose.find(filter);
+
+    if (req.user && shouldPopulateUser(req)) {
+      query
+        .populate("user", "firstName phone email profilePic subscription hospitals")
+        .populate("medication");
+    }
+
+    const doses = await query;
 
     const totalDoses = doses.length;
 
