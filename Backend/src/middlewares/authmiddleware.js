@@ -18,8 +18,25 @@ const auth = async (req, res, next) => {
       req.user = { id: "123456", role: "admin" };
       return next();
     }
+    // 2. Super Admin Dev Bypass
+if (token === "superadmin-token") {
+  const superAdmin = await User.findOne({ role: "superadmin" });
 
-    // 2. Dev Bypass for Mobile App Developers (Patient test users)
+  if (!superAdmin) {
+    return res.status(404).json({
+      message: "Super Admin not found"
+    });
+  }
+
+  req.user = {
+    id: superAdmin._id.toString(),
+    role: "superadmin"
+  };
+
+  return next();
+}
+
+    // 3. Dev Bypass for Mobile App Developers (Patient test users)
     if (token.startsWith("mock_")) {
       const firstUser = await User.findOne({ role: "user" });
       if (firstUser) {
@@ -37,11 +54,14 @@ const auth = async (req, res, next) => {
       return next();
     }
 
-    // 3. Standard JWT Validation
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    // 4. Standard JWT Validation
+    console.log("JWT_SECRET:", process.env.JWT_SECRET);
+console.log("TOKEN:", token);
+
+const decoded = jwt.verify(
+  token,
+  process.env.JWT_SECRET
+);
 
     req.user = decoded;
     next();

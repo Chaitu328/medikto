@@ -1,10 +1,10 @@
-const dns = require("dns");
+// const dns = require("dns");
 
-// Set custom DNS servers
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
+// // Set custom DNS servers
+// dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
-// Prefer IPv4
-dns.setDefaultResultOrder("ipv4first");
+// // Prefer IPv4
+// dns.setDefaultResultOrder("ipv4first");
 
 const express = require("express");
 const connectDB = require("./src/config/db");
@@ -12,6 +12,8 @@ const cors = require("cors");
 
 
 require("dotenv").config();
+
+const passport = require("./src/config/passport");
 
 const cron = require("node-cron");
 
@@ -37,6 +39,8 @@ try {
 app.use(cors());
 
 app.use(express.json());
+
+app.use(passport.initialize());
 
 connectDB();
 

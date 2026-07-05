@@ -46,7 +46,6 @@ const userSchema = new mongoose.Schema({
     enum: ["free", "basic", "premium"],
     default: "free"
   },
-
   familyMembers: [
     {
       name: String,
@@ -66,7 +65,23 @@ const userSchema = new mongoose.Schema({
   timezone: { type: String, default: "UTC" },
 
   // List of patients monitored by this caretaker
-  guardianFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
+  guardianFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+   isFirstLogin: {
+    type: Boolean,
+    default: true
+},
+
+mustChangePassword: {
+    type: Boolean,
+    default: true
+},
+
+accountStatus: {
+    type: String,
+    enum: ["pending","active","disabled"],
+    default: "pending"
+}
 
 }, { timestamps: true });
 

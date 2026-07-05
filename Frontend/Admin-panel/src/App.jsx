@@ -29,6 +29,13 @@ import ComplianceTracker from "./Pages/ComplianceTracker";
 import "./App.css";
 import DeletedSelfies from "./Pages/DeletedSelfies";
 
+import Hospitals from "./Pages/Hospitals";
+import HospitalRequests from "./Pages/HospitalRequests";
+import Caretakers from "./Pages/Caretakers";
+import Admins from "./Pages/Admins";
+import PendingRequests from "./Pages/PendingRequests";
+import Settings from "./Pages/Settings";
+
 // ================= ADMIN PROTECTED ROUTE =================
 function ProtectedRoute({
   children,
@@ -73,6 +80,20 @@ function App() {
                     path="/"
                     element={
                       <Dashboard />
+                    }
+                  />
+
+                   <Route
+                    path="/admins"
+                    element={
+                      <Admins />
+                    }
+                  />
+
+                  <Route
+                    path="/pendingrequests"
+                    element={
+                      <PendingRequests/>
                     }
                   />
 
@@ -138,6 +159,26 @@ function App() {
                       <ComplianceTracker />
                     }
                   />
+
+                  <Route
+  path="/hospitals"
+  element={<Hospitals />}
+/>
+
+<Route
+  path="/hospital-requests"
+  element={<HospitalRequests />}
+/>
+
+<Route
+  path="/caretakers"
+  element={<Caretakers />}
+/>
+
+<Route
+  path="/settings"
+  element={<Settings/>}
+/>
                 </Routes>
               </Layout>
             </ProtectedRoute>

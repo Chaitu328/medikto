@@ -3,6 +3,10 @@ const PLAN_LIMITS = require("../utils/planLimits");
 const User = require("../models/userModel");
 const Dose = require("../models/doseModel");
 const cloudinary = require("../config/cloudinary");
+const {
+  buildUserAccessFilter,
+  shouldPopulateUser,
+} = require("../utils/accessControl");
 
 const timingToTimeMap = {
   morning: "08:30 AM",
@@ -72,11 +76,14 @@ exports.addMedication = async (req, res) => {
 // ================= GET MEDICATIONS =================
 exports.getMedications = async (req, res) => {
   try {
-    // Caretakers can view their patient's medications via ?patientId=...
-    const userId = req.query.patientId || req.user.id;
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
 
-    const meds = await Medication.find({ user: userId })
-      .sort({ createdAt: -1 });
+    const query = Medication.find(filter).sort({ createdAt: -1 });
+    if (shouldPopulateUser(req)) {
+      query.populate("user", "firstName phone email profilePic subscription hospitals");
+    }
+
+    const meds = await query;
 
     res.json(meds);
 
@@ -118,14 +125,21 @@ exports.getTodaySchedule = async (req, res) => {
     // If no date sent, use today
     const date = selectedDate || getTodayDate();
 
-    // Caretakers can view their patient's schedule via ?patientId=...
-    const userId = req.query.patientId || req.user.id;
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
 
     // Fetch doses filtered by user and date
-    const doses = await Dose.find({
-      user: userId,
+    const query = Dose.find({
+      ...filter,
       date: date,
     }).sort({ time: 1 });
+
+    if (shouldPopulateUser(req)) {
+      query
+        .populate("user", "firstName phone email profilePic subscription hospitals")
+        .populate("medication");
+    }
+
+    const doses = await query;
 
     res.status(200).json({
       success: true,
@@ -149,11 +163,19 @@ exports.markAsTaken = async (req, res) => {
 
     const { doseId } = req.params;
 
-    const dose = await Dose.findById(doseId);
+    const dose = await Dose.findById(doseId).populate("user");
 
     if (!dose) {
       return res.status(404).json({
         message: "Dose not found"
+      });
+    }
+
+    // Verify user has access to this dose
+    const filter = await buildUserAccessFilter(req, dose.user._id.toString());
+    if (Object.keys(filter).length > 0 && !filter.user) {
+      return res.status(403).json({
+        message: "Access denied"
       });
     }
 
@@ -183,7 +205,7 @@ exports.verifyWithSelfie = async (req, res) => {
       });
     }
 
-    const dose = await Dose.findById(doseId);
+    const dose = await Dose.findById(doseId).populate("user");
 
     if (!dose) {
       return res.status(404).json({
@@ -191,7 +213,13 @@ exports.verifyWithSelfie = async (req, res) => {
       });
     }
 
-    // --- Build timestamp overlay text for selfie ---
+    // Verify user has access to this dose
+    const filter = await buildUserAccessFilter(req, dose.user._id.toString());
+    if (Object.keys(filter).length > 0 && !filter.user) {
+      return res.status(403).json({
+        message: "Access denied"
+      });
+    }
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], {
       hour: "2-digit",
@@ -280,7 +308,7 @@ exports.deleteSelfie = async (req, res) => {
 
     const { doseId } = req.params;
 
-    const dose = await Dose.findById(doseId);
+    const dose = await Dose.findById(doseId).populate("user");
 
     if (!dose) {
       return res.status(404).json({
@@ -288,12 +316,18 @@ exports.deleteSelfie = async (req, res) => {
       });
     }
 
+    // Verify user has access to this dose
+    const filter = await buildUserAccessFilter(req, dose.user._id.toString());
+    if (Object.keys(filter).length > 0 && !filter.user) {
+      return res.status(403).json({
+        message: "Access denied"
+      });
+    }
+
     dose.isDeleted = true;
     dose.deletedAt = new Date();
-   dose.deletionReason =
-  "system-auto-delete";
-
-dose.deletedBy = "system";
+    dose.deletionReason = "system-auto-delete";
+    dose.deletedBy = "system";
 
     const recoverDate = new Date();
 

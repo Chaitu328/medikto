@@ -1,14 +1,19 @@
 const User = require("../models/userModel");
-const Hospital = require("../models/hospitalModel");
 const cloudinary = require("../config/cloudinary");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendInviteEmail } = require("../utils/emailHelper");
+const { buildPatientListFilter } = require("../utils/accessControl");
 
 
 
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+  const user = await User.findById(req.user.id)
+  .populate({
+    path: "hospital",
+    select: "name email phone address",
+  })
+  .select("-password");
 
     if (!user) {
       return res.status(404).json({
@@ -27,39 +32,7 @@ exports.getProfile = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    let query = { role: "user" }; // Only return patient users by default
-
-    // If request comes from an authenticated admin, filter by their hospital
-    if (req.user && req.user.role === "admin") {
-      let hospitalId;
-      if (req.user.id === "123456") {
-        const dummyHosp = await Hospital.findOne({ name: "Demo Hospital" });
-        if (dummyHosp) {
-          hospitalId = dummyHosp._id;
-        }
-      } else {
-        const admin = await User.findById(req.user.id);
-        if (admin && admin.hospital) {
-          hospitalId = admin.hospital;
-        } else {
-          const hosp = await Hospital.findOne({ adminId: req.user.id });
-          if (hosp) {
-            hospitalId = hosp._id;
-          }
-        }
-      }
-
-      if (hospitalId) {
-        query.hospitals = hospitalId;
-      } else {
-        // If the admin is not linked to any hospital, they shouldn't see any patients
-        return res.status(200).json({
-          success: true,
-          count: 0,
-          users: [],
-        });
-      }
-    }
+    const query = await buildPatientListFilter(req, req.query.patientId);
 
     const users = await User.find(query)
       .select("-password")

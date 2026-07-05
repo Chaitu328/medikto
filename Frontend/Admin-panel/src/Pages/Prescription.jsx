@@ -735,10 +735,10 @@ const compliancePercent =
               </p>
             </div>
 
-            <button className="h-11 px-5 rounded-xl bg-[#2563EB] text-white font-semibold shadow-lg shadow-[#2563EB]/20 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-[#2563EB]/30 transition-all duration-300 flex items-center gap-2">
+            {/* <button className="h-11 px-5 rounded-xl bg-[#2563EB] text-white font-semibold shadow-lg shadow-[#2563EB]/20 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-[#2563EB]/30 transition-all duration-300 flex items-center gap-2">
               <Upload className="w-4 h-4" />
               Upload Prescription
-            </button>
+            </button> */}
           </div>
 
           {/* LIST */}
@@ -773,16 +773,28 @@ const compliancePercent =
 
                   {/* ACTIONS */}
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200">
-                      <Eye className="w-4 h-4 text-[#2563EB]" />
-                    </button>
-
                     <button
+  onClick={(e) => {
+    e.stopPropagation();
+
+    if (prescription?.fileUrl) {
+      window.open(prescription.fileUrl, "_blank", "noopener,noreferrer");
+    } else {
+      alert("Prescription file not available.");
+    }
+  }}
+  className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200"
+  title="View Prescription"
+>
+  <Eye className="w-4 h-4 text-[#2563EB]" />
+</button>
+
+                    {/* <button
                       onClick={() => handleDeletePrescription(prescription?._id)}
                       className="w-9 h-9 rounded-lg border border-red-200 flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-all duration-200"
                     >
                       <Trash2 className="w-4 h-4 text-[#EF4444]" />
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               ))

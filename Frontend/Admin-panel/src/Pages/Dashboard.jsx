@@ -34,18 +34,19 @@ import {
   Tooltip,
 } from "recharts";
 
-import api from "../api/axios";
+import api from "../Api/axios.js";
 
 export default function Dashboard() {
-  const [dashboard, setDashboard] = useState({
-    medications: [],
-    reports: [],
-    today: [],
-    vitals: [],
-    prescriptions: [],
-    adherence: {},
-    loading: true,
-  });
+const [dashboard, setDashboard] = useState({
+  medications: [],
+  reports: [],
+  today: [],
+  vitals: [],
+  patients: [],
+  prescriptions: [],
+  adherence: {},
+  loading: true,
+});
 
   const [chartData, setChartData] = useState([]);
 
@@ -67,21 +68,23 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [
-        medicationsRes,
-        reportsRes,
-        todayRes,
-        vitalsRes,
-        prescriptionsRes,
-        adherenceRes,
-      ] = await Promise.all([
-        api.get("/medications"),
-        api.get("/reports"),
-        api.get("/today"),
-        api.get("/vitals"),
-        api.get("/prescriptions"),
-        api.get("/adherence"),
-      ]);
+     const [
+  medicationsRes,
+  reportsRes,
+  todayRes,
+  vitalsRes,
+  prescriptionsRes,
+  adherenceRes,
+  patientsRes,
+] = await Promise.all([
+  api.get("/medications"),
+  api.get("/reports"),
+  api.get("/today"),
+  api.get("/vitals"),
+  api.get("/prescriptions"),
+  api.get("/adherence"),
+  api.get("/users"), // <-- use your patient endpoint
+]);
 
       const medications = normalizeArray(medicationsRes, "medications");
 
@@ -94,6 +97,8 @@ export default function Dashboard() {
       const prescriptions = normalizeArray(prescriptionsRes, "prescriptions");
 
       const adherence = adherenceRes?.data || {};
+
+      const patients = normalizeArray(patientsRes, "users");
 
       const adherenceChart = adherence?.data?.length
         ? adherence.data.slice(0, 7).map((item, index) => ({
@@ -113,14 +118,15 @@ export default function Dashboard() {
       setChartData(adherenceChart);
 
       setDashboard({
-        medications,
-        reports,
-        today,
-        vitals,
-        prescriptions,
-        adherence,
-        loading: false,
-      });
+  medications,
+  reports,
+  today,
+  vitals,
+  patients,
+  prescriptions,
+  adherence,
+  loading: false,
+});
     } catch (error) {
       console.log("Dashboard Error:", error);
 
@@ -235,9 +241,7 @@ export default function Dashboard() {
     );
   }
 
-  const totalPatients = Array.isArray(dashboard.vitals)
-    ? dashboard.vitals.length
-    : 0;
+  const totalPatients = dashboard.patients.length;
 
   const totalMedications = Array.isArray(dashboard.medications)
     ? dashboard.medications.length
@@ -506,8 +510,8 @@ const missedMedications =
             </div>
 
             <div className="space-y-3">
-              {Array.isArray(dashboard.vitals) && dashboard.vitals.length > 0 ? (
-                dashboard.vitals.slice(0, 3).map((vital, index) => (
+              {Array.isArray(dashboard.patients) && dashboard.patients.length > 0 ? (
+  dashboard.patients.slice(0, 3).map((patient, index) => (
                   <div
                     key={index}
                     className="p-4 rounded-2xl bg-red-50/60 border border-red-100/60 flex gap-4 hover:bg-red-50 hover:border-red-200 hover:shadow-sm transition-all duration-200 cursor-pointer group/alert"
@@ -520,11 +524,11 @@ const missedMedications =
 
                     <div className="min-w-0 flex-1">
                       <h4 className="font-semibold text-[#0F172A] text-sm truncate">
-                        {vital?.user?.name || "Patient"}
-                      </h4>
-                      <p className="text-xs text-[#64748B] mt-1">
-                        Critical vital detected — immediate review required
-                      </p>
+  {patient.firstName || "Patient"}
+</h4>
+<p className="text-xs text-[#64748B] mt-1">
+  {patient.phone}
+</p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-100 px-2 py-0.5 rounded-md">
                           URGENT
@@ -677,13 +681,12 @@ const missedMedications =
                 Recent Patients
               </h3>
               <span className="text-xs font-semibold text-[#64748B] bg-slate-100 px-2.5 py-1 rounded-lg">
-                {Array.isArray(dashboard.vitals) ? dashboard.vitals.length : 0} Active
-              </span>
+{dashboard.patients.length} Active              </span>
             </div>
 
             <div className="space-y-4">
-              {Array.isArray(dashboard.vitals) && dashboard.vitals.length > 0 ? (
-                dashboard.vitals.slice(0, 3).map((patient, index) => (
+              {Array.isArray(dashboard.patients) && dashboard.patients.length > 0 ? (
+  dashboard.patients.slice(0, 3).map((patient, index) => (
                   <div
                     key={index}
                     className="flex items-center justify-between p-3 rounded-xl hover:bg-[#F8FAFC] transition-all duration-200 cursor-pointer group/patient"
@@ -699,7 +702,7 @@ const missedMedications =
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-semibold text-[#0F172A] text-sm truncate">
-                          {patient?.user?.name || "Patient"}
+                          {patient?.firstName || "Patient"}
                         </h4>
                         <p className="text-xs text-[#64748B]">
                           Medication Checkup

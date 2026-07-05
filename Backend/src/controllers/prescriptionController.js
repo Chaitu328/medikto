@@ -1,5 +1,9 @@
 const Prescription = require("../models/prescriptionModel");
 const cloudinary = require("../config/cloudinary");
+const {
+  buildUserAccessFilter,
+  shouldPopulateUser,
+} = require("../utils/accessControl");
 
 
 exports.addPrescription = async (req, res) => {
@@ -56,13 +60,16 @@ exports.addPrescription = async (req, res) => {
 exports.getPrescriptions =
   async (req, res) => {
     try {
-      const userId = req.query.patientId || req.user.id;
-      const data =
-        await Prescription.find({ user: userId })
-          // .populate("user")
-          .sort({
-            createdAt: -1,
-          });
+      const filter = await buildUserAccessFilter(req, req.query.patientId);
+      const query = Prescription.find(filter).sort({
+        createdAt: -1,
+      });
+
+      if (shouldPopulateUser(req)) {
+        query.populate("user", "firstName phone email profilePic subscription hospitals");
+      }
+
+      const data = await query;
 
       res.json(data);
 
@@ -80,8 +87,14 @@ exports.getPrescriptions =
 
 exports.getPrescriptionById = async (req, res) => {
   try {
-    const userId = req.query.patientId || req.user.id;
-    const data = await Prescription.findOne({ _id: req.params.id, user: userId });
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+    const query = Prescription.findOne({ _id: req.params.id, ...filter });
+
+    if (shouldPopulateUser(req)) {
+      query.populate("user", "firstName phone email profilePic subscription hospitals");
+    }
+
+    const data = await query;
 
     if (!data) {
       return res.status(404).json({ message: "Not found" });
