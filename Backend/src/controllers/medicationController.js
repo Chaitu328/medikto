@@ -6,6 +6,7 @@ const cloudinary = require("../config/cloudinary");
 const {
   buildUserAccessFilter,
   shouldPopulateUser,
+  getAccessiblePatientIds,
 } = require("../utils/accessControl");
 
 const timingToTimeMap = {
@@ -28,7 +29,8 @@ exports.addMedication = async (req, res) => {
       unit,
       timings,
       notifications,
-      instructions
+      instructions,
+      frequency
     } = req.body;
 
     if (!name || !dosage || !unit || !timings?.length) {
@@ -44,7 +46,8 @@ exports.addMedication = async (req, res) => {
       unit,
       timings,
       notifications,
-      instructions
+      instructions,
+      frequency: frequency || "daily"
     });
 
     const today = getTodayDate();
@@ -117,6 +120,52 @@ exports.getMedications = async (req, res) => {
 //   }
 // };
 
+const ensureDosesExist = async (req, date) => {
+  try {
+    const patientIds = await getAccessiblePatientIds(req, req.query.patientId);
+    if (!patientIds || patientIds.length === 0) return;
+
+    for (const patientId of patientIds) {
+      const medications = await Medication.find({ user: patientId });
+      if (!medications || medications.length === 0) continue;
+
+      for (const med of medications) {
+        if (med.frequency === "weekly") {
+          const creationDay = new Date(med.createdAt).getDay();
+          const targetDay = new Date(date).getDay();
+          if (creationDay !== targetDay) {
+            continue; // Skip this medication on this date since it is not the scheduled weekday
+          }
+        }
+
+        const doseExists = await Dose.exists({
+          user: patientId,
+          medication: med._id,
+          date: date,
+        });
+
+        if (!doseExists) {
+          const newDoses = med.timings.map((t) => ({
+            user: patientId,
+            medication: med._id,
+            name: med.name,
+            dosage: `${med.dosage}${med.unit}`,
+            date: date,
+            time: timingToTimeMap[t.toLowerCase()] || t,
+            status: "pending",
+          }));
+
+          if (newDoses.length > 0) {
+            await Dose.insertMany(newDoses);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.log("Error in ensureDosesExist:", err.message);
+  }
+};
+
 exports.getTodaySchedule = async (req, res) => {
   try {
     // Get selected date from query
@@ -124,6 +173,9 @@ exports.getTodaySchedule = async (req, res) => {
 
     // If no date sent, use today
     const date = selectedDate || getTodayDate();
+
+    // Ensure schedules exist for this date
+    await ensureDosesExist(req, date);
 
     const filter = await buildUserAccessFilter(req, req.query.patientId);
 

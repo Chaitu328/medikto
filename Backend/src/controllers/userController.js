@@ -1,4 +1,6 @@
+const mongoose = require("mongoose");
 const User = require("../models/userModel");
+const Hospital = require("../models/hospitalModel");
 const cloudinary = require("../config/cloudinary");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendInviteEmail } = require("../utils/emailHelper");
@@ -305,16 +307,20 @@ exports.inviteCaretaker = async (req, res) => {
 exports.getCaretakers = async (req, res) => {
   try {
     const patientId = req.user.id;
+    if (!patientId || !mongoose.Types.ObjectId.isValid(patientId)) {
+      return res.status(400).json({ message: "Invalid patient ID" });
+    }
+    const patientObjectId = new mongoose.Types.ObjectId(patientId);
     
     // Find all accepted caretakers
     const acceptedCaretakers = await User.find({
       role: "guardian",
-      guardianFor: patientId
+      guardianFor: patientObjectId
     }).select("-password");
 
     // Find all pending invites
     const pendingInvites = await CaretakerInvite.find({
-      patientId,
+      patientId: patientObjectId,
       status: "pending"
     });
 

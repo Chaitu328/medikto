@@ -369,30 +369,33 @@ const InviteModal = ({
   patients,
   selectedPatient,
   setSelectedPatient,
+  hospitals,
 }) => {
   const [formData, setFormData] = useState({
-  name: "",
-  email: "",
-  phone: "",
-  relation: "Father",
-});
-
-  if (!isOpen) return null;
-
- const handleSubmit = (e) => {
-  e.preventDefault();
-
-  onSave(formData);
-
-  setFormData({
     name: "",
     email: "",
     phone: "",
     relation: "Father",
+    hospital: "",
   });
 
-  setSelectedPatient("");
-};
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    onSave(formData);
+
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      relation: "Father",
+      hospital: "",
+    });
+
+    setSelectedPatient("");
+  };
 
   return (
     <>
@@ -408,21 +411,21 @@ const InviteModal = ({
           <div className="space-y-4">
             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Guardian Details</h4>
             <FormField label="Patient" required>
- <select
-  value={selectedPatient}
-  onChange={(e) => setSelectedPatient(e.target.value)}
-  className="w-full px-4 py-2.5 rounded-xl border border-slate-200"
-  required
->
-  <option value="">Select Patient</option>
+              <select
+                value={selectedPatient}
+                onChange={(e) => setSelectedPatient(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200"
+                required
+              >
+                <option value="">Select Patient</option>
 
-  {(patients || []).map((patient) => (
-    <option key={patient._id} value={patient._id}>
-      {patient.firstName}
-    </option>
-  ))}
-</select>
-</FormField>
+                {(patients || []).map((patient) => (
+                  <option key={patient._id} value={patient._id}>
+                    {patient.firstName}
+                  </option>
+                ))}
+              </select>
+            </FormField>
             <FormField label="Full Name" required>
               <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Enter guardian name" required />
             </FormField>
@@ -438,6 +441,14 @@ const InviteModal = ({
               <select value={formData.relation} onChange={(e) => setFormData({ ...formData, relation: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">
                 {["Father", "Mother", "Brother", "Sister", "Friend", "Doctor", "Guardian", "Other"].map((r) => (
                   <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Assigned Hospital" required>
+              <select value={formData.hospital} onChange={(e) => setFormData({ ...formData, hospital: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white" required>
+                <option value="">Select Hospital</option>
+                {(hospitals || []).map((h) => (
+                  <option key={h._id} value={h._id}>{h.name}</option>
                 ))}
               </select>
             </FormField>
@@ -616,7 +627,8 @@ const GuardiansManagement = () => {
   const [resendLoading, setResendLoading] = useState({});
   const [resetLoading, setResetLoading] = useState({});
   const [patients, setPatients] = useState([]);
-const [selectedPatient, setSelectedPatient] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState("");
+  const [hospitals, setHospitals] = useState([]);
 
   const ITEMS_PER_PAGE = 10;
 
@@ -680,9 +692,19 @@ const fetchPatients = async () => {
   }
 };
 
+const fetchHospitals = async () => {
+  try {
+    const res = await api.get("/hospitals");
+    setHospitals(res.data.hospitals || res.data || []);
+  } catch (err) {
+    console.error("Failed to fetch hospitals:", err);
+  }
+};
+
  useEffect(() => {
     fetchData();
-      fetchPatients();
+    fetchPatients();
+    fetchHospitals();
   }, []);
 
   // Unique relations for filter
@@ -797,13 +819,14 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
   const handleInvite = async (formData) => {
     setInviteLoading(true);
     try {
-     await api.post("/guardians/create", {
-  patientId: selectedPatient,   // <-- Patient ID
-  firstName: formData.name,
-  email: formData.email,
-  phone: formData.phone,
-  relation: formData.relation,
-});
+      await api.post("/guardians/create", {
+        patientId: selectedPatient,
+        firstName: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        relation: formData.relation,
+        hospital: formData.hospital,
+      });
       await fetchData();
       setInviteModalOpen(false);
     } catch (err) {
@@ -1321,14 +1344,15 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
       {/* INVITE MODAL */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       <InviteModal
-  isOpen={inviteModalOpen}
-  onClose={() => setInviteModalOpen(false)}
-  onSave={handleInvite}
-  loading={inviteLoading}
-  patients={patients}
-  selectedPatient={selectedPatient}
-  setSelectedPatient={setSelectedPatient}
-/>
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        onSave={handleInvite}
+        loading={inviteLoading}
+        patients={patients}
+        selectedPatient={selectedPatient}
+        setSelectedPatient={setSelectedPatient}
+        hospitals={hospitals}
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* EDIT MODAL */}

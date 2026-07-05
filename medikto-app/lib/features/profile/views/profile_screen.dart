@@ -13,6 +13,7 @@ import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:medikto/features/profile/views/edit_profile.dart';
 import 'package:medikto/features/profile/views/connected_hospitals_screen.dart';
+import 'package:medikto/features/profile/views/manage_caretakers_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -187,413 +188,560 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               SizedBox(height: screenSize.height * 0.016),
 
               /// 🔹 Profile Card (Dark Mode)
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const EditProfileScreen(),
-                    ),
-                  );
-                },
-                child: profileAsync.when(
-                  data: (response) {
-                    if (response.status != ResponseStatus.SUCCESS) {
-                      return const SizedBox();
-                    }
+              profileAsync.when(
+                data: (response) {
+                  if (response.status != ResponseStatus.SUCCESS) {
+                    return const SizedBox();
+                  }
 
-                    final ProfileModel profile = response.data;
+                  final ProfileModel profile = response.data;
+                  final isGuardian = profile.role == "guardian";
 
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const EditProfileScreen(),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.05),
-                          ),
+                  if (isGuardian) {
+                    final hospitalName = profile.hospital != null
+                        ? (profile.hospital!['name'] ?? "Unknown Hospital")
+                        : "No Hospital Assigned";
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.05),
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            /// PROFILE IMAGE
-                            Container(
-                              height: 72,
-                              width: 72,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: accentCyan.withOpacity(0.4),
-                                  width: 1.5,
-                                ),
-                                color: Colors.white.withOpacity(0.04),
-
-                                image:
-                                    profile.profilePic != null &&
-                                        profile.profilePic!.isNotEmpty
-                                    ? DecorationImage(
-                                        image: CachedNetworkImageProvider(
-                                          "${profile.profilePic!}?t=${DateTime.now().millisecondsSinceEpoch}",
-                                        ),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
+                      ),
+                      child: Column(
+                        children: [
+                          Center(
+                            child: CircleAvatar(
+                              radius: 50,
+                              backgroundColor: Colors.white10,
+                              backgroundImage: profile.profilePic != null && profile.profilePic!.isNotEmpty
+                                  ? CachedNetworkImageProvider(
+                                      "${profile.profilePic!}?t=${DateTime.now().millisecondsSinceEpoch}",
+                                    )
+                                  : null,
+                              child: profile.profilePic == null || profile.profilePic!.isEmpty
+                                  ? const Icon(Icons.person, color: accentCyan, size: 50)
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: Text(
+                              profile.firstName ?? "Guardian",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: accentCyan.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: const Text(
+                                "GUARDIAN",
+                                style: TextStyle(
+                                  color: accentCyan,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          const Divider(color: Colors.white10),
+                          const SizedBox(height: 16),
+                          _buildDetailRow(Icons.email_outlined, "Email", profile.email ?? "Not provided"),
+                          const SizedBox(height: 16),
+                          _buildDetailRow(Icons.phone_outlined, "Mobile Number", profile.phone ?? "Not provided"),
+                          const SizedBox(height: 16),
+                          _buildDetailRow(Icons.local_hospital_outlined, "Assigned Hospital", hospitalName),
+                        ],
+                      ),
+                    );
+                  }
 
-                              child:
-                                  profile.profilePic == null ||
-                                      profile.profilePic!.isEmpty
-                                  ? const Icon(
-                                      Icons.person,
-                                      color: accentCyan,
-                                      size: 34,
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          /// PROFILE IMAGE
+                          Container(
+                            height: 72,
+                            width: 72,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: accentCyan.withOpacity(0.4),
+                                width: 1.5,
+                              ),
+                              color: Colors.white.withOpacity(0.04),
+
+                              image:
+                                  profile.profilePic != null &&
+                                      profile.profilePic!.isNotEmpty
+                                  ? DecorationImage(
+                                      image: CachedNetworkImageProvider(
+                                        "${profile.profilePic!}?t=${DateTime.now().millisecondsSinceEpoch}",
+                                      ),
+                                      fit: BoxFit.cover,
                                     )
                                   : null,
                             ),
-                            const SizedBox(width: 14),
 
-                            /// DETAILS
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  /// NAME
-                                  Text(
-                                    profile.firstName?.isNotEmpty == true
-                                        ? profile.firstName!
-                                        : "Medikto User",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                            child:
+                                profile.profilePic == null ||
+                                    profile.profilePic!.isEmpty
+                                ? const Icon(
+                                    Icons.person,
+                                    color: accentCyan,
+                                    size: 34,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 14),
+
+                          /// DETAILS
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                /// NAME
+                                Text(
+                                  profile.firstName?.isNotEmpty == true
+                                      ? profile.firstName!
+                                      : "Medikto User",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
                                   ),
+                                ),
 
-                                  const SizedBox(height: 6),
+                                const SizedBox(height: 6),
 
-                                  /// PHONE
-                                  Text(
-                                    profile.phone ?? "--",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white60,
-                                      fontSize: 13,
-                                    ),
+                                /// PHONE
+                                Text(
+                                  profile.phone ?? "--",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 13,
                                   ),
+                                ),
 
-                                  const SizedBox(height: 14),
+                                const SizedBox(height: 14),
 
-                                  /// BADGES
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      /// VERIFIED
-                                      if (profile.isVerified == true)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 6,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(
-                                              0.12,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              30,
-                                            ),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.verified,
-                                                size: 14,
-                                                color: Colors.greenAccent,
-                                              ),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                "Verified",
-                                                style: TextStyle(
-                                                  color: Colors.greenAccent,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                      /// SUBSCRIPTION
+                                /// BADGES
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    /// VERIFIED
+                                    if (profile.isVerified == true)
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
+                                          horizontal: 10,
                                           vertical: 6,
                                         ),
                                         decoration: BoxDecoration(
-                                          color:
-                                              (profile.subscription ?? "")
-                                                      .toLowerCase() ==
-                                                  "premium"
-                                              ? accentCyan.withOpacity(0.14)
-                                              : Colors.white.withOpacity(0.06),
+                                          color: Colors.green.withOpacity(
+                                            0.12,
+                                          ),
                                           borderRadius: BorderRadius.circular(
                                             30,
                                           ),
                                         ),
-                                        child: Row(
+                                        child: const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(
-                                              (profile.subscription ?? "")
-                                                          .toLowerCase() ==
-                                                      "premium"
-                                                  ? Icons.workspace_premium
-                                                  : Icons.lock_outline,
+                                              Icons.verified,
                                               size: 14,
+                                              color: Colors.greenAccent,
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              "Verified",
+                                              style: TextStyle(
+                                                color: Colors.greenAccent,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                    /// SUBSCRIPTION
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            (profile.subscription ?? "")
+                                                    .toLowerCase() ==
+                                                "premium"
+                                            ? accentCyan.withOpacity(0.14)
+                                            : Colors.white.withOpacity(0.06),
+                                        borderRadius: BorderRadius.circular(
+                                          30,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            (profile.subscription ?? "")
+                                                        .toLowerCase() ==
+                                                    "premium"
+                                                ? Icons.workspace_premium
+                                                : Icons.lock_outline,
+                                            size: 14,
+                                            color:
+                                                (profile.subscription ?? "")
+                                                        .toLowerCase() ==
+                                                    "premium"
+                                                ? accentCyan
+                                                : Colors.white70,
+                                          ),
+
+                                          const SizedBox(width: 4),
+
+                                          Text(
+                                            ((profile.subscription ?? "free")
+                                                .toUpperCase()),
+                                            style: TextStyle(
                                               color:
                                                   (profile.subscription ?? "")
                                                           .toLowerCase() ==
                                                       "premium"
                                                   ? accentCyan
                                                   : Colors.white70,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
                                             ),
-
-                                            const SizedBox(width: 4),
-
-                                            Text(
-                                              ((profile.subscription ?? "free")
-                                                  .toUpperCase()),
-                                              style: TextStyle(
-                                                color:
-                                                    (profile.subscription ?? "")
-                                                            .toLowerCase() ==
-                                                        "premium"
-                                                    ? accentCyan
-                                                    : Colors.white70,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
+                          ),
 
-                            /// EDIT BUTTON
-                            InkWell(
-                              borderRadius: BorderRadius.circular(14),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const EditProfileScreen(),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
-                                  borderRadius: BorderRadius.circular(14),
+                          /// EDIT BUTTON
+                          InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const EditProfileScreen(),
                                 ),
-                                child: const Icon(
-                                  Icons.edit_outlined,
-                                  color: accentCyan,
-                                  size: 20,
-                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.edit_outlined,
+                                color: accentCyan,
+                                size: 20,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+                  );
+                },
 
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: accentCyan),
-                  ),
-
-                  error: (e, _) => const SizedBox(),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: accentCyan),
                 ),
+
+                error: (e, _) => const SizedBox(),
               ),
 
-              if ((profile?.subscription ?? "").toLowerCase() != "premium") ...[
+              if (profile?.role == "guardian") ...[
+                SizedBox(height: screenSize.height * 0.02),
+                _buildSection(
+                  title: "Password",
+                  children: [
+                    _ListItem(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangePasswordScreen(),
+                          ),
+                        );
+                      },
+                      icon: Icons.key_outlined,
+                      title: "Change Password",
+                      trailing: Icons.arrow_forward_ios,
+                    ),
+                  ],
+                ),
+                SizedBox(height: screenSize.height * 0.02),
+                _buildSection(
+                  children: [
+                    _ListItem(
+                      icon: Icons.logout,
+                      title: "Logout",
+                      color: Colors.white70,
+                      onTap: _showLogoutDialog,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 100),
+              ] else ...[
+                if ((profile?.subscription ?? "").toLowerCase() != "premium") ...[
+                  SizedBox(height: screenSize.height * 0.02),
+                  _buildPremiumCard(),
+                ],
                 SizedBox(height: screenSize.height * 0.02),
 
-                _buildPremiumCard(),
-              ],
-              SizedBox(height: screenSize.height * 0.02),
+                /// 🔹 Settings Section
+                _buildSection(
+                  title: "Settings",
+                  children: [
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white70,
+                      ),
+                      title: const Text(
+                        "Notifications",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                      trailing: Transform.scale(
+                        scale: 0.8,
+                        child: Switch(
+                          padding: EdgeInsets.zero,
+                          value: isSwitched,
+                          onChanged: (value) =>
+                              setState(() => isSwitched = value),
+                          activeTrackColor: accentCyan.withAlpha(140),
+                          activeThumbColor: accentCyan,
+                          inactiveThumbColor: Colors.grey,
+                          inactiveTrackColor: Colors.white10,
+                          trackOutlineColor: WidgetStateProperty.all(
+                            Colors.transparent,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const _ListItem(
+                      icon: Icons.language,
+                      title: "Language",
+                      subtitle: "English",
+                      trailing: Icons.arrow_forward_ios,
+                    ),
+                  ],
+                ),
 
-              /// 🔹 Settings Section
-              _buildSection(
-                title: "Settings",
-                children: [
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
-                      Icons.notifications_outlined,
+                SizedBox(height: screenSize.height * 0.02),
+
+                /// 🔹 Password
+                _buildSection(
+                  title: "Password",
+                  children: [
+                    _ListItem(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangePasswordScreen(),
+                          ),
+                        );
+                      },
+                      icon: Icons.key_outlined,
+                      title: "Change Password",
+                      trailing: Icons.arrow_forward_ios,
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: screenSize.height * 0.02),
+
+                /// 🔹 Connected Hospitals
+                _buildSection(
+                  title: "Hospital Access",
+                  children: [
+                    _ListItem(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ConnectedHospitalsScreen(),
+                          ),
+                        );
+                      },
+                      icon: Icons.local_hospital_outlined,
+                      title: "Manage Hospital Access",
+                      trailing: Icons.arrow_forward_ios,
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: screenSize.height * 0.02),
+
+                /// 🔹 Caretakers Access
+                _buildSection(
+                  title: "Caretaker Access",
+                  children: [
+                    _ListItem(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ManageCaretakersScreen(),
+                          ),
+                        );
+                      },
+                      icon: Icons.people_outline_rounded,
+                      title: "Manage Caretakers",
+                      trailing: Icons.arrow_forward_ios,
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: screenSize.height * 0.02),
+
+                /// 🔹 Help
+                _buildSection(
+                  title: "Help & Support",
+                  children: const [
+                    _ListItem(
+                      icon: Icons.info_outline,
+                      title: "FAQs",
+                      trailing: Icons.keyboard_arrow_down,
+                    ),
+                    _ListItem(
+                      icon: Icons.phone_outlined,
+                      title: "Contact Support",
+                      subtitle: "User Query",
+                      trailing: Icons.keyboard_arrow_down,
+                    ),
+                    _ListItem(
+                      icon: Icons.security,
+                      title: "Policies & Terms",
+                      subtitle: "Service Terms & Conditions",
+                      trailing: Icons.keyboard_arrow_down,
+                    ),
+                    _ListItem(
+                      icon: Icons.report_outlined,
+                      title: "Report an Issue",
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: screenSize.height * 0.02),
+
+                /// 🔹 Logout
+                _buildSection(
+                  children: [
+                    _ListItem(
+                      icon: Icons.logout,
+                      title: "Logout",
                       color: Colors.white70,
+                      onTap: _showLogoutDialog,
                     ),
-                    title: const Text(
-                      "Notifications",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
+                  ],
+                ),
+
+                SizedBox(height: screenSize.height * 0.02),
+
+                /// 🔹 Delete
+                _buildSection(
+                  children: [
+                    _ListItem(
+                      icon: Icons.delete_outline,
+                      title: "Delete Account",
+                      color: const Color(0xFFEF3235),
+                      onTap: _showDeleteDialog,
                     ),
-                    trailing: Transform.scale(
-                      scale: 0.8,
-                      child: Switch(
-                        padding: EdgeInsets.zero,
-                        value: isSwitched,
-                        onChanged: (value) =>
-                            setState(() => isSwitched = value),
-                        activeTrackColor: accentCyan.withAlpha(140),
-                        activeThumbColor: accentCyan,
-                        inactiveThumbColor: Colors.grey,
-                        inactiveTrackColor: Colors.white10,
-                        trackOutlineColor: WidgetStateProperty.all(
-                          Colors.transparent,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const _ListItem(
-                    icon: Icons.language,
-                    title: "Language",
-                    subtitle: "English",
-                    trailing: Icons.arrow_forward_ios,
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
-              SizedBox(height: screenSize.height * 0.02),
-
-              /// 🔹 Password
-              _buildSection(
-                title: "Password",
-                children: [
-                  _ListItem(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ChangePasswordScreen(),
-                        ),
-                      );
-                    },
-                    icon: Icons.key_outlined,
-                    title: "Change Password",
-                    trailing: Icons.arrow_forward_ios,
-                  ),
-                ],
-              ),
-
-              SizedBox(height: screenSize.height * 0.02),
-
-              /// 🔹 Connected Hospitals
-              _buildSection(
-                title: "Hospital Access",
-                children: [
-                  _ListItem(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ConnectedHospitalsScreen(),
-                        ),
-                      );
-                    },
-                    icon: Icons.local_hospital_outlined,
-                    title: "Manage Hospital Access",
-                    trailing: Icons.arrow_forward_ios,
-                  ),
-                ],
-              ),
-
-              SizedBox(height: screenSize.height * 0.02),
-
-              /// 🔹 Help
-              _buildSection(
-                title: "Help & Support",
-                children: const [
-                  _ListItem(
-                    icon: Icons.info_outline,
-                    title: "FAQs",
-                    trailing: Icons.keyboard_arrow_down,
-                  ),
-                  _ListItem(
-                    icon: Icons.phone_outlined,
-                    title: "Contact Support",
-                    subtitle: "User Query",
-                    trailing: Icons.keyboard_arrow_down,
-                  ),
-                  _ListItem(
-                    icon: Icons.security,
-                    title: "Policies & Terms",
-                    subtitle: "Service Terms & Conditions",
-                    trailing: Icons.keyboard_arrow_down,
-                  ),
-                  _ListItem(
-                    icon: Icons.report_outlined,
-                    title: "Report an Issue",
-                  ),
-                ],
-              ),
-
-              SizedBox(height: screenSize.height * 0.02),
-
-              /// 🔹 Logout
-              _buildSection(
-                children: [
-                  _ListItem(
-                    icon: Icons.logout,
-                    title: "Logout",
-                    color: Colors.white70,
-                    onTap: _showLogoutDialog, // 👈 ADD THIS,
-                  ),
-                ],
-              ),
-
-              SizedBox(height: screenSize.height * 0.02),
-
-              /// 🔹 Delete
-              _buildSection(
-                children: [
-                  _ListItem(
-                    icon: Icons.delete_outline,
-                    title: "Delete Account",
-                    color: Color(0xFFEF3235),
-                    onTap: _showDeleteDialog, // 👈 ADD THIS
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 100), // Space for bottom bar
+                const SizedBox(height: 100), // Space for bottom bar
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: accentCyan, size: 20),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -637,36 +785,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _profileInfoTile({required String title, required String value}) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.04)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
 
-          const SizedBox(height: 4),
-
-          Text(
-            title,
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ListItem extends StatelessWidget {

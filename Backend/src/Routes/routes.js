@@ -175,10 +175,10 @@ router.patch("/hospitals/:id/status", auth, updateHospitalStatus);
 router.delete("/hospitals/:id", auth, deleteHospital);
 
 // ================= CARETAKERS / OBSERVERS =================
-// router.post("/profile/caretakers/invite", auth, inviteCaretaker);
+router.post("/profile/caretakers/invite", auth, inviteCaretaker);
 router.get("/profile/caretakers", auth, getCaretakers);
-// router.delete("/profile/caretakers/:id", auth, deleteCaretaker);
-// router.get("/profile/caretakers/patients", auth, getCaretakerPatients);
+router.delete("/profile/caretakers/:id", auth, deleteCaretaker);
+router.get("/profile/caretakers/patients", auth, getCaretakerPatients);
 router.post(
   "/guardians/create",
   auth,

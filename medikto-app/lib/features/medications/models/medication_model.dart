@@ -10,6 +10,7 @@ class MedicationModel {
   final DateTime? updatedAt;
   final String? time;
   final String? status;
+  final String? frequency;
 
   MedicationModel({
     this.id,
@@ -23,6 +24,7 @@ class MedicationModel {
     this.updatedAt,
     this.time,
     this.status,
+    this.frequency,
   });
 
   factory MedicationModel.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class MedicationModel {
           : null,
       time: json['time'], // ✅ THIS FIXES YOUR ERROR
       status: json['status'],
+      frequency: json['frequency'],
     );
   }
 
@@ -62,6 +65,7 @@ class MedicationModel {
       "updatedAt": updatedAt?.toIso8601String(),
       'time': time,
       'status': status,
+      "frequency": frequency,
     };
   }
 }

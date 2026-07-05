@@ -57,6 +57,7 @@ class _MedicationVerificationScreenState
   bool remindersEnabled = true;
   String selectedDosageAmount = "Morning"; // Default radio value
   String selectedUnit = "mg";
+  String selectedFrequency = "daily";
 
   final List<String> units = ["mg", "ml", "gm"];
   // List<String> selectedDosageTimings = [];
@@ -98,6 +99,7 @@ class _MedicationVerificationScreenState
       }
 
       remindersEnabled = med.notifications ?? true;
+      selectedFrequency = med.frequency ?? "daily";
 
       if (med.timings != null) {
         selectedDosageTimings = med.timings!.map((timeString) {
@@ -541,8 +543,8 @@ class _MedicationVerificationScreenState
                   Expanded(child: _buildDropdownField("UNIT")),
                 ],
               ),
-              // const SizedBox(height: 20),
-              /// /// 📅 3. FREQUENCY & DOSAGE ROW
+              const SizedBox(height: 20),
+              _buildFrequencyDropdown(),
               const SizedBox(height: 20),
               _buildTimingSection(),
               const SizedBox(height: 24),
@@ -612,6 +614,7 @@ class _MedicationVerificationScreenState
                                 .toList(),
                             notifications: remindersEnabled,
                             instructions: instructionsController.text.trim(),
+                            frequency: selectedFrequency,
                           );
 
                           ResponseData<dynamic> response;
@@ -890,6 +893,66 @@ class _MedicationVerificationScreenState
   }
 
   /// 🔹 Helper for the Unit Dropdown
+  Widget _buildFrequencyDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "FREQUENCY",
+          style: TextStyle(
+            color: Colors.white54,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              padding: EdgeInsets.zero,
+              value: selectedFrequency,
+              dropdownColor: surfaceColor,
+              icon: const Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.white54,
+              ),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    selectedFrequency = newValue;
+                  });
+                }
+              },
+              items: const [
+                DropdownMenuItem(
+                  value: "daily",
+                  child: Text(
+                    "Daily",
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: "weekly",
+                  child: Text(
+                    "Weekly",
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDropdownField(String title) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

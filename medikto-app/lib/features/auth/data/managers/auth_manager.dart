@@ -134,6 +134,41 @@ Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) asyn
   }
 }
 
+  Future<ResponseData> loginGuardian({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await dioClient.tokenRef!.post(
+        ApiUrls.guardianLogin,
+        data: {
+          "email": email.trim().toLowerCase(),
+          "password": password,
+        },
+        options: Options(headers: {"Content-Type": "application/json"}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(StorageKeys.token, response.data['token']);
+        return ResponseData(
+          response.data['message'] ?? "Login successful",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      } else {
+        return ResponseData(
+          response.data['message'] ?? "Login Failed",
+          ResponseStatus.FAILED,
+        );
+      }
+    } on DioException catch (e) {
+      return ResponseData(e.response?.data?["message"] ?? "Server Error", ResponseStatus.FAILED);
+    } catch (e) {
+      return ResponseData("An unexpected error occurred", ResponseStatus.FAILED);
+    }
+  }
+
 Future<void> logout(BuildContext context) async {
   await (await SharedPreferences.getInstance()).clear();
   Navigator.pushAndRemoveUntil(

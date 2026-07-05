@@ -21,6 +21,12 @@ const medicationSchema = new mongoose.Schema({
 
   instructions: String,
 
+  frequency: {
+    type: String,
+    enum: ["daily", "weekly"],
+    default: "daily"
+  },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model("Medication", medicationSchema);

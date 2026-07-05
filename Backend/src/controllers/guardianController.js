@@ -13,7 +13,8 @@ exports.createGuardian = async (req, res) => {
       firstName,
       email,
       phone,
-      relation
+      relation,
+      hospital
     } = req.body;
 
     if (!patientId || !firstName || !email) {
@@ -70,7 +71,8 @@ exports.createGuardian = async (req, res) => {
 
       isFirstLogin: true,
 
-      accountStatus: "pending"
+      accountStatus: "pending",
+      hospital: hospital || undefined
     });
 
     // Create invite

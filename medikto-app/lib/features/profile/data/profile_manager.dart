@@ -253,4 +253,78 @@ class ProfileManager {
       return ResponseData("Please check your internet", ResponseStatus.FAILED);
     }
   }
+
+  /// GET CARETAKERS & PENDING INVITES (FOR PATIENTS)
+  Future<ResponseData> getCaretakers() async {
+    try {
+      final response = await dioClient.ref!.get("/profile/caretakers");
+      if (response.statusCode == 200) {
+        return ResponseData(
+          "Caretakers fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to fetch caretakers", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  /// DELETE / CANCEL CARETAKER ACCESS (FOR PATIENTS)
+  Future<ResponseData> deleteCaretaker(String id) async {
+    try {
+      final response = await dioClient.ref!.delete("/profile/caretakers/$id");
+      if (response.statusCode == 200) {
+        return ResponseData(
+          response.data['message'] ?? "Caretaker access removed successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to remove caretaker", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> changeGuardianPassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await dioClient.ref!.put(
+        ApiUrls.changeGuardianPassword,
+        data: {
+          "oldPassword": oldPassword,
+          "newPassword": newPassword,
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ResponseData(
+          response.data['message'] ?? "Password changed successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to change password", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
 }

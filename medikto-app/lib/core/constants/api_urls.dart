@@ -13,6 +13,8 @@ class ApiUrls {
   static const String verifyOtp = "/auth/verifyOTP";
   static const String profile = "/profile";
   static const String subscription = "/subscription";
+  static const String guardianLogin = "/guardian/login";
+  static const String changeGuardianPassword = "/guardian/change-password";
 
   static const String medications = "/medications";
   static String markAstaken(String doseId) => "/dose/$doseId/taken";

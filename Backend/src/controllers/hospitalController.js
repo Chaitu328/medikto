@@ -261,12 +261,12 @@ exports.createHospitalWithAdmin = async (req, res) => {
   }
 };
 
-// ================= GET ALL HOSPITALS (SUPER ADMIN ONLY) =================
+// ================= GET ALL HOSPITALS =================
 exports.getHospitals = async (req, res) => {
   try {
-    // 1. Verify Super Admin Role
-    if (req.user.role !== "superadmin") {
-      return res.status(403).json({ message: "Only Super Admin can view all hospitals" });
+    // 1. Verify Authorized Role
+    if (!["superadmin", "admin", "user", "guardian"].includes(req.user?.role)) {
+      return res.status(403).json({ message: "Unauthorized access to hospitals list" });
     }
 
     // 2. Fetch all hospitals with admin details

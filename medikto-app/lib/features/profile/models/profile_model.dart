@@ -13,6 +13,8 @@ class ProfileModel {
   final List<dynamic>? familyMembers;
   final String? createdAt;
   final String? role;
+  final String? email;
+  final Map<String, dynamic>? hospital;
 
   ProfileModel({
     this.id,
@@ -29,6 +31,8 @@ class ProfileModel {
     this.familyMembers,
     this.createdAt,
     this.role,
+    this.email,
+    this.hospital,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -52,6 +56,8 @@ class ProfileModel {
       familyMembers: json['familyMembers'],
       createdAt: json['createdAt'],
       role: json['role'],
+      email: json['email'],
+      hospital: json['hospital'] is Map<String, dynamic> ? json['hospital'] : null,
     );
   }
 }

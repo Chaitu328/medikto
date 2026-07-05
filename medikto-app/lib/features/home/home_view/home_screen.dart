@@ -34,6 +34,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   static const Color primaryBlue = Color(0xFF4D6AFF); // Brightened for dark bg
   static const Color darkBg = Color(0xFF121212);
   static const Color surfaceColor = Color(0xFF1E1E1E);
+  static const Color accentCyan = Color(0xFF81DEEA);
 
   String selectedPeriod = "Morning"; // Default selection
 
@@ -311,6 +312,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+
+                  if (profile?.role == "guardian") ...[
+                    _buildPatientSelectorCard(),
+                    const SizedBox(height: 20),
+                  ],
 
                   /// 1. ADHERENCE SCORE CARD (Dark Themed)
                   _buildAdherenceCard(adherence),
@@ -986,6 +992,130 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  Widget _buildPatientSelectorCard() {
+    if (monitoredPatients.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline, color: accentCyan, size: 24),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                "No patients linked to your account yet.",
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final activePatient = monitoredPatients.firstWhere(
+      (p) => p['_id'] == selectedPatientId,
+      orElse: () => monitoredPatients.first,
+    );
+
+    final activeName = activePatient['firstName'] ?? "Patient";
+    final activePhone = activePatient['phone'] ?? "";
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentCyan.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "MONITORED PATIENT",
+            style: TextStyle(
+              color: Colors.white38,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accentCyan.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.person_pin_rounded, color: accentCyan, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activeName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      activePhone,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Theme(
+                data: Theme.of(context).copyWith(
+                  canvasColor: surfaceColor,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedPatientId,
+                    icon: Icon(Icons.swap_horiz_rounded, color: accentCyan, size: 22),
+                    onChanged: (val) {
+                      if (val != null && val != selectedPatientId) {
+                        setState(() {
+                          selectedPatientId = val;
+                          DioClient.activePatientId = val;
+                        });
+                        _onRefresh();
+                      }
+                    },
+                    items: monitoredPatients.map<DropdownMenuItem<String>>((patient) {
+                      final name = patient['firstName'] ?? "Patient";
+                      return DropdownMenuItem<String>(
+                        value: patient['_id'],
+                        child: Text(
+                          name,
+                          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   PreferredSizeWidget _buildAppBar(Size size, ProfileModel? profile, bool hasUnread) {
     final isGuardian = profile?.role == "guardian";
 
@@ -1014,70 +1144,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(width: 12),
 
           Expanded(
-            child: isGuardian
-                ? (monitoredPatients.isEmpty
-                    ? const Text(
-                        "No patients linked",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white70,
-                        ),
-                      )
-                    : DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedPatientId,
-                          dropdownColor: const Color(0xFF1E1E1E),
-                          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF81DEEA), size: 20),
-                          isExpanded: true,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          items: monitoredPatients.map<DropdownMenuItem<String>>((patient) {
-                            final name = patient['firstName'] ?? "Patient";
-                            final phone = patient['phone'] ?? "";
-                            return DropdownMenuItem<String>(
-                              value: patient['_id'],
-                              child: Text(
-                                "$name ($phone)",
-                                style: const TextStyle(color: Colors.white, fontSize: 15),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null && val != selectedPatientId) {
-                              setState(() {
-                                selectedPatientId = val;
-                                DioClient.activePatientId = val;
-                              });
-                              _onRefresh();
-                            }
-                          },
-                        ),
-                      ))
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Hello ${profile?.firstName ?? "User"}!",
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-
-                      const Text(
-                        "Ready for your checkup?",
-                        style: TextStyle(fontSize: 11, color: Colors.white54),
-                      ),
-                    ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Hello ${profile?.firstName ?? "User"}!",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
+                ),
+                Text(
+                  profile?.role == "guardian" ? "Guardian Portal" : "Ready for your checkup?",
+                  style: const TextStyle(fontSize: 11, color: Colors.white54),
+                ),
+              ],
+            ),
           ),
         ],
       ),

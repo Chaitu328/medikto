@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,8 +22,12 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
   bool isButtonEnabled = false;
   String selectedCountryCode = "+91";
+  bool isGuardianMode = false;
+  bool _obscurePassword = true;
 
   // Dark Mode Palette
   static const Color darkBg = Color(0xFF121212);
@@ -121,26 +126,84 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  void _updateButtonState() {
+    bool enabled = false;
+    if (isGuardianMode) {
+      enabled = emailController.text.trim().isNotEmpty && passwordController.text.isNotEmpty;
+    } else {
+      enabled = phoneController.text.length == 10;
+    }
+    if (enabled != isButtonEnabled) {
+      setState(() {
+        isButtonEnabled = enabled;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    phoneController.addListener(() {
-      final isTenDigits = phoneController.text.length == 10;
-      if (isTenDigits != isButtonEnabled) {
-        setState(() {
-          isButtonEnabled = isTenDigits;
-        });
-      }
-    });
+    phoneController.addListener(_updateButtonState);
+    emailController.addListener(_updateButtonState);
+    passwordController.addListener(_updateButtonState);
   }
 
   @override
   void dispose() {
     phoneController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
     super.dispose();
   }
 
+  Future<void> handleGuardianLogin() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: accentCyan)),
+    );
+
+    try {
+      final response = await ref.read(authProvider).loginGuardian(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+      }
+
+      if (response.status == ResponseStatus.SUCCESS) {
+        if (mounted) {
+          AppToasts.showSuccess(context, response.message);
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const BaseBottomNavigationPage(),
+            ),
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          AppToasts.showError(context, response.message);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        AppToasts.showError(context, "An error occurred: $e");
+      }
+    }
+  }
+
   Future<void> handleLogin() async {
+    if (isGuardianMode) {
+      await handleGuardianLogin();
+      return;
+    }
+
     // 1. Show loading dialog
     showDialog(
       context: context,
@@ -224,155 +287,298 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
 
-                SizedBox(height: size.height * 0.01),
+                const SizedBox(height: 8),
 
-                const Text(
-                  "Enter your phone number. We will send you a confirmation code.",
-                  style: TextStyle(
+                Text(
+                  isGuardianMode
+                      ? "Enter your email and password to access the Guardian Portal."
+                      : "Enter your phone number. We will send you a confirmation code.",
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                     color: Colors.white54,
                   ),
                 ),
 
-                SizedBox(height: size.height * 0.04),
+                SizedBox(height: size.height * 0.03),
 
-                /// 🔹 PHONE INPUT (Dark Mode Optimized)
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: _showCountryCodePicker,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        alignment: Alignment.center,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.05),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.public,
-                              size: 18,
-                              color: Colors.white54,
+                // 🔹 Role Selector Tabs (Patient vs Guardian)
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isGuardianMode = false;
+                              _updateButtonState();
+                            });
+                          },
+                          child: Container(
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: !isGuardianMode ? accentCyan : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              selectedCountryCode,
-                              style: const TextStyle(
+                            child: Text(
+                              "Patient",
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: accentCyan,
+                                color: !isGuardianMode ? Colors.black : Colors.white60,
                               ),
                             ),
-                            const SizedBox(width: 2),
-                            const Icon(
-                              Icons.arrow_drop_down,
-                              color: Colors.white54,
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    Expanded(
-                      child: Container(
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isButtonEnabled
-                                ? accentCyan.withOpacity(0.5)
-                                : Colors.white.withOpacity(0.05),
-                          ),
-                        ),
-                        child: TextField(
-                          controller: phoneController,
-                          cursorColor: accentCyan,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
-                          ),
-                          inputFormatters: [
-                            LengthLimitingTextInputFormatter(10),
-                          ],
-                          decoration: InputDecoration(
-                            suffixIcon: phoneController.text.isNotEmpty
-                                ? InkWell(
-                                    onTap: () => phoneController.clear(),
-                                    child: const Icon(
-                                      Icons.cancel,
-                                      color: Colors.white24,
-                                      size: 20,
-                                    ),
-                                  )
-                                : null,
-                            hintText: "Enter mobile number",
-                            hintStyle: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white24,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            border: InputBorder.none,
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isGuardianMode = true;
+                              _updateButtonState();
+                            });
+                          },
+                          child: Container(
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isGuardianMode ? accentCyan : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              "Guardian",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isGuardianMode ? Colors.black : Colors.white60,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
-                SizedBox(height: size.height * 0.02),
+                SizedBox(height: size.height * 0.03),
 
-                Row(
-                  children: [
-                    const Text(
-                      "Don't have an account?  ",
-                      style: TextStyle(fontSize: 14, color: Colors.white38),
-                    ),
-                    InkWell(
-                      onTap: () => Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterScreen(),
+                if (!isGuardianMode) ...[
+                  /// 🔹 PHONE INPUT (Dark Mode Optimized)
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _showCountryCodePicker,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          alignment: Alignment.center,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.05),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.public,
+                                size: 18,
+                                color: Colors.white54,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                selectedCountryCode,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentCyan,
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              const Icon(
+                                Icons.arrow_drop_down,
+                                color: Colors.white54,
+                                size: 20,
+                              ),
+                            ],
+                          ),
                         ),
-                        (route) => false,
                       ),
-                      child: const Text(
-                        "Register",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: accentCyan,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isButtonEnabled
+                                  ? accentCyan.withOpacity(0.5)
+                                  : Colors.white.withOpacity(0.05),
+                            ),
+                          ),
+                          child: TextField(
+                            controller: phoneController,
+                            cursorColor: accentCyan,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(10),
+                            ],
+                            decoration: InputDecoration(
+                              suffixIcon: phoneController.text.isNotEmpty
+                                  ? InkWell(
+                                      onTap: () => phoneController.clear(),
+                                      child: const Icon(
+                                        Icons.cancel,
+                                        color: Colors.white24,
+                                        size: 20,
+                                      ),
+                                    )
+                                  : null,
+                              hintText: "Enter mobile number",
+                              hintStyle: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white24,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              border: InputBorder.none,
+                            ),
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                ] else ...[
+                  /// 🔹 EMAIL & PASSWORD INPUT (Dark Mode Optimized)
+                  Container(
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.05),
+                      ),
                     ),
-                  ],
-                ),
+                    child: TextField(
+                      controller: emailController,
+                      cursorColor: accentCyan,
+                      keyboardType: TextInputType.emailAddress,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.email_outlined, color: Colors.white54),
+                        hintText: "Enter your email",
+                        hintStyle: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white24,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 14,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.05),
+                      ),
+                    ),
+                    child: TextField(
+                      controller: passwordController,
+                      cursorColor: accentCyan,
+                      obscureText: _obscurePassword,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.lock_outline, color: Colors.white54),
+                        suffixIcon: InkWell(
+                          onTap: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                          child: Icon(
+                            _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white54,
+                            size: 20,
+                          ),
+                        ),
+                        hintText: "Enter your password",
+                        hintStyle: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white24,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                ],
 
-                SizedBox(height: size.height * 0.18),
+                if (!isGuardianMode) ...[
+                  SizedBox(height: size.height * 0.02),
+                  Row(
+                    children: [
+                      const Text(
+                        "Don't have an account?  ",
+                        style: TextStyle(fontSize: 14, color: Colors.white38),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterScreen(),
+                          ),
+                          (route) => false,
+                        ),
+                        child: const Text(
+                          "Register",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: accentCyan,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                SizedBox(height: size.height * 0.12),
 
                 /// 🔥 BUTTON (Cyan Branding)
                 CustomButton(
                   onPressed: isButtonEnabled ? handleLogin : null,
-                  // onPressed: isButtonEnabled
-                  //     ? () {
-                  //         Navigator.push(
-                  buttonText: "Send OTP",
+                  buttonText: isGuardianMode ? "Login" : "Send OTP",
                   buttonColor: isButtonEnabled
                       ? accentCyan
                       : accentCyan.withOpacity(0.15),
@@ -382,32 +588,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     color: isButtonEnabled ? Colors.black : Colors.white24,
                   ),
                 ),
-                const SizedBox(height: 15),
-                Center(
-                  child: TextButton(
-                    onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString(StorageKeys.token, "mock_dev_token");
-                      if (mounted) {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const BaseBottomNavigationPage(),
-                          ),
-                          (route) => false,
-                        );
-                      }
-                    },
-                    child: const Text(
-                      "Bypass Authentication (Dev Mode)",
-                      style: TextStyle(
-                        color: accentCyan,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+
+                if (kDebugMode) ...[
+                  const SizedBox(height: 15),
+                  Center(
+                    child: TextButton(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString(StorageKeys.token, "mock_dev_token");
+                        if (mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const BaseBottomNavigationPage(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      },
+                      child: const Text(
+                        "Bypass Authentication (Dev Mode)",
+                        style: TextStyle(
+                          color: accentCyan,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
