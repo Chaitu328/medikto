@@ -134,65 +134,65 @@ exports.register = async (req, res) => {
 };
 
 // ================= LINK PENDING CARETAKER INVITATIONS =================
-// async function linkPendingCaretakerInvites(user) {
-//   try {
-//     console.log("Inside linkPendingCaretakerInvites");
-//     console.log(user.phone);
+async function linkPendingCaretakerInvites(user) {
+  try {
+    console.log("Inside linkPendingCaretakerInvites");
+    console.log(user.phone);
 
-//     const queryConditions = [
-//       { phone: user.phone },
-//       { email: user.phone }
-//     ];
+    const queryConditions = [
+      { phone: user.phone },
+      { email: user.phone }
+    ];
 
-//     if (user.email) {
-//       queryConditions.push({
-//         email: user.email.toLowerCase().trim()
-//       });
-//     }
+    if (user.email) {
+      queryConditions.push({
+        email: user.email.toLowerCase().trim()
+      });
+    }
 
-//     const invites = await CaretakerInvite.find({
-//       $or: queryConditions,
-//       status: "pending"
-//     });
+    const invites = await CaretakerInvite.find({
+      $or: queryConditions,
+      status: "pending"
+    });
 
-//     console.log("Invites Found");
-//     console.log(invites);
-//     console.log("Invite Count:", invites.length);
+    console.log("Invites Found");
+    console.log(invites);
+    console.log("Invite Count:", invites.length);
 
-//     if (invites.length > 0) {
-//       user.role = "guardian";
+    if (invites.length > 0) {
+      user.role = "guardian";
 
-//       if (!user.guardianFor) {
-//         user.guardianFor = [];
-//       }
+      if (!user.guardianFor) {
+        user.guardianFor = [];
+      }
 
-//       for (const invite of invites) {
+      for (const invite of invites) {
 
-//         const alreadyExists = user.guardianFor.some(
-//           id => id.toString() === invite.patientId.toString()
-//         );
+        const alreadyExists = user.guardianFor.some(
+          id => id.toString() === invite.patientId.toString()
+        );
 
-//         console.log("Already Exists:", alreadyExists);
+        console.log("Already Exists:", alreadyExists);
 
-//         if (!alreadyExists) {
-//           user.guardianFor.push(invite.patientId);
-//         }
+        if (!alreadyExists) {
+          user.guardianFor.push(invite.patientId);
+        }
 
-//         invite.status = "accepted";
-//         await invite.save();
-//       }
+        invite.status = "accepted";
+        await invite.save();
+      }
 
-//       console.log("Saving User...");
-//       await user.save();
+      console.log("Saving User...");
+      await user.save();
 
-//       console.log("Saved Successfully");
-//       console.log(user);
-//     }
+      console.log("Saved Successfully");
+      console.log(user);
+    }
 
-//   } catch (err) {
-//     console.error("linkPendingCaretakerInvites error:", err.message);
-//   }
-// }
+  } catch (err) {
+    console.error("linkPendingCaretakerInvites error:", err.message);
+  }
+}
 
 // ================= HOSPITAL ADMIN LOGIN =================
 exports.adminLogin = async (req, res) => {

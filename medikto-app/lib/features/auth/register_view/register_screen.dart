@@ -9,6 +9,7 @@ import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
+import 'package:medikto/features/auth/login_view/login_screen.dart';
 import 'package:medikto/features/auth/register_view/account_create_success.dart';
 import 'package:medikto/features/auth/widgets/gender_selection_widget.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
@@ -185,7 +186,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           AppToasts.showError(context, "User with this phone number already exists. Please log in.");
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            MaterialPageRoute(builder: (_) => LoginScreen()),
             (route) => false,
           );
         }
@@ -315,7 +316,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 AppToasts.showSuccess(context, "Account created successfully. Please log in.");
                                 Navigator.pushAndRemoveUntil(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                  MaterialPageRoute(builder: (_) => LoginScreen()),
                                   (route) => false,
                                 );
                               } else {
