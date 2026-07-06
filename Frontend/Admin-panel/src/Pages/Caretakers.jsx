@@ -237,7 +237,7 @@ const ActionMenu = ({ caretaker, onView, onEdit, onDelete, onResend }) => {
 // ═════════════════════════════════════════════════════════════════════════════
 // RIGHT DRAWER
 // ═════════════════════════════════════════════════════════════════════════════
-const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, loading }) => {
+const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, onApprove, loading }) => {
   if (!caretaker) return null;
 
   return (
@@ -320,6 +320,14 @@ const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, loadi
 
         {/* Footer Actions */}
         <div className="px-6 py-5 border-t border-slate-100 space-y-3">
+          {caretaker.accountStatus === "pending" && (
+            <button
+              onClick={() => { onApprove(caretaker.id, "active"); onClose(); }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+            >
+              <CheckCircle2 size={16} /> Approve Guardian
+            </button>
+          )}
           <button
             onClick={() => { onEdit(caretaker); onClose(); }}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -1241,6 +1249,15 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
                               >
                                 <Eye size={15} />
                               </button>
+                              {caretaker.accountStatus === "pending" && (
+                                <button
+                                  onClick={() => handleUpdateStatus(caretaker.id, "active")}
+                                  className="p-2 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
+                                  title="Approve Guardian"
+                                >
+                                  <CheckCircle2 size={15} />
+                                </button>
+                              )}
                               {caretaker.status === "pending" && (
                                 <button
                                   onClick={() => handleResendCredentials(caretaker)}
@@ -1336,6 +1353,7 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
           onEdit={handleEdit}
           onDelete={handleDeleteClick}
           onResend={handleResendCredentials}
+          onApprove={handleUpdateStatus}
           loading={drawerLoading}
         />
       )}

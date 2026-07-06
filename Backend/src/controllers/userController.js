@@ -5,6 +5,7 @@ const cloudinary = require("../config/cloudinary");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendInviteEmail } = require("../utils/emailHelper");
 const { buildPatientListFilter } = require("../utils/accessControl");
+const bcrypt = require("bcrypt");
 
 
 
@@ -269,11 +270,19 @@ exports.updateFCMToken = async (req, res) => {
 // ================= PATIENT: INVITE CARETAKER =================
 exports.inviteCaretaker = async (req, res) => {
   try {
-    const { email, relation, phone } = req.body;
+    const { email, relation, phone, name, password } = req.body;
     const patientId = req.user.id;
 
     if (!email) {
       return res.status(400).json({ message: "Caretaker email is required" });
+    }
+
+    if (!name) {
+      return res.status(400).json({ message: "Caretaker name is required" });
+    }
+
+    if (!password) {
+      return res.status(400).json({ message: "Caretaker password is required" });
     }
 
     const patient = await User.findById(patientId);
@@ -281,9 +290,25 @@ exports.inviteCaretaker = async (req, res) => {
       return res.status(404).json({ message: "Patient not found" });
     }
 
+    // Find or create caretaker user document
+    let caretaker = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!caretaker) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      caretaker = await User.create({
+        firstName: name,
+        email: email.trim().toLowerCase(),
+        phone: phone || undefined,
+        password: hashedPassword,
+        role: "guardian",
+        isVerified: true,
+        accountStatus: "pending"
+      });
+    }
+
     // Create the invite
     const invite = await CaretakerInvite.create({
       patientId,
+      caretakerId: caretaker._id,
       email: email.trim().toLowerCase(),
       relation: relation || "Caretaker",
       phone: phone || null,

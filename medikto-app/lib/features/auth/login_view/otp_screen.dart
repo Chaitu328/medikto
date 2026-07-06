@@ -184,6 +184,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                           await ref.read(authProvider).sendFirebaseOTP(
                             phone: widget.phoneNumber ?? "",
                             onCodeSent: (newVerificationId, _) {
+                              _pinController.clear();
                               setState(() {
                                 _loading = false;
                                 _activeVerificationId = newVerificationId;

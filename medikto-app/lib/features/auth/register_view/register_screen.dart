@@ -143,6 +143,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
   final caretakerNameController = TextEditingController();
   final caretakerEmailController = TextEditingController();
+  final caretakerPhoneController = TextEditingController();
+  final caretakerPasswordController = TextEditingController();
   String selectedCaretakerRelation = "Son";
 
   Future<void> handleRegister() async {
@@ -155,6 +157,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (passwordController.text != confirmPasswordController.text) {
       AppToasts.showError(context, "Passwords do not match");
       return;
+    }
+
+    if (inviteCaretaker) {
+      if (caretakerNameController.text.trim().isEmpty) {
+        AppToasts.showError(context, "Caretaker name is required");
+        return;
+      }
+      if (caretakerEmailController.text.trim().isEmpty) {
+        AppToasts.showError(context, "Caretaker email is required");
+        return;
+      }
+      if (caretakerPhoneController.text.trim().isEmpty) {
+        AppToasts.showError(context, "Caretaker phone is required");
+        return;
+      }
+      if (caretakerPasswordController.text.trim().isEmpty) {
+        AppToasts.showError(context, "Caretaker password is required");
+        return;
+      }
     }
 
     // 2. Show Loading
@@ -299,6 +320,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   "caretakerEmail": caretakerEmailController.text.trim(),
                                   "caretakerName": caretakerNameController.text.trim(),
                                   "caretakerRelation": selectedCaretakerRelation,
+                                  "caretakerPhone": caretakerPhoneController.text.trim(),
+                                  "caretakerPassword": caretakerPasswordController.text.trim(),
                                 },
                                 if (selectedImage != null)
                                   "profile_image": await MultipartFile.fromFile(
@@ -569,6 +592,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           _buildCaretakerField("Caretaker Full Name", "Enter caretaker name", caretakerNameController),
                           const SizedBox(height: 12),
                           _buildCaretakerField("Caretaker Email", "Enter caretaker email", caretakerEmailController, keyboardType: TextInputType.emailAddress),
+                          const SizedBox(height: 12),
+                          _buildCaretakerField("Caretaker Phone", "Enter caretaker phone number", caretakerPhoneController, keyboardType: TextInputType.phone),
+                          const SizedBox(height: 12),
+                          _buildCaretakerField("Caretaker Password", "Enter caretaker password", caretakerPasswordController, obscureText: true),
                           const SizedBox(height: 15),
                           const Text(
                             "Relationship",
@@ -636,6 +663,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     String hint,
     TextEditingController controller, {
     TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
   }) {
     return AppTextFormFieldTitled(
       controller: controller,
@@ -646,6 +674,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       color: Colors.white,
       borderColor: Colors.white10,
       textInputType: keyboardType,
+      obscureText: obscureText,
       hintStyle: const TextStyle(fontSize: 16, color: Colors.white24),
       titleTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
     );

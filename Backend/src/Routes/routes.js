@@ -109,7 +109,8 @@ const {
     getGuardianInvitations,
     acceptInvitation,
     rejectInvitation,
-       getAllGuardians
+       getAllGuardians,
+       updateGuardianStatus
 } = require("../controllers/guardianController");
 
 const passport = require("passport");
@@ -213,6 +214,11 @@ router.get(
     "/guardians",
     auth,
     getAllGuardians
+);
+router.patch(
+    "/guardians/:id/status",
+    auth,
+    updateGuardianStatus
 );
 
 

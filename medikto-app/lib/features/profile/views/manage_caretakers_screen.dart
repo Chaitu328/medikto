@@ -79,8 +79,10 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
   }
 
   void _showInviteBottomSheet() {
+    final nameController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
+    final passwordController = TextEditingController();
     String selectedRelation = "Father";
     final relations = ["Father", "Mother", "Brother", "Sister", "Friend", "Doctor", "Guardian", "Other"];
 
@@ -119,9 +121,9 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                 ),
                 const SizedBox(height: 16),
                 AppTextFormFieldTitled(
-                  title: "Caretaker Email",
-                  hintText: "email@example.com",
-                  controller: emailController,
+                  title: "Caretaker Name",
+                  hintText: "Enter full name",
+                  controller: nameController,
                   focusColor: accentCyan,
                   fillColor: darkBg,
                   color: Colors.white,
@@ -129,13 +131,36 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                 ),
                 const SizedBox(height: 16),
                 AppTextFormFieldTitled(
-                  title: "Caretaker Phone (Optional)",
+                  title: "Caretaker Email",
+                  hintText: "email@example.com",
+                  controller: emailController,
+                  focusColor: accentCyan,
+                  fillColor: darkBg,
+                  color: Colors.white,
+                  borderColor: Colors.white.withOpacity(0.1),
+                  textInputType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                AppTextFormFieldTitled(
+                  title: "Caretaker Phone",
                   hintText: "Enter mobile number",
                   controller: phoneController,
                   focusColor: accentCyan,
                   fillColor: darkBg,
                   color: Colors.white,
                   borderColor: Colors.white.withOpacity(0.1),
+                  textInputType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                AppTextFormFieldTitled(
+                  title: "Caretaker Password",
+                  hintText: "Enter password",
+                  controller: passwordController,
+                  focusColor: accentCyan,
+                  fillColor: darkBg,
+                  color: Colors.white,
+                  borderColor: Colors.white.withOpacity(0.1),
+                  obscureText: true,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -174,9 +199,25 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                   buttonColor: accentCyan,
                   textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
                   onPressed: () async {
+                    final name = nameController.text.trim();
                     final email = emailController.text.trim();
+                    final phone = phoneController.text.trim();
+                    final password = passwordController.text.trim();
+
+                    if (name.isEmpty) {
+                      AppToasts.showError(context, "Name is required");
+                      return;
+                    }
                     if (email.isEmpty) {
                       AppToasts.showError(context, "Email is required");
+                      return;
+                    }
+                    if (phone.isEmpty) {
+                      AppToasts.showError(context, "Phone number is required");
+                      return;
+                    }
+                    if (password.isEmpty) {
+                      AppToasts.showError(context, "Password is required");
                       return;
                     }
 
@@ -192,9 +233,11 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
 
                     try {
                       final response = await ref.read(profileProvider).inviteCaretaker(
+                            name: name,
                             email: email,
                             relation: selectedRelation,
-                            phone: phoneController.text.trim().isNotEmpty ? phoneController.text.trim() : null,
+                            phone: phone,
+                            password: password,
                           );
 
                       if (mounted) {

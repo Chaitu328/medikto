@@ -96,12 +96,27 @@ exports.register = async (req, res) => {
     });
 
     // If caretaker details are provided during patient registration
-    const { caretakerEmail, caretakerName, caretakerRelation } = req.body;
+    const { caretakerEmail, caretakerName, caretakerRelation, caretakerPhone, caretakerPassword } = req.body;
     if (caretakerEmail && caretakerName) {
       try {
+        let caretaker = await User.findOne({ email: caretakerEmail.trim().toLowerCase() });
+        if (!caretaker) {
+          const hashedPassword = caretakerPassword ? await bcrypt.hash(caretakerPassword, 10) : undefined;
+          caretaker = await User.create({
+            firstName: caretakerName,
+            email: caretakerEmail.trim().toLowerCase(),
+            phone: caretakerPhone || undefined,
+            password: hashedPassword,
+            role: "guardian",
+            isVerified: true,
+            accountStatus: "pending"
+          });
+        }
         await CaretakerInvite.create({
           patientId: user._id,
+          caretakerId: caretaker._id,
           email: caretakerEmail.trim().toLowerCase(),
+          phone: caretakerPhone || null,
           relation: caretakerRelation || "Caretaker",
           status: "pending"
         });
@@ -136,6 +151,12 @@ exports.register = async (req, res) => {
 // ================= LINK PENDING CARETAKER INVITATIONS =================
 async function linkPendingCaretakerInvites(user) {
   try {
+    // Only link caretaker invitations if the user registering/logging in is a guardian.
+    // This prevents patient accounts (role 'user') from being converted into caretakers.
+    if (user.role !== "guardian") {
+      return;
+    }
+
     console.log("Inside linkPendingCaretakerInvites");
     console.log(user.phone);
 

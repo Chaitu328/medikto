@@ -224,6 +224,8 @@ class ProfileManager {
   Future<ResponseData> inviteCaretaker({
     required String email,
     required String relation,
+    required String name,
+    required String password,
     String? phone,
   }) async {
     Response response;
@@ -233,6 +235,8 @@ class ProfileManager {
         data: {
           "email": email,
           "relation": relation,
+          "name": name,
+          "password": password,
           "phone": phone,
         },
       );

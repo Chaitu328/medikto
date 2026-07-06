@@ -154,6 +154,12 @@ exports.guardianLogin = async (req, res) => {
         }
 
         // Account status
+        if (guardian.accountStatus === "pending") {
+            return res.status(403).json({
+                success: false,
+                message: "Your account is pending admin approval."
+            });
+        }
         if (guardian.accountStatus === "disabled") {
             return res.status(403).json({
                 success: false,
@@ -505,5 +511,33 @@ exports.getAllGuardians = async (req, res) => {
       success: false,
       message: err.message,
     });
+  }
+};
+
+// ================= ADMIN: UPDATE GUARDIAN STATUS =================
+exports.updateGuardianStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ success: false, message: "Status is required." });
+    }
+
+    const guardian = await User.findById(id);
+    if (!guardian || guardian.role !== "guardian") {
+      return res.status(404).json({ success: false, message: "Guardian not found." });
+    }
+
+    guardian.accountStatus = status;
+    await guardian.save();
+
+    res.json({
+      success: true,
+      message: `Guardian status updated to ${status} successfully.`,
+      guardian
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 };
