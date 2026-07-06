@@ -30,6 +30,31 @@ Future<String> get token async {
   return t;
 }
 
+Future<ResponseData> checkIfPhoneRegistered(String phone) async {
+  try {
+    final response = await dioClient.tokenRef!.post(
+      ApiUrls.checkPhone,
+      data: {"phone": phone},
+      options: Options(headers: {"Content-Type": "application/json"}),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final bool exists = response.data['exists'] ?? false;
+      final String msg = response.data['message'] ?? "";
+      return ResponseData(msg, ResponseStatus.SUCCESS, data: exists);
+    } else {
+      return ResponseData(
+        response.data['error'] ?? response.data['message'] ?? "Failed to check registration status",
+        ResponseStatus.FAILED,
+      );
+    }
+  } on DioException catch (e) {
+    final message = e.response?.data?["error"] ?? e.response?.data?["message"] ?? "Server Connection Error";
+    return ResponseData(message, ResponseStatus.FAILED);
+  } catch (e) {
+    return ResponseData("An unexpected error occurred: $e", ResponseStatus.FAILED);
+  }
+}
+
 Future<void> sendFirebaseOTP({
   required String phone,
   required Function(String verificationId, int? resendToken) onCodeSent,
@@ -98,7 +123,7 @@ Future<ResponseData> verifyFirebaseOTP({
       );
     } else {
       return ResponseData(
-        response.data['message'] ?? "Verification Failed",
+        response.data['error'] ?? response.data['message'] ?? "Verification Failed",
         ResponseStatus.FAILED,
       );
     }
@@ -124,11 +149,12 @@ Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) asyn
       await prefs.setString(StorageKeys.token, response.data['token']);
       return ResponseData("Account created successfully", ResponseStatus.SUCCESS, data: response.data);
     } else {
-      final message = response.data?["message"] ?? "Registration failed";
+      final message = response.data?["error"] ?? response.data?["message"] ?? "Registration failed";
       return ResponseData(message, ResponseStatus.FAILED);
     }
   } on DioException catch (e) {
-    return ResponseData(e.response?.data?["message"] ?? "Server Error", ResponseStatus.FAILED);
+    final message = e.response?.data?["error"] ?? e.response?.data?["message"] ?? "Server Error";
+    return ResponseData(message, ResponseStatus.FAILED);
   } catch (e) {
     return ResponseData("An unexpected error occurred", ResponseStatus.FAILED);
   }

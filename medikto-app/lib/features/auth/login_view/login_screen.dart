@@ -215,6 +215,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final String fullPhoneNumber = selectedCountryCode + phoneController.text;
 
     try {
+      // Check if user is registered first
+      final checkResponse = await ref.read(authProvider).checkIfPhoneRegistered(fullPhoneNumber);
+      if (checkResponse.status == ResponseStatus.FAILED) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+          AppToasts.showError(context, checkResponse.message);
+        }
+        return;
+      }
+
+      final bool exists = checkResponse.data as bool;
+      if (!exists) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+          AppToasts.showError(context, "This phone number is not registered. Please sign up first.");
+        }
+        return;
+      }
+
+      // Proceed to send Firebase OTP
       await ref.read(authProvider).sendFirebaseOTP(
         phone: fullPhoneNumber,
         onCodeSent: (verificationId, resendToken) {

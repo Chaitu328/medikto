@@ -363,3 +363,20 @@ exports.deleteAdmin = async (req, res) => {
     });
   }
 };
+
+// ================= CHECK PHONE NUMBER REGISTERED =================
+exports.checkPhone = async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ message: "Phone number is required" });
+    }
+    const user = await User.findOne({ phone });
+    return res.json({
+      exists: !!user,
+      message: user ? "User is already registered" : "Phone number is not registered"
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};

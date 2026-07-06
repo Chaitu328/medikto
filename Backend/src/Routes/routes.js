@@ -67,6 +67,7 @@ const {
   changePassword,
     toggleAdminStatus,
   deleteAdmin,
+  checkPhone,
 } = require("../controllers/authContoller");
 
 const {
@@ -116,6 +117,7 @@ const passport = require("passport");
 // ================= AUTH =================
 router.post("/auth/verifyOTP", verifyOTP);
 router.post("/auth/register", register);
+router.post("/auth/check-phone", checkPhone);
 
 // ================= ADMIN AUTH (HOSPITAL ADMINS) =================
 router.post("/admin/login", adminLogin);

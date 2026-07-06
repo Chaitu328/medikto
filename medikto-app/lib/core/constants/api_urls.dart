@@ -11,6 +11,7 @@ class ApiUrls {
   static const String register = "/auth/register";
   static const String login = "/auth/sendOTP";
   static const String verifyOtp = "/auth/verifyOTP";
+  static const String checkPhone = "/auth/check-phone";
   static const String profile = "/profile";
   static const String subscription = "/subscription";
   static const String guardianLogin = "/guardian/login";

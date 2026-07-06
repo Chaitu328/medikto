@@ -168,6 +168,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final String fullPhoneNumber = selectedCountryCode + phoneController.text;
 
     try {
+      // Check if user is already registered
+      final checkResponse = await ref.read(authProvider).checkIfPhoneRegistered(fullPhoneNumber);
+      if (checkResponse.status == ResponseStatus.FAILED) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+          AppToasts.showError(context, checkResponse.message);
+        }
+        return;
+      }
+
+      final bool exists = checkResponse.data as bool;
+      if (exists) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading dialog
+          AppToasts.showError(context, "User with this phone number already exists. Please log in.");
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+        return;
+      }
+
       await ref.read(authProvider).sendFirebaseOTP(
         phone: fullPhoneNumber,
         onCodeSent: (verificationId, resendToken) {
@@ -288,10 +312,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               Navigator.pop(context); // Close OTP Dialog
 
                               if (response.status == ResponseStatus.SUCCESS) {
-                                AppToasts.showSuccess(context, "Account created and logged in!");
+                                AppToasts.showSuccess(context, "Account created successfully. Please log in.");
                                 Navigator.pushAndRemoveUntil(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),
+                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                                   (route) => false,
                                 );
                               } else {
