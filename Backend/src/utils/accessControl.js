@@ -54,7 +54,6 @@ const getAccessiblePatientIds = async (req, requestedPatientId) => {
   }
 
 if (role === "admin") {
-
   const admin = await User.findById(requesterId).select("hospitals");
 
   if (!admin?.hospitals?.length) {
@@ -63,13 +62,28 @@ if (role === "admin") {
 
   const hospitalIds = admin.hospitals.map(id => id.toString());
 
-  const patientIds = await User.find({
+  // 1. Find patients already linked to these hospitals
+  const linkedPatientIds = await User.find({
     role: "patient",
     hospitals: { $in: hospitalIds },
   }).distinct("_id");
 
+  // 2. Find patients with pending connection OTPs to these hospitals
+  const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
+  const pendingPhones = await HospitalLinkOTP.find({
+    hospitalId: { $in: hospitalIds },
+    expiresAt: { $gt: new Date() }
+  }).distinct("phone");
+
+  const pendingPatientIds = await User.find({
+    role: "patient",
+    phone: { $in: pendingPhones }
+  }).distinct("_id");
+
+  const combinedPatientIds = [...linkedPatientIds, ...pendingPatientIds];
+
   return filterRequestedPatient(
-    uniqueIds(patientIds),
+    uniqueIds(combinedPatientIds),
     requestedPatientId
   );
 }
