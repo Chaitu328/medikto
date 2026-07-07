@@ -201,70 +201,93 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     final hospitalName = profile.hospital != null
                         ? (profile.hospital!['name'] ?? "Unknown Hospital")
                         : "No Hospital Assigned";
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.05),
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const EditProfileScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.05),
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        children: [
-                          Center(
-                            child: CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Colors.white10,
-                              backgroundImage: profile.profilePic != null && profile.profilePic!.isNotEmpty
-                                  ? CachedNetworkImageProvider(
-                                      "${profile.profilePic!}?t=${DateTime.now().millisecondsSinceEpoch}",
-                                    )
-                                  : null,
-                              child: profile.profilePic == null || profile.profilePic!.isEmpty
-                                  ? const Icon(Icons.person, color: accentCyan, size: 50)
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: Text(
-                              profile.firstName ?? "Guardian",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
+                        child: Stack(
+                          children: [
+                            const Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Icon(
+                                Icons.edit_outlined,
+                                color: accentCyan,
+                                size: 20,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: accentCyan.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: const Text(
-                                "GUARDIAN",
-                                style: TextStyle(
-                                  color: accentCyan,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                            Column(
+                              children: [
+                                Center(
+                                  child: CircleAvatar(
+                                    radius: 50,
+                                    backgroundColor: Colors.white10,
+                                    backgroundImage: profile.profilePic != null && profile.profilePic!.isNotEmpty
+                                        ? CachedNetworkImageProvider(
+                                            "${profile.profilePic!}?t=${DateTime.now().millisecondsSinceEpoch}",
+                                          )
+                                        : null,
+                                    child: profile.profilePic == null || profile.profilePic!.isEmpty
+                                        ? const Icon(Icons.person, color: accentCyan, size: 50)
+                                        : null,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 16),
+                                Center(
+                                  child: Text(
+                                    profile.firstName ?? "Guardian",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: accentCyan.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: const Text(
+                                      "GUARDIAN",
+                                      style: TextStyle(
+                                        color: accentCyan,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                const Divider(color: Colors.white10),
+                                const SizedBox(height: 16),
+                                _buildDetailRow(Icons.email_outlined, "Email", profile.email ?? "Not provided"),
+                                const SizedBox(height: 16),
+                                _buildDetailRow(Icons.phone_outlined, "Mobile Number", profile.phone ?? "Not provided"),
+                                const SizedBox(height: 16),
+                                _buildDetailRow(Icons.local_hospital_outlined, "Assigned Hospital", hospitalName),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          const Divider(color: Colors.white10),
-                          const SizedBox(height: 16),
-                          _buildDetailRow(Icons.email_outlined, "Email", profile.email ?? "Not provided"),
-                          const SizedBox(height: 16),
-                          _buildDetailRow(Icons.phone_outlined, "Mobile Number", profile.phone ?? "Not provided"),
-                          const SizedBox(height: 16),
-                          _buildDetailRow(Icons.local_hospital_outlined, "Assigned Hospital", hospitalName),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   }

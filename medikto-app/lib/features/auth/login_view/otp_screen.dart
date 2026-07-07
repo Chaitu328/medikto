@@ -179,6 +179,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     GestureDetector(
                       onTap: () async {
                         if (_loading) return;
+                        _pinController.clear();
                         setState(() => _loading = true);
                         try {
                           await ref.read(authProvider).sendFirebaseOTP(

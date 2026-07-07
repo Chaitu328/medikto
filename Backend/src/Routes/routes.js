@@ -158,7 +158,7 @@ router.get(
 // ================= USER =================
 router.get("/profile", auth, getProfile);
 router.get("/users", auth, getAllUsers);
-router.put("/profile", auth, auth.blockGuardianWrite, upload.single("image"), updateProfile);
+router.put("/profile", auth, upload.single("image"), updateProfile);
 router.post("/family-members", auth, auth.blockGuardianWrite, addFamilyMember);
 router.put("/subscription", updateSubscription);
 router.put("/profile/fcm-token", auth, updateFCMToken);

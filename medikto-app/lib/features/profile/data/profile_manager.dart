@@ -197,6 +197,95 @@ class ProfileManager {
     }
   }
 
+  /// FETCH ALL HOSPITALS FOR DROPDOWN
+  Future<ResponseData> getAllHospitals() async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get("/hospitals");
+      if (response.statusCode == 200) {
+        return ResponseData(
+          "Hospitals fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data['hospitals'] ?? [],
+        );
+      }
+      return ResponseData("Failed to fetch hospitals list", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  /// REQUEST OTP TO LINK HOSPITAL
+  Future<ResponseData> requestHospitalOTP({
+    required String phone,
+    required String hospitalId,
+  }) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.post(
+        "/hospitals/send-link-otp",
+        data: {
+          "phone": phone,
+          "hospitalId": hospitalId,
+        },
+      );
+      if (response.statusCode == 200) {
+        return ResponseData(
+          "OTP requested successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to request link OTP", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  /// VERIFY LINK OTP
+  Future<ResponseData> verifyHospitalOTP({
+    required String phone,
+    required String otp,
+    required String hospitalId,
+  }) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.post(
+        "/hospitals/verify-link",
+        data: {
+          "phone": phone,
+          "otp": otp,
+          "hospitalId": hospitalId,
+        },
+      );
+      if (response.statusCode == 200) {
+        return ResponseData(
+          "Hospital connected successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to verify OTP", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
   /// FETCH MONITORED PATIENTS (FOR GUARDIANS)
   Future<ResponseData> getMonitoredPatients() async {
     Response response;

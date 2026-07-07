@@ -23,7 +23,12 @@ exports.sendLinkOTP = async (req, res) => {
 
     // 2. Identify Admin's Hospital
     let hospitalId;
-    if (req.user.id === "123456") {
+    if (req.user.role === "patient") {
+      hospitalId = req.body.hospitalId;
+      if (!hospitalId) {
+        return res.status(400).json({ message: "hospitalId is required when requested by patient" });
+      }
+    } else if (req.user.id === "123456") {
       // Create or get Demo Hospital for dummy admin
       let dummyHosp = await Hospital.findOne({ name: "Demo Hospital" });
       if (!dummyHosp) {
@@ -92,7 +97,12 @@ exports.verifyAndLink = async (req, res) => {
 
     // 1. Identify Admin's Hospital
     let hospitalId;
-    if (req.user.id === "123456") {
+    if (req.user.role === "patient") {
+      hospitalId = req.body.hospitalId;
+      if (!hospitalId) {
+        return res.status(400).json({ message: "hospitalId is required when verified by patient" });
+      }
+    } else if (req.user.id === "123456") {
       const dummyHosp = await Hospital.findOne({ name: "Demo Hospital" });
       if (!dummyHosp) {
         return res.status(404).json({ message: "Demo Hospital not found. Send OTP first." });
@@ -265,7 +275,7 @@ exports.createHospitalWithAdmin = async (req, res) => {
 exports.getHospitals = async (req, res) => {
   try {
     // 1. Verify Authorized Role
-    if (!["superadmin", "admin", "user", "guardian"].includes(req.user?.role)) {
+    if (!["superadmin", "admin", "user", "guardian", "patient"].includes(req.user?.role)) {
       return res.status(403).json({ message: "Unauthorized access to hospitals list" });
     }
 
