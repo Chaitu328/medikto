@@ -43,6 +43,7 @@ export default function Patients() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpSuccess, setOtpSuccess] = useState(false);
   const [otpError, setOtpError] = useState("");
+  const [displayedOtp, setDisplayedOtp] = useState("");
 
   const role = (localStorage.getItem("role") || "").toLowerCase();
 
@@ -247,6 +248,7 @@ const compliancePercent =
     setOtpSent(false);
     setOtpSuccess(false);
     setOtpError("");
+    setDisplayedOtp("");
   };
 
   const sendLinkOTP = async () => {
@@ -257,7 +259,9 @@ const compliancePercent =
     try {
       setOtpLoading(true);
       setOtpError("");
-      await api.post("/hospitals/send-link-otp", { phone: otpPhone });
+      const response = await api.post("/hospitals/send-link-otp", { phone: otpPhone });
+      const receivedOtp = response?.data?.otp || "";
+      setDisplayedOtp(receivedOtp);
       setOtpSent(true);
     } catch (error) {
       setOtpError(error?.response?.data?.message || "Failed to send OTP");
@@ -942,6 +946,12 @@ const compliancePercent =
                     </button>
                   ) : (
                     <div className="space-y-4">
+                      {displayedOtp && (
+                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-sm font-medium">
+                          <Crown className="w-4 h-4 flex-shrink-0" />
+                          <span>Generated OTP: <strong className="text-base text-emerald-800">{displayedOtp}</strong></span>
+                        </div>
+                      )}
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
                           Enter OTP

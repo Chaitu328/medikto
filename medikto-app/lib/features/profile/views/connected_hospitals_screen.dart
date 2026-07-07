@@ -237,7 +237,13 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                                   );
                                   setModalState(() => isActionLoading = false);
                                   if (res.status == ResponseStatus.SUCCESS) {
-                                    AppToasts.showSuccess(context, "Verification code resent successfully");
+                                    final code = res.data is Map ? (res.data as Map)['otp']?.toString() ?? "" : "";
+                                    AppToasts.showSuccess(
+                                      context,
+                                      code.isNotEmpty
+                                          ? "Verification code: $code (resent)"
+                                          : "Verification code resent successfully",
+                                    );
                                   } else {
                                     AppToasts.showError(context, res.message);
                                   }
@@ -267,7 +273,13 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                           );
                           setModalState(() => isActionLoading = false);
                           if (res.status == ResponseStatus.SUCCESS) {
-                            AppToasts.showSuccess(context, "Connection code sent successfully");
+                            final code = res.data is Map ? (res.data as Map)['otp']?.toString() ?? "" : "";
+                            AppToasts.showSuccess(
+                              context,
+                              code.isNotEmpty
+                                  ? "Connection code: $code (sent via notification)"
+                                  : "Connection code sent successfully",
+                            );
                             setModalState(() => isOtpSent = true);
                           } else {
                             AppToasts.showError(context, res.message);
