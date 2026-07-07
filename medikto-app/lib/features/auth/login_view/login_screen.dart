@@ -573,12 +573,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         style: TextStyle(fontSize: 14, color: Colors.white38),
                       ),
                       InkWell(
-                        onTap: () => Navigator.pushAndRemoveUntil(
+                        onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => const RegisterScreen(),
                           ),
-                          (route) => false,
                         ),
                         child: const Text(
                           "Register",

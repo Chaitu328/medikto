@@ -61,13 +61,13 @@ class ProfileManager {
   }
 
   Future<ResponseData> updateProfile({
-    required String firstName,
-    required String phone,
-    required String bloodGroup,
-    required String gender,
-    required String age,
-    required String height,
-    required String weight,
+    String firstName = "",
+    String phone = "",
+    String bloodGroup = "",
+    String gender = "",
+    String age = "",
+    String height = "",
+    String weight = "",
     File? image,
   }) async {
     try {

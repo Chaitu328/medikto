@@ -127,7 +127,10 @@ Future<void> logoutUser() async {
       }
     }, onError: (error, handler) async {
       // TODO: Remove Print Statements
-      debugPrint('Error');
+      debugPrint('Error details: $error');
+      debugPrint('Error message: ${error.message}');
+      debugPrint('Error type: ${error.type}');
+      debugPrint('Error error: ${error.error}');
       debugPrint(error.response?.realUri.toString());
       debugPrint(error.response?.data.toString());
       debugPrint(error.response?.statusCode?.toString() ?? '');

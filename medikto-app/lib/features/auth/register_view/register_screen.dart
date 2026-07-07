@@ -12,6 +12,7 @@ import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
 import 'package:medikto/features/auth/register_view/account_create_success.dart';
 import 'package:medikto/features/auth/widgets/gender_selection_widget.dart';
+import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -323,11 +324,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   "caretakerPhone": caretakerPhoneController.text.trim(),
                                   "caretakerPassword": caretakerPasswordController.text.trim(),
                                 },
-                                if (selectedImage != null)
-                                  "profile_image": await MultipartFile.fromFile(
-                                    selectedImage!.path,
-                                    filename: "profile.jpg",
-                                  ),
                               };
 
                               final response = await ref.read(authProvider).registerProfile(data);
@@ -336,6 +332,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               Navigator.pop(context); // Close OTP Dialog
 
                               if (response.status == ResponseStatus.SUCCESS) {
+                                if (selectedImage != null) {
+                                  try {
+                                    await ref.read(profileProvider).updateProfile(
+                                      image: selectedImage,
+                                    );
+                                  } catch (uploadErr) {
+                                    debugPrint("Registration profile image upload failed: $uploadErr");
+                                  }
+                                }
+
+                                nameController.clear();
+                                phoneController.clear();
+                                dobController.clear();
+                                passwordController.clear();
+                                confirmPasswordController.clear();
+                                govIdController.clear();
+                                setState(() {
+                                  selectedImage = null;
+                                });
+
                                 AppToasts.showSuccess(context, "Account created successfully. Please log in.");
                                 Navigator.pushAndRemoveUntil(
                                   context,
@@ -346,8 +362,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 AppToasts.showError(context, response.message);
                               }
                             } catch (e) {
-                              setDialogState(() => dialogLoading = false);
-                              AppToasts.showError(context, "Verification/Registration failed: $e");
+                              if (context.mounted) {
+                                setDialogState(() => dialogLoading = false);
+                                AppToasts.showError(context, "Verification/Registration failed: $e");
+                              }
                             }
                           },
                           child: const Text(
@@ -878,11 +896,9 @@ class _FormFields extends StatelessWidget {
             ),
             SizedBox(width: size.width * 0.04),
             Expanded(
-              child: Expanded(
-                child: GenderSection(
-                  selectedGender: selectedGender,
-                  onChanged: onGenderChanged,
-                ),
+              child: GenderSection(
+                selectedGender: selectedGender,
+                onChanged: onGenderChanged,
               ),
             ), // Ensure internal widget is dark
           ],
