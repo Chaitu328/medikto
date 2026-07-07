@@ -16,7 +16,7 @@ exports.sendLinkOTP = async (req, res) => {
     }
 
     // 1. Verify patient exists in DB
-    const patient = await User.findOne({ phone, role: "user" });
+    const patient = await User.findOne({ phone, role: "patient" });
     if (!patient) {
       return res.status(404).json({ message: "Patient not registered on Medikto. Ask patient to register in the app first." });
     }
@@ -131,7 +131,7 @@ exports.verifyAndLink = async (req, res) => {
     }
 
     // 5. Connect Patient
-    const patient = await User.findOne({ phone, role: "user" });
+    const patient = await User.findOne({ phone, role: "patient" });
     if (!patient) {
       return res.status(404).json({ message: "Patient not found" });
     }

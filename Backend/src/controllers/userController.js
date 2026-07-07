@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const User = require("../models/userModel");
-const Hospital = require("../models/hospitalModel");
 const cloudinary = require("../config/cloudinary");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendInviteEmail } = require("../utils/emailHelper");

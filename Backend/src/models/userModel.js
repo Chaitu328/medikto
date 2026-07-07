@@ -28,17 +28,16 @@ const userSchema = new mongoose.Schema({
 
   isVerified: { type: Boolean, default: false },
 
-    role: {
-        type: String,
-
-        enum: [
-          "admin",
-          "user",
-          "guardian",
-        ],
-
-        default: "user",
-      },
+   role: {
+    type: String,
+    enum: [
+        "superadmin",
+        "admin",
+        "guardian",
+        "patient"
+    ],
+    default: "patient"
+},
 
   // 🔥 UPDATED SUBSCRIPTION
   subscription: {

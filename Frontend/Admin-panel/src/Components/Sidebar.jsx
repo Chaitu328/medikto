@@ -14,6 +14,7 @@ import {
   Building2,
   UserPlus,
   ShieldCheck,
+  User,
 } from "lucide-react";
 
 import { NavLink } from "react-router-dom";
@@ -88,6 +89,11 @@ const superAdminMenu = [
     label: "Deleted Selfies",
     path: "/deletedselfie",
   },
+   {
+    icon: User,
+    label: "User Management",
+    path: "/users",
+  },
   {
     icon: Settings,
     label: "Settings",
@@ -116,6 +122,7 @@ const adminMenu = [
     label: "Caretakers",
     path: "/caretakers",
   },
+  
   {
     icon: Pill,
     label: "Medications",
@@ -155,14 +162,14 @@ const guardianMenu = [
     path: "/",
   },
   {
-    icon: ClipboardList,
-    label: "Pending Requests",
-    path: "/pendingrequests"
-  },
-  {
     icon: Users,
     label: "My Patients",
     path: "/patients",
+  },
+   {
+    icon: ClipboardList,
+    label: "Pending Requests",
+    path: "/pendingrequests"
   },
   {
     icon: Pill,

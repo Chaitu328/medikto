@@ -177,7 +177,12 @@ const RoleBadge = ({ role }) => {
 // SECTION COMPONENTS
 // =====================================================
 
-const AccountSection = ({ user, loading, platformStats }) => {  if (loading) {
+const AccountSection = ({
+  user,
+  loading,
+ platformStats,
+  pendingInvitations,
+}) => {  if (loading) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
@@ -365,17 +370,17 @@ const GuardianInfoCard = ({ user, pendingInvitations }) => (
       ))}
     </div>
 
-    <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="mt-6 grid grid-cols-1 sm:grid-cols-1 gap-4">
       <div className="bg-emerald-50 rounded-2xl p-5 text-center transition-transform duration-200 hover:scale-[1.02]">
         <Users className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
         <p className="text-2xl font-bold text-gray-900">{user?.guardianFor?.length || 0}</p>
         <p className="text-xs text-gray-500 mt-1 font-medium">Patients Assigned</p>
       </div>
-      <div className="bg-amber-50 rounded-2xl p-5 text-center transition-transform duration-200 hover:scale-[1.02]">
+      {/* <div className="bg-amber-50 rounded-2xl p-5 text-center transition-transform duration-200 hover:scale-[1.02]">
         <Bell className="w-6 h-6 text-amber-600 mx-auto mb-2" />
         <p className="text-2xl font-bold text-gray-900">{pendingInvitations || 0}</p>
         <p className="text-xs text-gray-500 mt-1 font-medium">Pending Invitations</p>
-      </div>
+      </div> */}
     </div>
   </div>
 );
@@ -887,7 +892,7 @@ setPlatformStats({
   hospitals: hospitalsRes.data.count || 0,
   guardians: guardiansRes.data.guardians?.length || 0,
   admins: users.filter((u) => u.role === "admin").length,
-  patients: users.filter((u) => u.role === "user").length,
+  patients: users.filter((u) => u.role === "patient").length,
 });
     } catch (err) {
       console.error(err);
@@ -984,7 +989,8 @@ useEffect(() => {
   user={user}
   loading={loading}
   platformStats={platformStats}
-/>;
+  pendingInvitations={pendingInvitations}
+/>
       case "security":
         return <SecuritySection user={user} onToast={showToast} />;
       case "notifications":

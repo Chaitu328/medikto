@@ -91,7 +91,7 @@ exports.register = async (req, res) => {
     user = await User.create({
       phone,
       firstName: name,
-      role: "user",
+      role: "patient",
       isVerified: true
     });
 
@@ -211,7 +211,45 @@ async function linkPendingCaretakerInvites(user) {
     }
 
   } catch (err) {
-    console.error("linkPendingCaretakerInvites error:", err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+// ================= DELETE ADMIN =================
+exports.deleteAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const admin = await User.findById(id);
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    if (admin.role !== "admin") {
+      return res.status(400).json({
+        success: false,
+        message: "Selected user is not an admin",
+      });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "Admin deleted successfully",
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
   }
 }
 

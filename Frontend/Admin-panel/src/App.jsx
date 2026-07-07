@@ -35,6 +35,7 @@ import Caretakers from "./Pages/Caretakers";
 import Admins from "./Pages/Admins";
 import PendingRequests from "./Pages/PendingRequests";
 import Settings from "./Pages/Settings";
+import UserManagement from "./Pages/UserManagement";
 
 // ================= ADMIN PROTECTED ROUTE =================
 function ProtectedRoute({
@@ -178,6 +179,11 @@ function App() {
 <Route
   path="/settings"
   element={<Settings/>}
+/>
+
+<Route
+  path="/users"
+  element={<UserManagement/>}
 />
                 </Routes>
               </Layout>

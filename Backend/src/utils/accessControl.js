@@ -19,10 +19,11 @@ const getAdminHospitalIds = async (adminId) => {
   const hospitalIds = [];
 
   if (isValidObjectId(adminId)) {
-    const admin = await User.findById(adminId).select("hospital");
-    if (admin?.hospital) {
-      hospitalIds.push(admin.hospital);
-    }
+    const admin = await User.findById(adminId).select("hospitals");
+
+if (admin?.hospitals?.length) {
+  hospitalIds.push(...admin.hospitals);
+}
 
     const hospitals = await Hospital.find({ adminId }).select("_id");
     hospitalIds.push(...hospitals.map((hospital) => hospital._id));
@@ -52,24 +53,26 @@ const getAccessiblePatientIds = async (req, requestedPatientId) => {
     return [];
   }
 
- if (role === "admin") {
-  const admin = await User.findById(requesterId).select("hospital");
+if (role === "admin") {
 
-  if (!admin || !admin.hospital) {
+  const admin = await User.findById(requesterId).select("hospitals");
+
+  if (!admin?.hospitals?.length) {
     return [];
   }
 
- const patientIds = await User.find({
-  role: "user",
-  $or: [
-    { hospital: admin.hospital },
-    { hospitals: admin.hospital },
-  ],
-}).distinct("_id");
+  const hospitalIds = admin.hospitals.map(id => id.toString());
 
-  return filterRequestedPatient(uniqueIds(patientIds), requestedPatientId);
+  const patientIds = await User.find({
+    role: "patient",
+    hospitals: { $in: hospitalIds },
+  }).distinct("_id");
+
+  return filterRequestedPatient(
+    uniqueIds(patientIds),
+    requestedPatientId
+  );
 }
-
 
   if (role === "guardian") {
     if (!isValidObjectId(requesterId)) {
@@ -81,7 +84,7 @@ const getAccessiblePatientIds = async (req, requestedPatientId) => {
     return filterRequestedPatient(patientIds, requestedPatientId);
   }
 
-  if (role === "user") {
+  if (role === "patient") {
     const ownId = requesterId.toString();
     return filterRequestedPatient([ownId], requestedPatientId);
   }
@@ -113,7 +116,7 @@ const buildPatientListFilter = async (req, requestedPatientId) => {
 
   // Admin/Guardian -> only patient users
   return {
-    role: "user",
+    role: "patient",
     _id: { $in: patientIds },
   };
 };

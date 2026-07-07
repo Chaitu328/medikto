@@ -98,7 +98,9 @@ const [dashboard, setDashboard] = useState({
 
       const adherence = adherenceRes?.data || {};
 
-      const patients = normalizeArray(patientsRes, "users");
+      const patients = normalizeArray(patientsRes, "users").filter(
+  (user) => user.role === "patient"
+);
 
       const adherenceChart = adherence?.data?.length
         ? adherence.data.slice(0, 7).map((item, index) => ({

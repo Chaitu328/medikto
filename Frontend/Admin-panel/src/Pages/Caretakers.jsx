@@ -691,7 +691,7 @@ const fetchPatients = async () => {
 
     // Only keep users having role = user
     const patients = (res.data.users || []).filter(
-      (user) => user.role === "user"
+      (user) => user.role === "patient"
     );
 
     setPatients(patients);
