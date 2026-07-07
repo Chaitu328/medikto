@@ -610,7 +610,7 @@ const UserManagement = () => {
   // Hospitals list for dropdown
   const [hospitals, setHospitals] = useState([]);
 
-  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
+  const API_BASE = import.meta.env.VITE_API_URL || "http://161.248.223.165:3028";
 
   // ─── Fetch Users ─────────────────────────────────────────────────────────
   const fetchUsers = async () => {

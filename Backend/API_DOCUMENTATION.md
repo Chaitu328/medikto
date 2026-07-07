@@ -18,7 +18,7 @@ The API supports:
 ## 2. Base URL
 
 ```txt
-http://localhost:4000/api
+http://161.248.223.165:3028/api
 ```
 
 ```txt
