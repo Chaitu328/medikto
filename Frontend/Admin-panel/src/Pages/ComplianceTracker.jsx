@@ -71,13 +71,12 @@ export default function ComplianceTracker() {
             ),
           ]);
 
-        setUsers(
-  Array.isArray(
-    usersRes.data
-  )
-    ? usersRes.data
-    : usersRes.data
-        ?.users || []
+       const allUsers = Array.isArray(usersRes.data)
+  ? usersRes.data
+  : usersRes.data?.users || [];
+
+setUsers(
+  allUsers.filter((user) => user.role === "patient")
 );
 
        setMedications(

@@ -125,7 +125,7 @@ export default function Header({
       default:
         return {
           ...base,
-          displayRole: "User",
+          displayrole: "patient",
           badge: null,
           subtitle: base.email,
           showSearch: true,
@@ -268,7 +268,7 @@ export default function Header({
     }
 
     // Patient: Search own medications, reports, vitals
-    else if (userRole === "patient" || userRole === "user") {
+    else if (userRole === "patient" || userrole === "patient") {
       const patientId = currentUser?._id || currentUser?.id;
 
       const ownMedications = medications

@@ -57,8 +57,11 @@ export default function DeletedSelfies() {
         const data =
           response?.data?.doses || [];
 
-        setDeletedSelfies(data);
+const patientSelfies = data.filter(
+  (item) => item?.user?.role === "patient"
+);
 
+setDeletedSelfies(patientSelfies);
       } catch (error) {
 
         console.log(

@@ -69,10 +69,16 @@ const [selectedType, setSelectedType] =
         ? todayRes.data.schedules
         : [];
 
-      setMedications(medicationData);
+const patientMedications = medicationData.filter(
+  (item) => item?.user?.role === "patient"
+);
 
-      setToday(todayData);
-    } catch (error) {
+setMedications(patientMedications);
+const patientToday = todayData.filter(
+  (item) => item?.user?.role === "patient"
+);
+
+setToday(patientToday);    } catch (error) {
       console.log("Medication Error:", error);
     } finally {
       setLoading(false);

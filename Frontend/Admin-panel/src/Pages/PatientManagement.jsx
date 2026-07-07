@@ -99,6 +99,10 @@ const isSuperAdmin = role === "superadmin";
   const filteredPatients = useMemo(() => {
   return patients.filter((patient) => {
 
+    if (patient.role !== "patient") {
+      return false;
+    }
+
     // SEARCH
     const matchesSearch =
 
@@ -199,42 +203,29 @@ const isSuperAdmin = role === "superadmin";
 ]);
 
   // STATS
- const totalPatients =
-  patients.length;
 
-const premiumPatients =
-  patients.filter(
-    (p) =>
-      (
-        p?.subscription ||
-        ""
-      ).toLowerCase() ===
-      "premium"
-  ).length;
+  const patientList = patients.filter(
+  (p) => p.role === "patient"
+);
 
-const highCompliance =
-  patients.filter(
-    (p) =>
-      getComplianceStatus(
-        p
-      ) === "High"
-  ).length;
+ const totalPatients = patientList.length;
 
-const pendingReviews =
-  patients.filter(
-    (p) =>
-      getComplianceStatus(
-        p
-      ) === "Low"
-  ).length;
+const premiumPatients = patientList.filter(
+  (p) =>
+    (p?.subscription || "").toLowerCase() === "premium"
+).length;
+
+const highCompliance = patientList.filter(
+  (p) => getComplianceStatus(p) === "High"
+).length;
+
+const pendingReviews = patientList.filter(
+  (p) => getComplianceStatus(p) === "Low"
+).length;
 
 const compliancePercent =
   totalPatients > 0
-    ? Math.round(
-        (highCompliance /
-          totalPatients) *
-          100
-      )
+    ? Math.round((highCompliance / totalPatients) * 100)
     : 0;
 
   // HOSPITAL LINK MODAL HANDLERS

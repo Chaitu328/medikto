@@ -69,7 +69,11 @@ const fetchTodaySchedule = async (
       ? response.data.schedules
       : [];
 
-    setSchedules(data);
+const patientSchedules = data.filter(
+  (item) => item?.user?.role === "patient"
+);
+
+setSchedules(patientSchedules);
 
   } catch (error) {
     console.log(

@@ -125,6 +125,9 @@ export default function Patients() {
  const filteredPatients = useMemo(() => {
   return patients.filter((patient) => {
 
+    if (patient.role !== "patient") {
+      return false;
+    }
     const matchesSearch =
       patient?.name
         ?.toLowerCase()
@@ -199,44 +202,35 @@ const totalPages =
   );
 
   // ================= STATS =================
- const totalPatients =
-  patients.length;
+  const patientList = patients.filter(
+  (p) => p.role === "patient"
+);
+ const totalPatients = patientList.length;
 
 const premiumPatients =
-  patients.filter(
+  patientList.filter(
     (p) =>
-      (
-        p?.subscription ||
-        ""
-      ).toLowerCase() ===
-      "premium"
+      (p?.subscription || "").toLowerCase() === "premium"
   ).length;
 
 const highCompliance =
-  patients.filter(
+  patientList.filter(
     (p) =>
-      getComplianceStatus(
-        p
-      ) === "High"
+      getComplianceStatus(p) === "High"
   ).length;
 
 const pendingReviews =
-  patients.filter(
+  patientList.filter(
     (p) =>
-      getComplianceStatus(
-        p
-      ) === "Low"
+      getComplianceStatus(p) === "Low"
   ).length;
 
-const compliancePercent =
+  const compliancePercent =
   totalPatients > 0
     ? Math.round(
-        (highCompliance /
-          totalPatients) *
-          100
+        (highCompliance / totalPatients) * 100
       )
     : 0;
-
   // ================= LOADING =================
   if (loading) {
     return (

@@ -66,11 +66,16 @@ export default function ReportsPage() {
         ? response.data.reports
         : [];
 
-      setReports(reportData);
+      const patientReports = reportData.filter(
+  (report) => report?.user?.role === "patient"
+);
 
-      if (reportData.length > 0) {
-        setSelectedReport(reportData[0]);
-      }
+setReports(patientReports);
+
+if (patientReports.length > 0) {
+  setSelectedReport(patientReports[0]);
+}
+
     } catch (error) {
       console.log("REPORT FETCH ERROR:", error);
     } finally {

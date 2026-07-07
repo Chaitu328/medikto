@@ -38,18 +38,18 @@ if (token === "superadmin-token") {
 
     // 3. Dev Bypass for Mobile App Developers (Patient test users)
     if (token.startsWith("mock_")) {
-      const firstUser = await User.findOne({ role: "user" });
+      const firstUser = await User.findOne({ role: "patient" });
       if (firstUser) {
-        req.user = { id: firstUser._id.toString(), role: "user" };
+        req.user = { id: firstUser._id.toString(), role: "patient" };
       } else {
         // Create fallback test patient if DB is empty
         const testUser = await User.create({
           phone: "9999999999",
           firstName: "John Doe",
-          role: "user",
+          role: "patient",
           isVerified: true
         });
-        req.user = { id: testUser._id.toString(), role: "user" };
+        req.user = { id: testUser._id.toString(), role: "patient" };
       }
       return next();
     }
