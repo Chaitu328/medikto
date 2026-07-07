@@ -40,10 +40,43 @@ exports.getAllUsers = async (req, res) => {
       .select("-password")
       .sort({ createdAt: -1 });
 
+    // Find the current admin's hospital ID
+    let hospitalId;
+    if (req.user) {
+      const admin = await User.findById(req.user.id);
+      if (admin && admin.hospital) {
+        hospitalId = admin.hospital;
+      } else {
+        const Hospital = require("../models/hospitalModel");
+        const hosp = await Hospital.findOne({ adminId: req.user.id });
+        if (hosp) hospitalId = hosp._id;
+      }
+    }
+
+    // Convert users to plain JS objects so we can add custom properties
+    const usersJson = [];
+    const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
+
+    for (const u of users) {
+      const uObj = u.toObject();
+      if (hospitalId && uObj.phone) {
+        // Find if there is an active OTP for this patient & hospital
+        const linkOtp = await HospitalLinkOTP.findOne({
+          phone: uObj.phone,
+          hospitalId: hospitalId,
+          expiresAt: { $gt: new Date() }
+        });
+        if (linkOtp) {
+          uObj.otpCode = linkOtp.otp; // Attach OTP
+        }
+      }
+      usersJson.push(uObj);
+    }
+
     res.status(200).json({
       success: true,
-      count: users.length,
-      users,
+      count: usersJson.length,
+      users: usersJson,
     });
   } catch (error) {
     res.status(500).json({

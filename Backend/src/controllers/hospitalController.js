@@ -54,14 +54,13 @@ exports.sendLinkOTP = async (req, res) => {
 
     // 3. Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
-    const hashedOTP = await bcrypt.hash(otp.toString(), 10);
 
     // 4. Save to temporary OTP link table
     await HospitalLinkOTP.deleteMany({ phone, hospitalId });
     await HospitalLinkOTP.create({
       phone,
       hospitalId,
-      otp: hashedOTP,
+      otp: otp.toString(),
       expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes validity
     });
 
@@ -135,7 +134,7 @@ exports.verifyAndLink = async (req, res) => {
     }
 
     // 4. Compare OTP
-    const isMatch = await bcrypt.compare(otp.toString(), record.otp);
+    const isMatch = (otp.toString() === record.otp);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid OTP" });
     }

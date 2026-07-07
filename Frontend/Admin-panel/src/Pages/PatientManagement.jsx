@@ -720,26 +720,40 @@ const compliancePercent =
               </div>
 
               {/* ACTIONS */}
-              <div className="flex items-center">
-               {!isGuardian && (
-  patient?.hospitals?.length > 0 ? (
-    <span
-      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-    >
-      Linked
-    </span>
-  ) : (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        openHospitalLinkModal(patient);
-      }}
-      className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg px-3 py-2 text-xs font-semibold transition-all shadow-sm"
-    >
-      Link Hospital
-    </button>
-  )
-)}
+              <div className="flex items-center gap-2">
+                {!isGuardian && (
+                  patient?.hospitals?.length > 0 ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    >
+                      Linked
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openHospitalLinkModal(patient);
+                        }}
+                        className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg px-3 py-2 text-xs font-semibold transition-all shadow-sm"
+                      >
+                        Link Hospital
+                      </button>
+                      {patient?.otpCode && (
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/60 animate-pulse cursor-pointer"
+                          title="Active connection OTP code"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openHospitalLinkModal(patient);
+                          }}
+                        >
+                          OTP: {patient.otpCode}
+                        </span>
+                      )}
+                    </>
+                  )
+                )}
               </div>
             </div>
           ))
