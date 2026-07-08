@@ -18,6 +18,6 @@ exports.loginSuccess = async (req, res) => {
   console.log("TOKEN:", token);
 
   res.redirect(
-  `http://localhost:5173/superadmin/login?token=${token}`
+  `https://admin.medikto.com/superadmin/login?token=${token}`
 );
 };
