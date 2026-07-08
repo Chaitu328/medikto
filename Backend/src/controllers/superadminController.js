@@ -1,10 +1,13 @@
 const jwt = require("jsonwebtoken");
 
 exports.loginSuccess = async (req, res) => {
+  console.log("LOGIN SUCCESS");
+  console.log("REQ USER:", req.user);
+
   const token = jwt.sign(
     {
       id: req.user._id,
-      role: "superadmin",
+      role: req.user.role,
     },
     process.env.JWT_SECRET,
     {
@@ -12,7 +15,9 @@ exports.loginSuccess = async (req, res) => {
     }
   );
 
+  console.log("TOKEN:", token);
+
   res.redirect(
-    `http://localhost:5173/superadmin?token=${token}`
-  );
+  `http://localhost:5173/superadmin/login?token=${token}`
+);
 };

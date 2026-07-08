@@ -3,7 +3,10 @@ import {
   Routes,
   Route,
   Navigate,
+  useNavigate,
 } from "react-router-dom";
+import { useEffect } from "react";
+// import { useNavigate } from "react-router-dom";
 
 import Layout from "./Layout";
 
@@ -37,6 +40,23 @@ import PendingRequests from "./Pages/PendingRequests";
 import Settings from "./Pages/Settings";
 import UserManagement from "./Pages/UserManagement";
 
+
+function GoogleCallback() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+
+if (token) {
+  localStorage.setItem("token", token);
+  window.history.replaceState({}, "", "/");
+}
+  }, [navigate]);
+
+  return <div>Signing in...</div>;
+}
+
 // ================= ADMIN PROTECTED ROUTE =================
 function ProtectedRoute({
   children,
@@ -48,12 +68,19 @@ function ProtectedRoute({
 
   // NO TOKEN
   if (!token) {
+    // return (
+    //   <Navigate
+    //     to="/login"
+    //     replace
+    //   />
+    // );
+
     return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    );
+  <Navigate
+    to="/admin/login"
+    replace
+  />
+);
   }
 
   return children;
@@ -64,10 +91,36 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* ================= LOGIN ================= */}
-        <Route
+        {/* <Route
           path="/login"
           element={<Login />}
-        />
+        /> */}
+
+
+        <Route
+  path="/login"
+  element={<Navigate to="/admin/login" replace />}
+/>
+
+<Route
+  path="/admin/login"
+  element={<Login />}
+/>
+
+<Route
+  path="/guardian/login"
+  element={<Login />}
+/>
+
+<Route
+  path="/superadmin/login"
+  element={<Login />}
+/>
+
+<Route
+  path="/superadmin"
+  element={<GoogleCallback />}
+/>
 
         {/* ================= PROTECTED ROUTES ================= */}
         <Route

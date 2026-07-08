@@ -19,7 +19,7 @@ import {
 
 import { NavLink } from "react-router-dom";
 
-const role = localStorage.getItem("role");
+
 
 
 
@@ -153,6 +153,11 @@ const adminMenu = [
     label: "Compliance",
     path: "/compliance",
   },
+  {
+    icon: Settings,
+    label: "Settings",
+    path: "/settings",
+  },
 ];
 
 const guardianMenu = [
@@ -205,14 +210,15 @@ const guardianMenu = [
 
 // const role = (localStorage.getItem("role") || "").toLowerCase();
 
-const menuItems =
-  role === "superadmin"
-    ? superAdminMenu
-    : role === "guardian"
-    ? guardianMenu
-    : adminMenu;
-
 export default function Sidebar() {
+  const role = localStorage.getItem("role");
+
+  const menuItems =
+    role === "superadmin"
+      ? superAdminMenu
+      : role === "guardian"
+      ? guardianMenu
+      : adminMenu;
   return (
     <aside className="w-[260px] h-screen bg-white border-r border-gray-200 flex flex-col px-4 py-6 fixed left-0 top-0">
       {/* LOGO */}
