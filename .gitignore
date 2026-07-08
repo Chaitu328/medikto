@@ -8,6 +8,7 @@ node_modules/
 CHANGELOG.md
 MOBILE_SETUP.md
 README.local.md
+medikto_system_summary.md
 # Logs
 npm-debug.log*
 yarn-debug.log*
