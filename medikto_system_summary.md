@@ -198,6 +198,9 @@ Step 4: Complete profile (age, blood group, height, weight — optional)
 | Basic | 48 hours | Same as Free |
 | Premium | 3 months | Selfie proofs kept for 3 months |
 
+> 🧪 **Beta Version Note (Subscription Updates)**:
+> In the current Beta release, subscription upgrades (switching from Free to Basic/Premium) are executed as direct database updates via the `/api/subscription` endpoint. No payment gateway (like Stripe or Razorpay) is integrated in this development version. A patient can upgrade their tier instantly in the mobile app profile page to facilitate testing of the different storage retention policies and UI badge responses.
+
 ### How does a Caretaker / Guardian work?
 
 A **Caretaker** is someone (family member, nurse) who watches over a patient remotely.
