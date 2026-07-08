@@ -18,7 +18,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 
-import api from "../api/axios";
+import api from "../Api/axios";
 
 export default function DeletedSelfies() {
 

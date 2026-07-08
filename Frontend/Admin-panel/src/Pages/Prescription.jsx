@@ -28,7 +28,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import api from "../api/axios";
+import api from "../Api/axios";
 
 export default function Patients() {
   const [patients, setPatients] = useState([]);

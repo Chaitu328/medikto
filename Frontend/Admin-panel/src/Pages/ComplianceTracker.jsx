@@ -17,7 +17,7 @@ import {
   useState,
 } from "react";
 
-import api from "../api/axios";
+import api from "../Api/axios";
 
 export default function ComplianceTracker() {
   // ================= STATES =================

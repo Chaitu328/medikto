@@ -32,7 +32,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
-import api from "../api/axios";
+import api from "../Api/axios";
 
 export default function VitalsPage() {
   // ================= STATES =================
