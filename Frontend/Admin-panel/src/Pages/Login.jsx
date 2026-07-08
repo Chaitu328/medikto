@@ -570,7 +570,7 @@ const MediktoLogin = () => {
 
   const handleGoogleLogin = () => {
   window.location.href =
-    "http://localhost:4000/api/superadmin/google";
+    "https://api.medikto.com/api/superadmin/google";
 };
 
   const handleGuardianLogin = async (e) => {

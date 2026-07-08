@@ -4,7 +4,7 @@ class ApiUrls {
   // static const String baseUrl = "http://10.0.2.2:4000/api"; // Local Android Emulator
   // static const String baseUrl = "http://192.168.29.210:4000/api"; // Local Wi-Fi Connection (Old)
   // static const String baseUrl = "http://192.168.1.8:4000/api"; // Local Wi-Fi (Host Computer)
-  static const String baseUrl = "http://161.248.223.165:3028/api"; // VPS Server
+  static const String baseUrl = "https://api.medikto.com/api"; // VPS Server
 
 
   // Endpoints

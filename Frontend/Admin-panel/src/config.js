@@ -1,6 +1,6 @@
 const config = {
-  // API_BASE_URL:"http://161.248.223.165:3028/api" 
-    API_BASE_URL:"http://Localhost:4000/api" 
+  // API_BASE_URL:"https://api.medikto.com/api" 
+    API_BASE_URL:"https://api.medikto.com/api" 
 
 };
 
