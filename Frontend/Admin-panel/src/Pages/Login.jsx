@@ -23,7 +23,7 @@ import {
   EyeOff,
   Hospital,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import api from "../Api/axios";
 
@@ -375,6 +375,25 @@ const ErrorToast = ({ message, onClose }) => {
 // ═════════════════════════════════════════════════════════════════════════════
 const MediktoLogin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  useEffect(() => {
+  const token = params.get("token");
+
+  if (token) {
+    localStorage.setItem("token", token);
+    localStorage.setItem("role", "superadmin");
+
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        role: "superadmin",
+      })
+    );
+
+    navigate("/", { replace: true });
+  }
+}, []);
   const [activeRole, setActiveRole] = useState("hospital");
 
   // Hospital Admin states
@@ -417,6 +436,24 @@ const MediktoLogin = () => {
   bg: "bg-emerald-50",
 },
   };
+
+  useEffect(() => {
+  if (params.get("error") === "unauthorized") {
+    setApiError(
+      "This Google account is not authorized to access the Super Admin portal."
+    );
+  }
+}, [location.search]);
+
+  useEffect(() => {
+  if (location.pathname === "/superadmin/login") {
+    setActiveRole("superadmin");
+  } else if (location.pathname === "/admin/login") {
+    setActiveRole("hospital");
+  } else if (location.pathname === "/guardian/login") {
+    setActiveRole("guardian");
+  }
+}, [location.pathname]);
 
   // Reset form when role changes
   useEffect(() => {
@@ -514,22 +551,27 @@ const MediktoLogin = () => {
   //   }
   // };
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      // In production, this would trigger Google OAuth
-      // For now, simulate a successful superadmin login
-      await new Promise((r) => setTimeout(r, 1500));
-      localStorage.setItem("token", "superadmin-token");
-      localStorage.setItem("role", "superadmin");
-      localStorage.setItem("user", JSON.stringify({ name: "Super Admin", role: "superadmin" }));
-      navigate("/");
-    } catch (error) {
-      setApiError("Google login failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const handleGoogleLogin = async () => {
+  //   setLoading(true);
+  //   try {
+  //     // In production, this would trigger Google OAuth
+  //     // For now, simulate a successful superadmin login
+  //     await new Promise((r) => setTimeout(r, 1500));
+  //     localStorage.setItem("token", "superadmin-token");
+  //     localStorage.setItem("role", "superadmin");
+  //     localStorage.setItem("user", JSON.stringify({ name: "Super Admin", role: "superadmin" }));
+  //     navigate("/");
+  //   } catch (error) {
+  //     setApiError("Google login failed. Please try again.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const handleGoogleLogin = () => {
+  window.location.href =
+    "http://localhost:4000/api/superadmin/google";
+};
 
   const handleGuardianLogin = async (e) => {
   e.preventDefault();
@@ -554,7 +596,7 @@ const MediktoLogin = () => {
 
     if (mustChangePassword) {
 
-      navigate("/guardian/change-password");
+      navigate("/");
 
     } else {
 
@@ -612,7 +654,13 @@ const MediktoLogin = () => {
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
             {/* Role Toggle */}
             <div className="px-8 pt-8 pb-2">
-              <RoleToggle activeRole={activeRole} onChange={setActiveRole} />
+              {/* <RoleToggle activeRole={activeRole} onChange={setActiveRole} /> */}
+              {location.pathname === "/login" && (
+  <RoleToggle
+    activeRole={activeRole}
+    onChange={setActiveRole}
+  />
+)}
             </div>
 
             {/* Card Header */}

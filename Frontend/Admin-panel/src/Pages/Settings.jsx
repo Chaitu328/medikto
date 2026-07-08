@@ -936,33 +936,34 @@ setPlatformStats({
   // }, [detectUserRole]);
 
   useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      const res = await api.get("/profile");
-      setUser(res.data);
-    } catch (err) {
-      console.error("Failed to load profile:", err);
-    }
-  };
-
-  fetchProfile();
-}, []);
-
-useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      const res = await api.get("/profile");
-      setUser(res.data);   // ✅
-
-    } catch (err) {
-      console.error(err);
-    } finally {
+    const localUser = detectUserRole();
+    if (localUser && localUser.role === "superadmin") {
+      setUser({
+        role: "superadmin",
+        firstName: "Super",
+        name: "Admin",
+        email: "admin@medikto.com",
+        phone: "Not available",
+        version: "1.0.0",
+        environment: "Production",
+      });
       setLoading(false);
+      return;
     }
-  };
 
-  fetchProfile();
-}, []);
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get("/profile");
+        setUser(res.data);
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [detectUserRole]);
 
 useEffect(() => {
   const fetchInvitations = async () => {

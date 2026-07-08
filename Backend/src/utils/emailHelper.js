@@ -60,13 +60,43 @@ const generateEmailTemplate = (headerTitle, headerSubtitle, greetingName, bodyPa
                 <tr>
                   <td align="center" style="padding:36px 32px 28px 32px;">
                     <!-- Logo Circle -->
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; margin:0 auto;">
-                      <tr>
-                        <td style="width:72px; height:72px; background-color:#FFFFFF; border-radius:50%; text-align:center; vertical-align:middle; box-shadow:0 4px 16px rgba(0,0,0,0.12);">
-                          <img src="{{LOGO_URL}}" alt="Medikto" width="40" height="40" style="display:block; border:0; outline:none; text-decoration:none; margin:0 auto;" />
-                        </td>
-                      </tr>
-                    </table>
+                   <!-- Logo -->
+<table
+  role="presentation"
+  cellpadding="0"
+  cellspacing="0"
+  border="0"
+  align="center"
+  style="margin:0 auto 20px auto;"
+>
+  <tr>
+    <td align="center">
+      <div
+        style="
+          width:120px;
+          height:120px;
+          border-radius:50%;
+          background:#ffffff;
+          padding:4px;
+          display:inline-block;
+          box-shadow:0 3px 10px rgba(0,0,0,0.08);
+        "
+      >
+        <img
+          src="https://res.cloudinary.com/t5njdeek/image/upload/v1783439119/Medikto1.logo_ojwpoz.png"
+          alt="Medikto"
+          style="
+            width:118px;
+            height:118px;
+            border-radius:50%;
+            display:block;
+            object-fit:cover;
+          "
+        />
+      </div>
+    </td>
+  </tr>
+</table>
                     <!-- Header Title -->
                     <h1 style="margin:20px 0 6px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:26px; font-weight:700; color:#FFFFFF; letter-spacing:-0.3px; line-height:1.2;">${headerTitle}</h1>
                     <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:400; color:rgba(255,255,255,0.85); line-height:1.5;">${headerSubtitle}</p>
@@ -110,7 +140,7 @@ const generateEmailTemplate = (headerTitle, headerSubtitle, greetingName, bodyPa
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                       <tr>
                         <td style="padding-right:8px; vertical-align:middle;">
-                          <img src="{{LOGO_URL}}" alt="Medikto" width="28" height="28" style="display:block; border:0;" />
+                          <img src="https://res.cloudinary.com/t5njdeek/image/upload/v1783439119/Medikto1.logo_ojwpoz.png" alt="Medikto" width="28" height="28" style="display:block; border:0;" />
                         </td>
                         <td style="vertical-align:middle;">
                           <span style="font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:16px; font-weight:700; color:#2563EB; letter-spacing:-0.2px;">Medikto</span>
