@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:medikto/firebase_options.dart';
 import 'package:medikto/core/network/notification_manager.dart';
 import 'package:medikto/splash_screen.dart';
 
@@ -13,7 +14,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     await NotificationManager().initialize();
   } catch (e) {
     debugPrint("Firebase SDK init failed: $e");

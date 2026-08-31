@@ -66,5 +66,22 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Medikto needs access to your camera to take prescription and medical report photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Medikto needs access to your photo library to select profile photos and upload medical records.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Medikto needs microphone access for video recording if required.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.696322298012-up1hn0poeq5529q4jcc319do0nn5ckh1</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
