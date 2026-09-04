@@ -16,6 +16,7 @@ workflows:
         script: |
           flutter pub get
 
+
       - name: Build iOS
         script: |
           flutter build ios --debug --no-codesign
