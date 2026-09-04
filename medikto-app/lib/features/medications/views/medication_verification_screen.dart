@@ -368,8 +368,55 @@ class _MedicationVerificationScreenState
                         Switch(
                           value: isNotifyEnabled,
                           activeColor: accentCyan,
-                          onChanged: (val) =>
-                              setModalState(() => isNotifyEnabled = val),
+                          onChanged: (val) async {
+                            if (!val) {
+                              final shouldDisable = await showDialog<bool>(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (ctx) => AlertDialog(
+                                  backgroundColor: surfaceColor,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                  title: const Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 28),
+                                      SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          "Disable Notifications?",
+                                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  content: const Text(
+                                    "Switching off will stop critical notifications for the medicines.",
+                                    style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: const Text(
+                                        "Keep Enabled",
+                                        style: TextStyle(color: accentCyan, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text(
+                                        "Turn Off",
+                                        style: TextStyle(color: Colors.redAccent),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (shouldDisable == true) {
+                                setModalState(() => isNotifyEnabled = false);
+                              }
+                            } else {
+                              setModalState(() => isNotifyEnabled = true);
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -682,6 +729,7 @@ class _MedicationVerificationScreenState
                             });
                           }
                         }
+                      },
                 child: isLoading
                     ? const SizedBox(
                         height: 22,
@@ -896,8 +944,55 @@ class _MedicationVerificationScreenState
           ),
           Switch(
             value: timing.isNotificationEnabled,
-            onChanged: (val) =>
-                setState(() => timing.isNotificationEnabled = val),
+            onChanged: (val) async {
+              if (!val) {
+                final shouldDisable = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: surfaceColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    title: const Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 28),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            "Disable Notifications?",
+                            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    content: const Text(
+                      "Switching off will stop critical notifications for the medicines.",
+                      style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text(
+                          "Keep Enabled",
+                          style: TextStyle(color: accentCyan, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text(
+                          "Turn Off",
+                          style: TextStyle(color: Colors.redAccent),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldDisable == true) {
+                  setState(() => timing.isNotificationEnabled = false);
+                }
+              } else {
+                setState(() => timing.isNotificationEnabled = true);
+              }
+            },
             activeColor: accentCyan,
           ),
         ],
@@ -1153,7 +1248,7 @@ class _MedicationVerificationScreenState
           ),
           const SizedBox(height: 16),
 
-          // [✓] Continue (Ongoing long-term medication)
+          // [✓] Continue (Long-term medication)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -1180,7 +1275,7 @@ class _MedicationVerificationScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        "Continue indefinitely",
+                        "Continue until stopped",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -1188,7 +1283,7 @@ class _MedicationVerificationScreenState
                         ),
                       ),
                       Text(
-                        "For ongoing conditions (BP, Sugar) — repeats daily until stopped",
+                        "For long-term medicines like BP or diabetes",
                         style: TextStyle(
                           color: isContinueMedication ? Colors.white70 : Colors.white38,
                           fontSize: 11,
@@ -1342,7 +1437,7 @@ class _MedicationVerificationScreenState
               ),
               SizedBox(height: 2),
               Text(
-                "Receive alerts when doses are due",
+                "Get alerts when your medicine is due",
                 style: TextStyle(
                   color: Colors.white38,
                   fontSize: 11,

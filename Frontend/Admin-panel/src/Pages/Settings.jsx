@@ -43,7 +43,7 @@ import api from "../Api/axios.js";
 // CONSTANTS & CONFIG
 // =====================================================
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api.medikto.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://api-prd.medikto.com/api";
 
 const TABS = [
   { id: "account", label: "Account", icon: UserCircle },

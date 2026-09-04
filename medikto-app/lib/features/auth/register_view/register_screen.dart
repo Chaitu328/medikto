@@ -1,16 +1,13 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:medikto/bottom_bar.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
-import 'package:medikto/features/auth/register_view/account_create_success.dart';
 import 'package:medikto/features/auth/widgets/gender_selection_widget.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
@@ -35,21 +32,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final dobController = TextEditingController();
-  // final aadharController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
 
   String selectedGender = "Male"; // Default value for GenderSelectionWidget
   File? selectedImage;
   final ImagePicker _picker = ImagePicker();
-  String selectedIdType = "Aadhaar";
-  final govIdController = TextEditingController();
-
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   String selectedCountryCode = "+91";
 
   bool inviteCaretaker = false;
+  bool obscureCaretakerPassword = true;
 
   void _showCountryCodePicker() {
     final List<Map<String, String>> countries = [
@@ -150,13 +140,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> handleRegister() async {
     // 1. Basic Validation
-    if (phoneController.text.length != 10) {
+    if (nameController.text.trim().isEmpty) {
+      AppToasts.showError(context, "Please enter your full name");
+      return;
+    }
+
+    if (phoneController.text.trim().length != 10) {
       AppToasts.showError(context, "Contact number must be exactly 10 digits");
       return;
     }
 
-    if (passwordController.text != confirmPasswordController.text) {
-      AppToasts.showError(context, "Passwords do not match");
+    if (dobController.text.trim().isEmpty) {
+      AppToasts.showError(context, "Please select your date of birth");
       return;
     }
 
@@ -169,8 +164,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         AppToasts.showError(context, "Caretaker email is required");
         return;
       }
-      if (caretakerPhoneController.text.trim().isEmpty) {
-        AppToasts.showError(context, "Caretaker phone is required");
+      if (caretakerPhoneController.text.trim().length != 10) {
+        AppToasts.showError(context, "Caretaker phone number must be exactly 10 digits");
         return;
       }
       if (caretakerPasswordController.text.trim().isEmpty) {
@@ -188,7 +183,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
     );
 
-    final String fullPhoneNumber = selectedCountryCode + phoneController.text;
+    final String fullPhoneNumber = selectedCountryCode + phoneController.text.trim();
 
     try {
       // Check if user is already registered
@@ -310,13 +305,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                               // Call register Profile API with Firebase ID Token
                               final data = {
-                                "full_name": nameController.text,
+                                "full_name": nameController.text.trim(),
                                 "mobile_number": phone,
-                                "dob": dobController.text,
+                                "dob": dobController.text.trim(),
                                 "gender": selectedGender,
                                 "token": idToken, // Send Firebase ID Token to Backend!
-                                "government_id_type": selectedIdType,
-                                "government_id_number": govIdController.text.isEmpty ? null : govIdController.text,
                                 if (inviteCaretaker) ...{
                                   "caretakerEmail": caretakerEmailController.text.trim(),
                                   "caretakerName": caretakerNameController.text.trim(),
@@ -345,11 +338,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 nameController.clear();
                                 phoneController.clear();
                                 dobController.clear();
-                                passwordController.clear();
-                                confirmPasswordController.clear();
-                                govIdController.clear();
+                                caretakerNameController.clear();
+                                caretakerEmailController.clear();
+                                caretakerPhoneController.clear();
+                                caretakerPasswordController.clear();
                                 setState(() {
                                   selectedImage = null;
+                                  inviteCaretaker = false;
                                 });
 
                                 AppToasts.showSuccess(context, "Account created successfully. Please log in.");
@@ -544,29 +539,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           nameCont: nameController,
                           phoneCont: phoneController,
                           dobCont: dobController,
-                          passCont: passwordController,
-                          confirmPassCont: confirmPasswordController,
-                          govIdController: govIdController,
-                          selectedIdType: selectedIdType,
-                          onIdTypeChanged: (val) {
-                            setState(() => selectedIdType = val);
-                          },
                           selectedGender: selectedGender,
                           onGenderChanged: (value) {
                             setState(() {
                               selectedGender = value;
-                            });
-                          },
-                          obscurePassword: _obscurePassword,
-                          obscureConfirmPassword: _obscureConfirmPassword,
-                          toggleObscurePassword: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                          toggleObscureConfirmPassword: () {
-                            setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
                             });
                           },
                           selectedCountryCode: selectedCountryCode,
@@ -611,9 +587,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           const SizedBox(height: 12),
                           _buildCaretakerField("Caretaker Email", "Enter caretaker email", caretakerEmailController, keyboardType: TextInputType.emailAddress),
                           const SizedBox(height: 12),
-                          _buildCaretakerField("Caretaker Phone", "Enter caretaker phone number", caretakerPhoneController, keyboardType: TextInputType.phone),
+                          _buildCaretakerField(
+                            "Caretaker Phone",
+                            "Enter 10-digit phone number",
+                            caretakerPhoneController,
+                            keyboardType: TextInputType.phone,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
+                            ],
+                          ),
                           const SizedBox(height: 12),
-                          _buildCaretakerField("Caretaker Password", "Enter caretaker password", caretakerPasswordController, obscureText: true),
+                          _buildCaretakerField(
+                            "Caretaker Password",
+                            "Enter caretaker password",
+                            caretakerPasswordController,
+                            obscureText: obscureCaretakerPassword,
+                            suffix: Icon(
+                              obscureCaretakerPassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: Colors.white54,
+                              size: 20,
+                            ),
+                            suffixIconOnTap: () {
+                              setState(() {
+                                obscureCaretakerPassword = !obscureCaretakerPassword;
+                              });
+                            },
+                          ),
                           const SizedBox(height: 15),
                           const Text(
                             "Relationship",
@@ -682,6 +684,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     TextEditingController controller, {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
+    List<TextInputFormatter>? inputFormatters,
+    Widget? suffix,
+    VoidCallback? suffixIconOnTap,
   }) {
     return AppTextFormFieldTitled(
       controller: controller,
@@ -693,6 +698,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       borderColor: Colors.white10,
       textInputType: keyboardType,
       obscureText: obscureText,
+      inputFormatters: inputFormatters,
+      suffix: suffix,
+      suffixIconOnTap: suffixIconOnTap,
       hintStyle: const TextStyle(fontSize: 16, color: Colors.white24),
       titleTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
     );
@@ -748,17 +756,8 @@ class _FormFields extends StatelessWidget {
   final TextEditingController nameCont;
   final TextEditingController phoneCont;
   final TextEditingController dobCont;
-  final TextEditingController govIdController;
-  final String selectedIdType;
-  final Function(String) onIdTypeChanged;
-  final TextEditingController passCont;
-  final TextEditingController confirmPassCont;
   final String selectedGender;
   final Function(String) onGenderChanged;
-  final bool obscurePassword;
-  final bool obscureConfirmPassword;
-  final VoidCallback toggleObscurePassword;
-  final VoidCallback toggleObscureConfirmPassword;
   final String selectedCountryCode;
   final VoidCallback onCountryCodeTap;
   
@@ -766,25 +765,14 @@ class _FormFields extends StatelessWidget {
     required this.nameCont,
     required this.phoneCont,
     required this.dobCont,
-    required this.govIdController,
-    required this.passCont,
-    required this.confirmPassCont,
-    required this.selectedIdType,
-    required this.onIdTypeChanged,
     required this.selectedGender,
     required this.onGenderChanged,
-    required this.obscurePassword,
-    required this.obscureConfirmPassword,
-    required this.toggleObscurePassword,
-    required this.toggleObscureConfirmPassword,
     required this.selectedCountryCode,
     required this.onCountryCodeTap,
   });
 
   static const Color surfaceColor = Color(0xFF1E1E1E);
   static const Color accentCyan = Color(0xFF81DEEA);
-
-  
 
   Future<void> _selectDOB(
     BuildContext context,
@@ -823,8 +811,6 @@ class _FormFields extends StatelessWidget {
       controller.text = formatted;
     }
   }
-
-  
 
   @override
   Widget build(BuildContext context) {
@@ -883,130 +869,20 @@ class _FormFields extends StatelessWidget {
 
         SizedBox(height: size.height * 0.01),
 
-        /// 🔹 DOB + GENDER
-        Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _selectDOB(context, dobCont),
-                child: AbsorbPointer(
-                  child: _buildField("DOB", "DD/MM/YYYY", dobCont),
-                ),
-              ),
-            ),
-            SizedBox(width: size.width * 0.04),
-            Expanded(
-              child: GenderSection(
-                selectedGender: selectedGender,
-                onChanged: onGenderChanged,
-              ),
-            ), // Ensure internal widget is dark
-          ],
-        ),
-
-        SizedBox(height: size.height * 0.01),
-
-        // _buildField("Aadhar Number", "0000 0000 0000", aadharCont),
-        // SizedBox(height: size.height * 0.02),
-        const Text(
-          "Government ID (Optional)",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white70,
+        /// 🔹 DOB
+        GestureDetector(
+          onTap: () => _selectDOB(context, dobCont),
+          child: AbsorbPointer(
+            child: _buildField("DOB", "DD/MM/YYYY", dobCont),
           ),
         ),
 
         SizedBox(height: size.height * 0.01),
 
-        /// 🔹 DROPDOWN
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: selectedIdType,
-              dropdownColor: surfaceColor,
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.white54,
-              ),
-              style: const TextStyle(color: Colors.white),
-              items: [
-                "Aadhaar",
-                "Passport",
-                "Driving License",
-              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-              onChanged: (val) {
-                if (val != null) onIdTypeChanged(val);
-              },
-            ),
-          ),
-        ),
-
-        SizedBox(height: size.height * 0.01),
-
-        /// 🔹 ID INPUT FIELD
-        AppTextFormFieldTitled(
-          controller: govIdController,
-          title: "$selectedIdType Number",
-          hintText: selectedIdType == "Aadhaar"
-              ? "0000 0000 0000"
-              : "Enter $selectedIdType number",
-          focusColor: accentCyan,
-          fillColor: surfaceColor,
-          color: Colors.white,
-          borderColor: Colors.white10,
-          textInputType: selectedIdType == "Aadhaar"
-              ? TextInputType.number
-              : TextInputType.text,
-          inputFormatters: selectedIdType == "Aadhaar"
-              ? [FilteringTextInputFormatter.digitsOnly]
-              : [],
-          hintStyle: const TextStyle(fontSize: 16, color: Colors.white24),
-          titleTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
-        ),
-
-        SizedBox(height: size.height * 0.02),
-
-        const Text(
-          "Security",
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-
-        SizedBox(height: size.height * 0.01),
-
-        _buildField(
-          "New Password",
-          "Enter your new password",
-          passCont,
-          obscureText: obscurePassword,
-          suffix: Icon(
-            obscurePassword ? Icons.visibility : Icons.visibility_off,
-            color: Colors.white54,
-          ),
-          suffixIconOnTap: toggleObscurePassword,
-        ),
-        SizedBox(height: size.height * 0.01),
-
-        _buildField(
-          "Confirm Password",
-          "Re-enter your new password",
-          confirmPassCont,
-          obscureText: obscureConfirmPassword,
-          suffix: Icon(
-            obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-            color: Colors.white54,
-          ),
-          suffixIconOnTap: toggleObscureConfirmPassword,
+        /// 🔹 GENDER
+        GenderSection(
+          selectedGender: selectedGender,
+          onChanged: onGenderChanged,
         ),
       ],
     );
@@ -1021,7 +897,7 @@ class _FormFields extends StatelessWidget {
     VoidCallback? suffixIconOnTap,
   }) {
     return AppTextFormFieldTitled(
-      controller: controller, // Link the controller here
+      controller: controller,
       title: title,
       hintText: hint,
       focusColor: accentCyan,

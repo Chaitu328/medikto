@@ -610,7 +610,7 @@ const UserManagement = () => {
   // Hospitals list for dropdown
   const [hospitals, setHospitals] = useState([]);
 
-  const API_BASE = import.meta.env.VITE_API_URL || "https://api.medikto.com";
+  const API_BASE = import.meta.env.VITE_API_URL || "https://api-prd.medikto.com";
 
   // ─── Fetch Users ─────────────────────────────────────────────────────────
   const fetchUsers = async () => {

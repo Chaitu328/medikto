@@ -24,12 +24,25 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  bool isSwitched = false;
+  bool isSwitched = true;
 
   // Theme Colors consistent with your other dark mode screens
   static const Color darkBg = Color(0xFF121212);
   static const Color surfaceColor = Color(0xFF1E1E1E);
   static const Color accentCyan = Color(0xFF81DEEA);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPreference();
+  }
+
+  Future<void> _loadNotificationPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isSwitched = prefs.getBool(StorageKeys.notificationsEnabled) ?? true;
+    });
+  }
 
   void _showLogoutDialog() {
     showDialog(
@@ -585,8 +598,76 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Switch(
                           padding: EdgeInsets.zero,
                           value: isSwitched,
-                          onChanged: (value) =>
-                              setState(() => isSwitched = value),
+                          onChanged: (value) async {
+                            if (!value) {
+                              final shouldDisable = await showDialog<bool>(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (ctx) => AlertDialog(
+                                  backgroundColor: surfaceColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  title: const Row(
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: Colors.amberAccent,
+                                        size: 28,
+                                      ),
+                                      SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          "Disable Notifications?",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  content: const Text(
+                                    "Switching off will stop critical notifications for the medicines.",
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: const Text(
+                                        "Keep Enabled",
+                                        style: TextStyle(
+                                          color: accentCyan,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text(
+                                        "Turn Off",
+                                        style: TextStyle(color: Colors.redAccent),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (shouldDisable == true) {
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setBool(StorageKeys.notificationsEnabled, false);
+                                setState(() => isSwitched = false);
+                              }
+                            } else {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool(StorageKeys.notificationsEnabled, true);
+                              setState(() => isSwitched = true);
+                            }
+                          },
                           activeTrackColor: accentCyan.withAlpha(140),
                           activeThumbColor: accentCyan,
                           inactiveThumbColor: Colors.grey,

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/widgets/form_field_widget.dart';
-import 'package:medikto/features/home/add_reports/widgets/vital_trend_history_view.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
 
@@ -19,13 +19,11 @@ class AddBloodPressureScreen extends ConsumerStatefulWidget {
 }
 
 class _AddBloodPressureScreenState
-    extends ConsumerState<AddBloodPressureScreen> with SingleTickerProviderStateMixin {
+    extends ConsumerState<AddBloodPressureScreen> {
   // Theme Palette
   static const Color darkBg = Color(0xFF121212);
   static const Color surfaceColor = Color(0xFF1E1E1E);
   static const Color accentCyan = Color(0xFF81DEEA);
-
-  late TabController _tabController;
 
   final systolicController = TextEditingController();
   final diastolicController = TextEditingController();
@@ -38,10 +36,10 @@ class _AddBloodPressureScreenState
   final List<FormFieldModel> bpFields = [
     FormFieldModel(
       title: "Systolic (max 120)",
-      hint: "100",
+      hint: "120",
       suffix: const Text(
         "mmHg",
-        style: TextStyle(color: Colors.white54, fontSize: 12),
+        style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold),
       ),
       isRequired: true,
     ),
@@ -50,15 +48,15 @@ class _AddBloodPressureScreenState
       hint: "80",
       suffix: const Text(
         "mmHg",
-        style: TextStyle(color: Colors.white54, fontSize: 12),
+        style: TextStyle(color: Colors.white54, fontSize: 13, fontWeight: FontWeight.bold),
       ),
       isRequired: true,
     ),
     FormFieldModel(title: "", hint: "", isRow: true, isRequired: true),
     FormFieldModel(
-      title: "Notes",
-      hint: "Enter your notes",
-      maxLines: 4,
+      title: "Notes (Optional)",
+      hint: "e.g. Taken after resting 10 mins",
+      maxLines: 3,
       isRequired: false,
     ),
   ];
@@ -66,7 +64,9 @@ class _AddBloodPressureScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    final now = DateTime.now();
+    dateController.text = DateFormat("yyyy-MM-dd").format(now);
+    timeController.text = DateFormat("HH:mm").format(now);
   }
 
   Future<void> addBloodPressure() async {
@@ -109,22 +109,20 @@ class _AddBloodPressureScreenState
     });
 
     if (response.status == ResponseStatus.SUCCESS) {
-      AppToasts.showSuccess(context, response.message);
-      ref.invalidate(getVitalsProvider);
-
-      systolicController.clear();
-      diastolicController.clear();
-      notesController.clear();
-
-      _tabController.animateTo(0);
+      if (mounted) {
+        AppToasts.showSuccess(context, response.message);
+        ref.invalidate(getVitalsProvider);
+        Navigator.pop(context, true);
+      }
     } else {
-      AppToasts.showError(context, response.message);
+      if (mounted) {
+        AppToasts.showError(context, response.message);
+      }
     }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     systolicController.dispose();
     diastolicController.dispose();
     dateController.dispose();
@@ -215,110 +213,99 @@ class _AddBloodPressureScreenState
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(getProfileProvider);
-    final isGuardian = profileAsync.value?.data is ProfileModel && (profileAsync.value!.data as ProfileModel).role == 'guardian';
+    final isGuardian = profileAsync.value?.data is ProfileModel &&
+        (profileAsync.value!.data as ProfileModel).role == 'guardian';
 
     return Scaffold(
       backgroundColor: darkBg,
       appBar: CustomAppBar(
-        title: "Blood Pressure",
+        title: "Add Blood Pressure",
         onBack: () => Navigator.pop(context),
         backgroundColor: darkBg,
         titleStyle: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
+          fontSize: 18,
         ),
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Top Tab Navigation
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                indicator: BoxDecoration(
-                  color: accentCyan,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelColor: Colors.black,
-                unselectedLabelColor: Colors.white60,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                dividerColor: Colors.transparent,
-                tabs: const [
-                  Tab(text: "📈 Trend & History"),
-                  Tab(text: "➕ New Entry"),
-                ],
-              ),
-            ),
-
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Tab 1: Trend & History
-                  VitalTrendHistoryView(
-                    vitalType: "bloodPressure",
-                    title: "Blood Pressure",
-                    unit: "mmHg",
-                    accentColor: accentCyan,
-                    onAddTap: () => _tabController.animateTo(1),
-                  ),
-
-                  // Tab 2: New Entry Form
-                  Column(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              DynamicFormSection(
-                                fields: bpFields,
-                                controllers: [
-                                  systolicController,
-                                  diastolicController,
-                                  dateController,
-                                  timeController,
-                                  notesController,
-                                ],
-                                onTimeTap: selectTime,
-                                onDateTap: selectDate,
-                              ),
-                            ],
-                          ),
-                        ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Elderly-friendly guidance banner
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white10),
                       ),
-                      if (!isGuardian)
-                        SafeArea(
-                          top: false,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                            child: CustomButton(
-                              onPressed: isLoading ? null : addBloodPressure,
-                              buttonText: isLoading ? "Please wait..." : "Save Record",
-                              buttonColor: accentCyan,
-                              textStyle: const TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                      child: Row(
+                        children: [
+                          Container(
+                            height: 40,
+                            width: 40,
+                            decoration: BoxDecoration(
+                              color: accentCyan.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.favorite_outline, color: accentCyan, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              "Enter your systolic and diastolic blood pressure readings below.",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                height: 1.3,
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    DynamicFormSection(
+                      fields: bpFields,
+                      controllers: [
+                        systolicController,
+                        diastolicController,
+                        dateController,
+                        timeController,
+                        notesController,
+                      ],
+                      onTimeTap: selectTime,
+                      onDateTap: selectDate,
+                    ),
+                  ],
+                ),
               ),
             ),
+            if (!isGuardian)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                  child: CustomButton(
+                    onPressed: isLoading ? null : addBloodPressure,
+                    buttonText: isLoading ? "Please wait..." : "Save Record",
+                    buttonColor: accentCyan,
+                    textStyle: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

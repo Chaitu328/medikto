@@ -41,7 +41,8 @@ medikto/
 - Doctor Management
 - Medication Reminders
 - Push Notifications
-- Health Report Management
+- Consolidated Medical Documents Hub (Vitals History, Medical Reports, Prescriptions)
+- Streamlined Health Vitals Tracking (Blood Pressure, Heart Rate, Sugar Levels, Body Temperature)
 - Guardian Management
 - Admin Dashboard
 - Role-Based Access Control

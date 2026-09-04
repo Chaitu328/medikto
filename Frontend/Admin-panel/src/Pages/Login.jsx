@@ -569,9 +569,9 @@ const MediktoLogin = () => {
   // };
 
   const handleGoogleLogin = () => {
-  window.location.href =
-    "https://api.medikto.com/api/superadmin/google";
-};
+    window.location.href =
+      "https://api-prd.medikto.com/api/superadmin/google";
+  };
 
   const handleGuardianLogin = async (e) => {
   e.preventDefault();
@@ -869,9 +869,12 @@ const MediktoLogin = () => {
                     <div className="mt-6 pt-5 border-t border-slate-100 text-center">
                       <p className="text-sm text-slate-500">
                         Need help?{" "}
-                        <button type="button" className="text-[#2563EB] font-semibold hover:text-blue-700 transition-colors">
+                        <a
+                          href="mailto:shahmedikto@gmail.com?subject=Hospital%20Admin%20Access%20Support&body=Hello%20Super%20Administrator,%0D%0A%0D%0AI%20need%20assistance%20with%20my%20Hospital%20Admin%20account%20access.%0D%0A%0D%0AHospital%20Name:%20%0D%0ARegistered%20Email:%20%0D%0APhone%20Number:%20%0D%0AIssue%20Description:%20%0D%0A"
+                          className="text-[#2563EB] font-semibold hover:text-blue-700 transition-colors inline-flex items-center gap-1"
+                        >
                           Contact Super Administrator
-                        </button>
+                        </a>
                       </p>
                     </div>
                   </motion.div>
@@ -947,6 +950,19 @@ const MediktoLogin = () => {
   </button>
 
 </form>
+
+{/* Help Link */}
+<div className="mt-6 pt-5 border-t border-slate-100 text-center">
+  <p className="text-sm text-slate-500">
+    Need help?{" "}
+    <a
+      href="mailto:shahmedikto@gmail.com?subject=Guardian%20Account%20Access%20Support&body=Hello%20Super%20Administrator,%0D%0A%0D%0AI%20need%20assistance%20with%20my%20Guardian%20account%20access.%0D%0A%0D%0ARegistered%20Email:%20%0D%0APhone%20Number:%20%0D%0AIssue%20Description:%20%0D%0A"
+      className="text-[#2563EB] font-semibold hover:text-blue-700 transition-colors inline-flex items-center gap-1"
+    >
+      Contact Super Administrator
+    </a>
+  </p>
+</div>
                   </motion.div>
                 )}
               </AnimatePresence>

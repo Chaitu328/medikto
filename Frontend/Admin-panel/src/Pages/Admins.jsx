@@ -38,7 +38,7 @@ import axios from "axios";
 
 // ─── AXIOS INSTANCE ───────────────────────────────────────────────────────────
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://api.medikto.com/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://api-prd.medikto.com/api",
   headers: { "Content-Type": "application/json" },
 });
 

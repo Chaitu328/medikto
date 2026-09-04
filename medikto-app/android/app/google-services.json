@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "696322298012-f99hm0rcj2qb7qr5mf9oci38ca8e29ad.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.medikto",
+            "certificate_hash": "c9638591b18bebe49b985eeba07f0291a0a7f289"
+          }
+        },
+        {
           "client_id": "696322298012-fbb80b49s6h4u721qdtv753fj6n48k1s.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -53,6 +61,13 @@
             {
               "client_id": "696322298012-khnr0pr0iphi4cfds2h9e069f5nu0u97.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "696322298012-up1hn0poeq5529q4jcc319do0nn5ckh1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.medikto"
+              }
             }
           ]
         }

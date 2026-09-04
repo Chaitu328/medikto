@@ -111,13 +111,18 @@ class GenderSection extends StatelessWidget {
         onTap: () => onChanged(gender),
         child: Container(
           height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: surfaceColor,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: isSelected ? accentCyan : Colors.white10),
+            border: Border.all(
+              color: isSelected ? accentCyan : Colors.white10,
+              width: isSelected ? 1.5 : 1,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 isSelected
@@ -127,13 +132,19 @@ class GenderSection extends StatelessWidget {
                 size: 20,
               ),
 
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
 
-              Text(
-                gender[0].toUpperCase() + gender.substring(1),
-                style: TextStyle(
-                  color: isSelected ? accentCyan : Colors.white70,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    gender[0].toUpperCase() + gender.substring(1),
+                    style: TextStyle(
+                      color: isSelected ? accentCyan : Colors.white70,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ),
             ],

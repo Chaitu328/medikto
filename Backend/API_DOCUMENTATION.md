@@ -18,7 +18,7 @@ The API supports:
 ## 2. Base URL
 
 ```txt
-https://api.medikto.com/api
+https://api-prd.medikto.com/api
 ```
 
 ```txt

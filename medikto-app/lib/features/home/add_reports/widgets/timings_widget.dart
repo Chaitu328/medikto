@@ -22,7 +22,7 @@ class _TimingsSectionState extends State<TimingsSection> {
 
   List<TimeModel> times = [
     TimeModel(time: "04:30 PM", isEnabled: true),
-    TimeModel(time: "08:30 PM", isEnabled: false),
+    TimeModel(time: "08:30 PM", isEnabled: true),
   ];
 
   TimeOfDay selectedTime = const TimeOfDay(hour: 12, minute: 0);
@@ -126,8 +126,57 @@ class _TimingsSectionState extends State<TimingsSection> {
                   scale: 0.8,
                   child: Switch(
                     value: item.isEnabled,
-                    onChanged: (value) =>
-                        setState(() => item.isEnabled = value),
+                    onChanged: (value) async {
+                      if (!value) {
+                        final shouldDisable = await showDialog<bool>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: surfaceColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            title: const Row(
+                              children: [
+                                Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 28),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    "Disable Notifications?",
+                                    style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            content: const Text(
+                              "Switching off will stop critical notifications for the medicines.",
+                              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text(
+                                  "Keep Enabled",
+                                  style: TextStyle(color: accentCyan, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text(
+                                  "Turn Off",
+                                  style: TextStyle(color: Colors.redAccent),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (shouldDisable == true) {
+                          setState(() => item.isEnabled = false);
+                        }
+                      } else {
+                        setState(() => item.isEnabled = true);
+                      }
+                    },
                     activeColor: accentCyan,
                     activeTrackColor: accentCyan.withOpacity(0.3),
                     inactiveThumbColor: Colors.white24,
