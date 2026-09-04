@@ -1,42 +1,47 @@
 const Log = require("../models/logModel");
 const User = require("../models/userModel");
-const cloudinary = require("../config/cloudinary");
-const PDFDocument = require("pdfkit"); 
+const {
+  uploadBufferToS3,
+  resolveFileUrl,
+  deleteS3Object,
+} = require("../config/s3");
+const { applySelfieWatermark } = require("../utils/watermarkHelper");
+const PDFDocument = require("pdfkit");
 
 exports.takeMedication = async (req, res) => {
   try {
     const { medId } = req.body;
 
     const user = await User.findById(req.user.id);
+    const now = new Date();
 
-const result = await cloudinary.uploader.upload(req.file.path, {
-  transformation: [
-    {
-      overlay: {
-        font_family: "Arial",
-        font_size: 30,
-        text: new Date().toLocaleString()
-      },
-      gravity: "south_east",
-      x: 10,
-      y: 10
+    let selfieUrl = null;
+    if (req.file) {
+      const watermarkedBuffer = await applySelfieWatermark(req.file.buffer, now);
+      const s3Key = `patients/${req.user.id}/logs/${Date.now()}_selfie.jpg`;
+      await uploadBufferToS3(watermarkedBuffer, s3Key, "image/jpeg");
+      selfieUrl = s3Key;
     }
-  ]
-});
+
     const autoDeleteAt =
-      user.subscription === "premium"
+      user && user.subscription === "premium"
         ? null
         : Date.now() + 48 * 60 * 60 * 1000;
 
     const log = await Log.create({
       user: req.user.id,
       medication: medId,
-      takenAt: new Date(),
-      selfieUrl: result.secure_url,
-      autoDeleteAt
+      takenAt: now,
+      selfieUrl,
+      autoDeleteAt,
     });
 
-    res.json(log);
+    const logObj = log.toObject();
+    if (logObj.selfieUrl) {
+      logObj.selfieUrl = await resolveFileUrl(logObj.selfieUrl);
+    }
+
+    res.json(logObj);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -48,7 +53,17 @@ exports.getLogs = async (req, res) => {
       .populate("medication")
       .sort({ createdAt: -1 });
 
-    res.json(logs);
+    const resolvedLogs = await Promise.all(
+      logs.map(async (l) => {
+        const lObj = l.toObject ? l.toObject() : l;
+        if (lObj.selfieUrl) {
+          lObj.selfieUrl = await resolveFileUrl(lObj.selfieUrl);
+        }
+        return lObj;
+      })
+    );
+
+    res.json(resolvedLogs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -60,7 +75,7 @@ exports.getCompliance = async (req, res) => {
 
     const grouped = {};
 
-    logs.forEach(log => {
+    logs.forEach((log) => {
       const date = log.takenAt.toISOString().split("T")[0];
 
       if (!grouped[date]) grouped[date] = 0;
@@ -75,6 +90,10 @@ exports.getCompliance = async (req, res) => {
 
 exports.deleteLog = async (req, res) => {
   try {
+    const log = await Log.findById(req.params.id);
+    if (log && log.selfieUrl) {
+      await deleteS3Object(log.selfieUrl);
+    }
     await Log.findByIdAndDelete(req.params.id);
     res.json({ message: "Log deleted" });
   } catch (err) {
@@ -96,7 +115,7 @@ exports.exportLogs = async (req, res) => {
     doc.fontSize(18).text("Medication Report", { align: "center" });
     doc.moveDown();
 
-    logs.forEach(log => {
+    logs.forEach((log) => {
       doc
         .fontSize(12)
         .text(`Medicine: ${log.medication?.name || "N/A"}`)

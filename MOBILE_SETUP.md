@@ -71,10 +71,14 @@ Medikto utilizes Firebase for SMS OTP authentication and Firebase Cloud Messagin
 
 #### 🍏 iOS Setup (macOS only)
 1. Add an iOS app inside your Firebase Console under the same project.
-2. Download the `GoogleService-Info.plist` file.
+2. Download the `GoogleService-Info.plist` file and place it at `ios/Runner/GoogleService-Info.plist`.
 3. Open the iOS folder in Xcode: `open ios/Runner.xcworkspace`.
-4. Drag and drop the `GoogleService-Info.plist` file into the `Runner/Runner` directory in Xcode. Ensure "Copy items if needed" is checked.
+4. Ensure `GoogleService-Info.plist` is linked to the `Runner` target.
 5. In Xcode, enable **Push Notifications** and **Background Modes** (check *Background fetch* and *Remote notifications*) under the target's *Signing & Capabilities* tab.
+6. **Upload APNs Key to Firebase (Crucial)**:
+   - In your [Apple Developer Portal](https://developer.apple.com/account) -> **Certificates, Identifiers & Profiles** -> **Keys**, create an **Apple Push Notifications service (APNs)** key and download the `.p8` file.
+   - Go to [Firebase Console](https://console.firebase.google.com) -> **Project Settings** -> **Cloud Messaging** -> **Apple app configuration** -> upload your `.p8` key with your Team ID and Key ID.
+7. Always test iOS push notifications on a **physical iPhone/iPad** rather than an iOS Simulator.
 
 ---
 

@@ -44,6 +44,15 @@ app.use(passport.initialize());
 
 connectDB();
 
+// Lightweight health endpoint for Docker HEALTHCHECK and monitoring (safe, no secrets)
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Routes
 app.use("/api", require("./src/Routes/routes"));
 

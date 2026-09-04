@@ -47,6 +47,32 @@ exports.sendPushNotification = async (userId, title, body, data = {}) => {
         acc[key] = String(data[key]);
         return acc;
       }, {}),
+      android: {
+        priority: "high",
+        notification: {
+          channelId: "medikto_channel",
+          sound: "default",
+          defaultSound: true,
+          priority: "high",
+          notificationCount: 1,
+        },
+      },
+      apns: {
+        headers: {
+          "apns-priority": "10",
+        },
+        payload: {
+          aps: {
+            alert: {
+              title: title,
+              body: body,
+            },
+            sound: "default",
+            badge: 1,
+            contentAvailable: true,
+          },
+        },
+      },
       token: user.fcmToken,
     };
 

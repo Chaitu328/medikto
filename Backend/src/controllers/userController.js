@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 const User = require("../models/userModel");
-const cloudinary = require("../config/cloudinary");
+const {
+  uploadBufferToS3,
+  generateAvatarKey,
+  resolveFileUrl,
+} = require("../config/s3");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendInviteEmail } = require("../utils/emailHelper");
 const { buildPatientListFilter } = require("../utils/accessControl");
@@ -10,12 +14,12 @@ const bcrypt = require("bcrypt");
 
 exports.getProfile = async (req, res) => {
   try {
-  const user = await User.findById(req.user.id)
-  .populate({
-    path: "hospital",
-    select: "name email phone address",
-  })
-  .select("-password");
+    const user = await User.findById(req.user.id)
+      .populate({
+        path: "hospital",
+        select: "name email phone address",
+      })
+      .select("-password");
 
     if (!user) {
       return res.status(404).json({
@@ -23,7 +27,12 @@ exports.getProfile = async (req, res) => {
       });
     }
 
-    return res.status(200).json(user);
+    const userObj = user.toObject();
+    if (userObj.profilePic) {
+      userObj.profilePic = await resolveFileUrl(userObj.profilePic);
+    }
+
+    return res.status(200).json(userObj);
 
   } catch (err) {
     return res.status(500).json({
@@ -59,6 +68,9 @@ exports.getAllUsers = async (req, res) => {
 
     for (const u of users) {
       const uObj = u.toObject();
+      if (uObj.profilePic) {
+        uObj.profilePic = await resolveFileUrl(uObj.profilePic);
+      }
       if (hospitalId && uObj.phone) {
         // Find if there is an active OTP for this patient & hospital
         const linkOtp = await HospitalLinkOTP.findOne({
@@ -100,9 +112,15 @@ exports.updateProfile = async (req, res) => {
 
     let profilePic;
 
-    // upload image
+    // upload image to S3
     if (req.file) {
-      profilePic = req.file.path;
+      const s3Key = generateAvatarKey(req.user.id, req.file.originalname);
+      await uploadBufferToS3(
+        req.file.buffer,
+        s3Key,
+        req.file.mimetype || "image/jpeg"
+      );
+      profilePic = s3Key;
     }
 
     const updateData = {};
@@ -123,7 +141,12 @@ exports.updateProfile = async (req, res) => {
       { new: true }
     ).select("-password");
 
-    res.json(user);
+    const userObj = user ? user.toObject() : {};
+    if (userObj.profilePic) {
+      userObj.profilePic = await resolveFileUrl(userObj.profilePic);
+    }
+
+    res.json(userObj);
 
   } catch (err) {
     res.status(500).json({ error: err.message });

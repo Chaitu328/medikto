@@ -1,20 +1,31 @@
-# Use Node.js 22 LTS Alpine image
+# Use Node.js 22 LTS Alpine image (lean and lightweight)
 FROM node:22-alpine
+
+# Set production environment
+ENV NODE_ENV=production
+ENV DOCDB_CA_PATH=/app/certs/global-bundle.pem
 
 # Create app directory
 WORKDIR /app
 
-# Copy package files
+# Copy package definition files
 COPY package*.json ./
 
-# Install dependencies
+# Install production dependencies only
 RUN npm install --omit=dev
 
-# Copy application source
+# Copy CA certificate bundle
+COPY certs/ ./certs/
+
+# Copy application source code
 COPY . .
 
-# Expose application port
+# Expose backend API port
 EXPOSE 4000
 
-# Start the application
-CMD ["npm", "start"]
+# Lightweight container health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:4000/health || exit 1
+
+# Start the application with a strict 512 MB Node.js heap limit
+CMD ["node", "--max-old-space-size=512", "app.js"]

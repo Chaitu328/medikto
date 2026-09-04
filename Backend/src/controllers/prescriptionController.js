@@ -1,10 +1,14 @@
 const Prescription = require("../models/prescriptionModel");
-const cloudinary = require("../config/cloudinary");
+const {
+  uploadBufferToS3,
+  generatePrescriptionKey,
+  resolveFileUrl,
+  deleteS3Object,
+} = require("../config/s3");
 const {
   buildUserAccessFilter,
   shouldPopulateUser,
 } = require("../utils/accessControl");
-
 
 exports.addPrescription = async (req, res) => {
   try {
@@ -36,7 +40,13 @@ exports.addPrescription = async (req, res) => {
     let fileUrl = null;
 
     if (req.file) {
-      fileUrl = req.file.path;
+      const s3Key = generatePrescriptionKey(req.user.id, req.file.originalname);
+      await uploadBufferToS3(
+        req.file.buffer,
+        s3Key,
+        req.file.mimetype || "application/pdf"
+      );
+      fileUrl = s3Key;
     }
 
     const prescription = await Prescription.create({
@@ -47,43 +57,53 @@ exports.addPrescription = async (req, res) => {
       fileUrl
     });
 
-    res.status(201).json(prescription);
+    const prescriptionObj = prescription.toObject();
+    if (prescriptionObj.fileUrl) {
+      prescriptionObj.fileUrl = await resolveFileUrl(prescriptionObj.fileUrl);
+    }
+
+    res.status(201).json(prescriptionObj);
 
   } catch (err) {
-    console.error(err);
+    console.error("addPrescription error:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
+exports.getPrescriptions = async (req, res) => {
+  try {
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+    const query = Prescription.find(filter).sort({
+      createdAt: -1,
+    });
 
-
-exports.getPrescriptions =
-  async (req, res) => {
-    try {
-      const filter = await buildUserAccessFilter(req, req.query.patientId);
-      const query = Prescription.find(filter).sort({
-        createdAt: -1,
-      });
-
-      if (shouldPopulateUser(req)) {
-        query.populate("user", "firstName phone email profilePic subscription hospitals");
-      }
-
-      const data = await query;
-
-      res.json(data);
-
-    } catch (err) {
-      res
-        .status(500)
-        .json({
-          error:
-            err.message,
-        });
+    if (shouldPopulateUser(req)) {
+      query.populate("user", "firstName phone email profilePic subscription hospitals");
     }
-  };
 
+    const data = await query;
 
+    const resolvedPrescriptions = await Promise.all(
+      data.map(async (p) => {
+        const pObj = p.toObject ? p.toObject() : p;
+        if (pObj.fileUrl) {
+          pObj.fileUrl = await resolveFileUrl(pObj.fileUrl);
+        }
+        if (pObj.user && pObj.user.profilePic) {
+          pObj.user.profilePic = await resolveFileUrl(pObj.user.profilePic);
+        }
+        return pObj;
+      })
+    );
+
+    res.json(resolvedPrescriptions);
+
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
+  }
+};
 
 exports.getPrescriptionById = async (req, res) => {
   try {
@@ -100,14 +120,20 @@ exports.getPrescriptionById = async (req, res) => {
       return res.status(404).json({ message: "Not found" });
     }
 
-    res.json(data);
+    const pObj = data.toObject();
+    if (pObj.fileUrl) {
+      pObj.fileUrl = await resolveFileUrl(pObj.fileUrl);
+    }
+    if (pObj.user && pObj.user.profilePic) {
+      pObj.user.profilePic = await resolveFileUrl(pObj.user.profilePic);
+    }
+
+    res.json(pObj);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-
-
 
 exports.updatePrescription = async (req, res) => {
   try {
@@ -131,25 +157,30 @@ exports.updatePrescription = async (req, res) => {
     if (reminders)
       prescription.reminders = reminders;
 
-    // update file if new uploaded
+    // update file in S3 if new uploaded
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "auto"
-      });
-
-      prescription.fileUrl = result.secure_url;
+      const s3Key = generatePrescriptionKey(prescription.user.toString(), req.file.originalname);
+      await uploadBufferToS3(
+        req.file.buffer,
+        s3Key,
+        req.file.mimetype || "application/pdf"
+      );
+      prescription.fileUrl = s3Key;
     }
 
     await prescription.save();
 
-    res.json(prescription);
+    const pObj = prescription.toObject();
+    if (pObj.fileUrl) {
+      pObj.fileUrl = await resolveFileUrl(pObj.fileUrl);
+    }
+
+    res.json(pObj);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-
-
 
 exports.deletePrescription = async (req, res) => {
   try {
@@ -157,6 +188,10 @@ exports.deletePrescription = async (req, res) => {
 
     if (!data) {
       return res.status(404).json({ message: "Not found" });
+    }
+
+    if (data.fileUrl) {
+      await deleteS3Object(data.fileUrl);
     }
 
     await data.deleteOne();

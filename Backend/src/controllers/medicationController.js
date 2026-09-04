@@ -2,7 +2,13 @@ const Medication = require("../models/medicationModel");
 const PLAN_LIMITS = require("../utils/planLimits");
 const User = require("../models/userModel");
 const Dose = require("../models/doseModel");
-const cloudinary = require("../config/cloudinary");
+const {
+  uploadBufferToS3,
+  generateDoseProofKey,
+  resolveFileUrl,
+  deleteS3Object,
+} = require("../config/s3");
+const { applySelfieWatermark } = require("../utils/watermarkHelper");
 const {
   buildUserAccessFilter,
   shouldPopulateUser,
@@ -223,11 +229,25 @@ exports.getTodaySchedule = async (req, res) => {
 
     const doses = await query;
 
+    // Resolve presigned URLs for private proof images and profile pictures
+    const resolvedSchedules = await Promise.all(
+      doses.map(async (d) => {
+        const dObj = d.toObject ? d.toObject() : d;
+        if (dObj.proofImage) {
+          dObj.proofImage = await resolveFileUrl(dObj.proofImage);
+        }
+        if (dObj.user && dObj.user.profilePic) {
+          dObj.user.profilePic = await resolveFileUrl(dObj.user.profilePic);
+        }
+        return dObj;
+      })
+    );
+
     res.status(200).json({
       success: true,
       selectedDate: date,
-      totalSchedules: doses.length,
-      schedules: doses,
+      totalSchedules: resolvedSchedules.length,
+      schedules: resolvedSchedules,
     });
 
   } catch (err) {
@@ -266,7 +286,12 @@ exports.markAsTaken = async (req, res) => {
 
     await dose.save();
 
-    res.json(dose);
+    const doseObj = dose.toObject();
+    if (doseObj.proofImage) {
+      doseObj.proofImage = await resolveFileUrl(doseObj.proofImage);
+    }
+
+    res.json(doseObj);
 
   } catch (err) {
     res.status(500).json({
@@ -303,42 +328,20 @@ exports.verifyWithSelfie = async (req, res) => {
       });
     }
     const now = new Date();
-    const timeStr = now.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-    const dateStr = now.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
 
-    // Upload to Cloudinary with text stamp baked into the image
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      transformation: [
-        { width: 800, crop: "limit" },
-        {
-          overlay: {
-            font_family: "Arial",
-            font_size: 28,
-            font_weight: "bold",
-            text: `Medikto | ${timeStr} | ${dateStr}`,
-          },
-          color: "white",
-          gravity: "south_west",
-          x: 16,
-          y: 16,
-          opacity: 90,
-        },
-      ],
-    });
+    // 1. Apply watermark with Sharp in memory (bounded at 32MB)
+    const watermarkedBuffer = await applySelfieWatermark(req.file.buffer, now);
+
+    // 2. Upload to private S3 under patients/{userId}/doses/{doseId}_proof.jpg
+    const patientId = (dose.user && dose.user._id) ? dose.user._id.toString() : req.user.id;
+    const s3Key = generateDoseProofKey(patientId, dose._id.toString());
+    await uploadBufferToS3(watermarkedBuffer, s3Key, "image/jpeg");
 
     dose.status = "taken";
     dose.takenAt = now;
     dose.verified = true;
     dose.verifiedAt = now;
-    dose.proofImage = result.secure_url;
+    dose.proofImage = s3Key;
 
     const user = await User.findById(dose.user || req.user.id);
 

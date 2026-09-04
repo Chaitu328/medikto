@@ -15,9 +15,12 @@ medikto/
 ## Technologies
 
 ### Backend
-- Node.js
+- Node.js (v22 LTS)
 - Express.js
-- MongoDB
+- Amazon DocumentDB / MongoDB (TLS enabled)
+- Amazon S3 Private Object Storage (AWS SDK v3 & Presigned URLs)
+- Sharp (low-memory image watermarking)
+- Docker & Docker Compose (512 MB memory bounded)
 - Firebase Cloud Messaging (FCM)
 - JWT Authentication
 
