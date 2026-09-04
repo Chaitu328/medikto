@@ -11,6 +11,10 @@ class MedicationModel {
   final String? time;
   final String? status;
   final String? frequency;
+  final DateTime? startDate;
+  final int? duration;
+  final DateTime? endDate;
+  final bool? isContinue;
 
   MedicationModel({
     this.id,
@@ -25,6 +29,10 @@ class MedicationModel {
     this.time,
     this.status,
     this.frequency,
+    this.startDate,
+    this.duration,
+    this.endDate,
+    this.isContinue,
   });
 
   factory MedicationModel.fromJson(Map<String, dynamic> json) {
@@ -41,15 +49,22 @@ class MedicationModel {
       notifications: json['notifications'],
       instructions: json['instructions'],
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+          ? DateTime.tryParse(json['createdAt'])
           : null,
-
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
+          ? DateTime.tryParse(json['updatedAt'])
           : null,
-      time: json['time'], // ✅ THIS FIXES YOUR ERROR
-      status: json['status'],
+      time: json['time'],
+      status: json['status'] ?? "active",
       frequency: json['frequency'],
+      startDate: json['startDate'] != null
+          ? DateTime.tryParse(json['startDate'])
+          : (json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null),
+      duration: json['duration'],
+      endDate: json['endDate'] != null
+          ? DateTime.tryParse(json['endDate'])
+          : null,
+      isContinue: json['isContinue'] ?? false,
     );
   }
 
@@ -66,6 +81,10 @@ class MedicationModel {
       'time': time,
       'status': status,
       "frequency": frequency,
+      "startDate": startDate?.toIso8601String(),
+      "duration": duration,
+      "endDate": endDate?.toIso8601String(),
+      "isContinue": isContinue,
     };
   }
 }

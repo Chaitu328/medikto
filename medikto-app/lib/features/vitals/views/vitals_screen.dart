@@ -183,13 +183,42 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
                 const SizedBox(height: 12),
 
-                // Prominent Medical Documents Hub Card
+                /// 🔹 Health Data Header
+                const Text(
+                  "Health Data",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // White text for dark mode
+                  ),
+                ),
+                SizedBox(height: size.height * 0.02),
+
+                _buildGrid(healthData, true, latestValues),
+
+                SizedBox(height: size.height * 0.03),
+        
+                /// 🔹 Health Records Header
+                const Text(
+                  "Health Records",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // White text for dark mode
+                  ),
+                ),
+                SizedBox(height: size.height * 0.02),
+        
+                _buildGrid(healthRecords, false),
+
+                SizedBox(height: size.height * 0.03),
+
+                // Prominent Medical Documents Hub Card (Positioned below Health Records)
                 Container(
                   width: double.infinity,
-                  margin: const EdgeInsets.only(top: 8, bottom: 20),
+                  margin: const EdgeInsets.only(top: 4, bottom: 20),
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -253,10 +282,10 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                                   ),
                                 );
                               },
-                              child: Row(
+                              child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text(
+                                  Text(
                                     "Open Hub",
                                     style: TextStyle(
                                       color: Color(0xFF81DEEA),
@@ -264,8 +293,8 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
-                                  const Icon(
+                                  SizedBox(width: 4),
+                                  Icon(
                                     Icons.arrow_forward,
                                     color: Color(0xFF81DEEA),
                                     size: 14,
@@ -279,34 +308,6 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                     ],
                   ),
                 ),
-
-                /// 🔹 Health Data Header
-                const Text(
-                  "Health Data",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // White text for dark mode
-                  ),
-                ),
-                SizedBox(height: size.height * 0.02),
-
-                _buildGrid(healthData, true, latestValues),
-
-                SizedBox(height: size.height * 0.03),
-        
-                /// 🔹 Health Records Header
-                const Text(
-                  "Health Records",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white, // White text for dark mode
-                  ),
-                ),
-                SizedBox(height: size.height * 0.02),
-        
-                _buildGrid(healthRecords, false),
         
                 SizedBox(height: size.height * 0.04),
               ],

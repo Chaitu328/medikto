@@ -176,11 +176,6 @@ class _AddPrescriptionFileScreenState
       return;
     }
 
-    if (reminders.isEmpty) {
-      AppToasts.showError(context, "Please add at least one reminder");
-      return;
-    }
-
     setState(() {
       isLoading = true;
     });
@@ -189,7 +184,7 @@ class _AddPrescriptionFileScreenState
       addPrescriptionProvider({
         "medicineName": medicineNameController.text.trim(),
         "dosageInstructions": dosageController.text.trim(),
-        "reminders": reminders,
+        "reminders": [],
         "file": selectedFile,
       }).future,
     );
@@ -202,11 +197,7 @@ class _AddPrescriptionFileScreenState
       AppToasts.showSuccess(context, response.message);
       ref.invalidate(getPrescriptionsProvider);
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),
-        (route) => false,
-      );
+      Navigator.pop(context, true);
     } else {
       AppToasts.showError(context, response.message);
     }
@@ -254,145 +245,7 @@ class _AddPrescriptionFileScreenState
                       maxLines: 4,
                     ),
 
-                    SizedBox(height: size.height * 0.01),
-
-                    // const TimingsSection(),
-                    SizedBox(height: size.height * 0.01),
-
-                    /// 🔹 REMINDERS SECTION
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "Reminder Timings",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-
-                              GestureDetector(
-                                onTap: addReminderTime,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: accentCyan.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      Icon(
-                                        Icons.add,
-                                        color: accentCyan,
-                                        size: 18,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        "Add Time",
-                                        style: TextStyle(
-                                          color: accentCyan,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 15),
-
-                          reminders.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    "No reminders added",
-                                    style: TextStyle(color: Colors.white38),
-                                  ),
-                                )
-                              : Column(
-                                  children: List.generate(reminders.length, (
-                                    index,
-                                  ) {
-                                    final reminder = reminders[index];
-
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 12,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: darkBg,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.alarm,
-                                                color: accentCyan,
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Text(
-                                                reminder["time"],
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-
-                                          Row(
-                                            children: [
-                                              Switch(
-                                                value: reminder["enabled"],
-                                                activeThumbColor: accentCyan,
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    reminders[index]["enabled"] =
-                                                        value;
-                                                  });
-                                                },
-                                              ),
-
-                                              IconButton(
-                                                onPressed: () =>
-                                                    removeReminder(index),
-                                                icon: const Icon(
-                                                  Icons.delete_outline,
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                ),
-                        ],
-                      ),
-                    ),
+                    SizedBox(height: size.height * 0.02),
 
                     SizedBox(height: size.height * 0.03),
 

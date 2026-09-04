@@ -14,22 +14,22 @@ exports.addPrescription = async (req, res) => {
       reminders
     } = req.body;
 
-    let parsedReminders;
+    let parsedReminders = [];
 
-    try {
-      parsedReminders =
-        typeof reminders === "string"
-          ? JSON.parse(reminders)
-          : reminders;
-    } catch (err) {
-      return res.status(400).json({
-        message: "Invalid reminders format"
-      });
+    if (reminders) {
+      try {
+        parsedReminders =
+          typeof reminders === "string"
+            ? JSON.parse(reminders)
+            : reminders;
+      } catch (err) {
+        parsedReminders = [];
+      }
     }
 
-    if (!medicineName || !parsedReminders?.length) {
+    if (!medicineName) {
       return res.status(400).json({
-        message: "Medicine name and at least one reminder required"
+        message: "Medicine name is required"
       });
     }
 
@@ -42,8 +42,8 @@ exports.addPrescription = async (req, res) => {
     const prescription = await Prescription.create({
       user: req.user.id,
       medicineName,
-      dosageInstructions,
-      reminders: parsedReminders,
+      dosageInstructions: dosageInstructions || "",
+      reminders: Array.isArray(parsedReminders) ? parsedReminders : [],
       fileUrl
     });
 

@@ -30,7 +30,11 @@ exports.addMedication = async (req, res) => {
       timings,
       notifications,
       instructions,
-      frequency
+      frequency,
+      startDate,
+      duration,
+      isContinue,
+      status
     } = req.body;
 
     if (!name || !dosage || !unit || !timings?.length) {
@@ -39,30 +43,51 @@ exports.addMedication = async (req, res) => {
       });
     }
 
+    const medStartDate = startDate ? new Date(startDate) : new Date();
+    let medEndDate = null;
+    const isOngoing = isContinue === true || isContinue === "true";
+
+    if (!isOngoing && duration && Number(duration) > 0) {
+      const durationDays = Number(duration);
+      medEndDate = new Date(medStartDate.getTime() + (durationDays - 1) * 24 * 60 * 60 * 1000);
+    }
+
     const medication = await Medication.create({
       user: req.user.id,
       name,
       dosage,
       unit,
       timings,
-      notifications,
+      notifications: notifications !== undefined ? notifications : true,
       instructions,
-      frequency: frequency || "daily"
+      frequency: frequency || "daily",
+      startDate: medStartDate,
+      duration: duration ? Number(duration) : null,
+      endDate: medEndDate,
+      isContinue: isOngoing,
+      status: status || "active"
     });
 
     const today = getTodayDate();
+    const medStartDateStr = medStartDate.toISOString().split("T")[0];
+    const medEndDateStr = medEndDate ? medEndDate.toISOString().split("T")[0] : null;
 
-    const doses = timings.map((t) => ({
-      user: req.user.id,
-      medication: medication._id,
-      name,
-      dosage: `${dosage}${unit}`,
-      date: today,
-      time: timingToTimeMap[t.toLowerCase()] || t,
-      status: "pending"
-    }));
+    // Only generate doses for today if today falls within [startDate, endDate] or isContinue
+    const isTodayValid = today >= medStartDateStr && (isOngoing || !medEndDateStr || today <= medEndDateStr);
 
-    await Dose.insertMany(doses);
+    if (isTodayValid && medication.status === "active") {
+      const doses = timings.map((t) => ({
+        user: req.user.id,
+        medication: medication._id,
+        name,
+        dosage: `${dosage}${unit}`,
+        date: today,
+        time: timingToTimeMap[t.toLowerCase()] || t,
+        status: "pending"
+      }));
+
+      await Dose.insertMany(doses);
+    }
 
     res.status(201).json({
       message: "Medication added",
@@ -97,29 +122,6 @@ exports.getMedications = async (req, res) => {
   }
 };
 
-// ================= TODAY SCHEDULE =================
-// exports.getTodaySchedule = async (req, res) => {
-//   try {
-
-//     const today = getTodayDate();
-
-//     const doses = await Dose.find({
-//       date: today
-//     })
-//       // .populate("user")
-//       .sort({
-//         time: 1
-//       });
-
-//     res.json(doses);
-
-//   } catch (err) {
-//     res.status(500).json({
-//       error: err.message
-//     });
-//   }
-// };
-
 const ensureDosesExist = async (req, date) => {
   try {
     const patientIds = await getAccessiblePatientIds(req, req.query.patientId);
@@ -130,8 +132,36 @@ const ensureDosesExist = async (req, date) => {
       if (!medications || medications.length === 0) continue;
 
       for (const med of medications) {
+        // Skip inactive, stopped, completed, or cancelled medications
+        if (med.status && med.status !== "active") {
+          continue;
+        }
+
+        // Date range checks
+        const medStartDate = med.startDate || med.createdAt || new Date();
+        const medStartDateStr = new Date(medStartDate).toISOString().split("T")[0];
+        
+        // If target date is before the medication's start date, skip
+        if (date < medStartDateStr) {
+          continue;
+        }
+
+        // If not continuous and end date exists, check if date is past end date
+        if (!med.isContinue && med.endDate) {
+          const medEndDateStr = new Date(med.endDate).toISOString().split("T")[0];
+          if (date > medEndDateStr) {
+            // Auto-complete medication if past end date
+            const todayStr = getTodayDate();
+            if (todayStr > medEndDateStr && med.status === "active") {
+              med.status = "completed";
+              await med.save();
+            }
+            continue;
+          }
+        }
+
         if (med.frequency === "weekly") {
-          const creationDay = new Date(med.createdAt).getDay();
+          const creationDay = new Date(medStartDate).getDay();
           const targetDay = new Date(date).getDay();
           if (creationDay !== targetDay) {
             continue; // Skip this medication on this date since it is not the scheduled weekday
@@ -405,14 +435,18 @@ exports.deleteSelfie = async (req, res) => {
 // ================= UPDATE MEDICATION =================
 exports.updateMedication = async (req, res) => {
   try {
-
     const {
       name,
       dosage,
       unit,
       timings,
       notifications,
-      instructions
+      instructions,
+      frequency,
+      startDate,
+      duration,
+      isContinue,
+      status
     } = req.body;
 
     const updateData = {};
@@ -420,13 +454,32 @@ exports.updateMedication = async (req, res) => {
     if (name) updateData.name = name;
     if (dosage) updateData.dosage = dosage;
     if (unit) updateData.unit = unit;
-    if (notifications !== undefined)
-      updateData.notifications = notifications;
-    if (instructions)
-      updateData.instructions = instructions;
+    if (notifications !== undefined) updateData.notifications = notifications;
+    if (instructions !== undefined) updateData.instructions = instructions;
+    if (frequency) updateData.frequency = frequency;
+    if (startDate) updateData.startDate = new Date(startDate);
+    if (isContinue !== undefined) updateData.isContinue = isContinue === true || isContinue === "true";
+    if (duration !== undefined) updateData.duration = duration ? Number(duration) : null;
+    if (status) updateData.status = status;
 
     if (timings) {
       updateData.timings = timings;
+    }
+
+    // Recalculate endDate
+    const currentMed = await Medication.findById(req.params.id);
+    if (!currentMed) {
+      return res.status(404).json({ message: "Medication not found" });
+    }
+
+    const effStartDate = updateData.startDate || currentMed.startDate || currentMed.createdAt || new Date();
+    const effIsContinue = updateData.isContinue !== undefined ? updateData.isContinue : currentMed.isContinue;
+    const effDuration = updateData.duration !== undefined ? updateData.duration : currentMed.duration;
+
+    if (!effIsContinue && effDuration && Number(effDuration) > 0) {
+      updateData.endDate = new Date(new Date(effStartDate).getTime() + (Number(effDuration) - 1) * 24 * 60 * 60 * 1000);
+    } else if (effIsContinue) {
+      updateData.endDate = null;
     }
 
     const med = await Medication.findByIdAndUpdate(
@@ -435,7 +488,73 @@ exports.updateMedication = async (req, res) => {
       { new: true }
     );
 
+    // If status changed to stopped/completed/cancelled, cancel future pending doses
+    const today = getTodayDate();
+    if (med.status && med.status !== "active") {
+      await Dose.updateMany(
+        { medication: med._id, date: { $gte: today }, status: "pending" },
+        { status: "cancelled" }
+      );
+    } else if (med.status === "active") {
+      // Re-activate cancelled future doses
+      await Dose.updateMany(
+        { medication: med._id, date: { $gte: today }, status: "cancelled" },
+        { status: "pending" }
+      );
+    }
+
     res.json(med);
+
+  } catch (err) {
+    res.status(500).json({
+      error: err.message
+    });
+  }
+};
+
+// ================= UPDATE MEDICATION STATUS =================
+exports.updateMedicationStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ["active", "completed", "stopped", "cancelled"];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        message: `Status must be one of: ${validStatuses.join(", ")}`
+      });
+    }
+
+    const med = await Medication.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!med) {
+      return res.status(404).json({ message: "Medication not found" });
+    }
+
+    const today = getTodayDate();
+    if (status !== "active") {
+      // Safely mark future pending doses as cancelled rather than physical deletion
+      await Dose.updateMany(
+        { medication: med._id, date: { $gte: today }, status: "pending" },
+        { status: "cancelled" }
+      );
+    } else {
+      // If re-activated, restore future cancelled doses to pending
+      await Dose.updateMany(
+        { medication: med._id, date: { $gte: today }, status: "cancelled" },
+        { status: "pending" }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Medication status updated to ${status}`,
+      medication: med
+    });
 
   } catch (err) {
     res.status(500).json({
@@ -447,8 +566,16 @@ exports.updateMedication = async (req, res) => {
 // ================= DELETE MEDICATION =================
 exports.deleteMedication = async (req, res) => {
   try {
+    const { id } = req.params;
+    const today = getTodayDate();
 
-    await Medication.findByIdAndDelete(req.params.id);
+    // Mark future pending doses as cancelled so reminders cease, preserving historical taken/missed records
+    await Dose.updateMany(
+      { medication: id, date: { $gte: today }, status: "pending" },
+      { status: "cancelled", isDeleted: true }
+    );
+
+    await Medication.findByIdAndDelete(id);
 
     res.json({
       message: "Medication deleted"

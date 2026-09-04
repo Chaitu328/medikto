@@ -19,7 +19,10 @@ const prescriptionSchema = new mongoose.Schema({
 
   dosageInstructions: String, // "500mg after breakfast"
 
-  reminders: [reminderSchema], // multiple times with toggle
+  reminders: {
+    type: [reminderSchema],
+    default: []
+  },
 
   fileUrl: String // uploaded prescription
 

@@ -17,8 +17,11 @@ cron.schedule("* * * * *", async () => {
     // Find pending doses within a 3-day window of UTC now
     const pendingDoses = await Dose.find({
       date: { $in: [yesterday, utcDateStr, tomorrow] },
-      status: "pending"
-    }).populate("user", "firstName phone fcmToken timezone");
+      status: "pending",
+      isDeleted: { $ne: true }
+    })
+      .populate("user", "firstName phone fcmToken timezone")
+      .populate("medication", "status notifications");
 
     if (pendingDoses.length === 0) {
       return;
@@ -26,6 +29,16 @@ cron.schedule("* * * * *", async () => {
 
     for (const dose of pendingDoses) {
       if (!dose.user) continue;
+
+      // If medication exists and is stopped, completed, cancelled, or has notifications disabled, skip
+      if (dose.medication) {
+        if (dose.medication.status && dose.medication.status !== "active") {
+          continue;
+        }
+        if (dose.medication.notifications === false) {
+          continue;
+        }
+      }
 
       const tz = dose.user.timezone || "UTC";
 

@@ -58,6 +58,10 @@ class _MedicationVerificationScreenState
   String selectedDosageAmount = "Morning"; // Default radio value
   String selectedUnit = "mg";
   String selectedFrequency = "daily";
+  DateTime selectedStartDate = DateTime.now();
+  bool isContinueMedication = false;
+  int selectedDurationDays = 7;
+  final TextEditingController customDaysController = TextEditingController(text: "7");
 
   final List<String> units = ["mg", "ml", "gm"];
   // List<String> selectedDosageTimings = [];
@@ -100,6 +104,16 @@ class _MedicationVerificationScreenState
 
       remindersEnabled = med.notifications ?? true;
       selectedFrequency = med.frequency ?? "daily";
+
+      if (med.startDate != null) {
+        selectedStartDate = med.startDate!;
+      }
+
+      isContinueMedication = med.isContinue ?? false;
+      if (med.duration != null && med.duration! > 0) {
+        selectedDurationDays = med.duration!;
+        customDaysController.text = med.duration.toString();
+      }
 
       if (med.timings != null) {
         selectedDosageTimings = med.timings!.map((timeString) {
@@ -549,6 +563,10 @@ class _MedicationVerificationScreenState
               _buildTimingSection(),
               const SizedBox(height: 24),
 
+              /// 🗓️ 3.5 COURSE DURATION & CONTINUOUS OPTION
+              _buildCourseDurationSection(),
+              const SizedBox(height: 20),
+
               /// ⏰ 4. SCHEDULED REMINDER CARD
               _buildNotificationToggleCard(),
               const SizedBox(height: 20),
@@ -605,6 +623,8 @@ class _MedicationVerificationScreenState
                         });
 
                         try {
+                          final duration = isContinueMedication ? null : selectedDurationDays;
+
                           final medication = MedicationModel(
                             name: medicationNameController.text.trim(),
                             dosage: int.tryParse(dosageController.text.trim()),
@@ -615,6 +635,10 @@ class _MedicationVerificationScreenState
                             notifications: remindersEnabled,
                             instructions: instructionsController.text.trim(),
                             frequency: selectedFrequency,
+                            startDate: selectedStartDate,
+                            duration: duration,
+                            isContinue: isContinueMedication,
+                            status: "active",
                           );
 
                           ResponseData<dynamic> response;
@@ -648,7 +672,7 @@ class _MedicationVerificationScreenState
                           if (mounted) {
                             AppToasts.showError(
                               context,
-                              "Something went wrong",
+                              "Failed to save medication: $e",
                             );
                           }
                         } finally {
@@ -658,23 +682,23 @@ class _MedicationVerificationScreenState
                             });
                           }
                         }
-                      },
                 child: isLoading
                     ? const SizedBox(
                         height: 22,
                         width: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: Colors.black,
                         ),
                       )
                     : Text(
                         widget.isEdit == true
                             ? "UPDATE MEDICATION"
                             : "ADD MEDICATION",
-                        style: TextStyle(
-                          fontSize: 18,
+                        style: const TextStyle(
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
                         ),
                       ),
               ),
@@ -1026,10 +1050,23 @@ class _MedicationVerificationScreenState
   //   );
   // }
 
-  /// 🔹 Helper for the Reminder Card
-  Widget _buildNotificationToggleCard() {
+  /// 🔹 Helper for Course Duration & Continuous Option
+  Widget _buildCourseDurationSection() {
+    final now = DateTime.now();
+    final isToday = selectedStartDate.year == now.year &&
+        selectedStartDate.month == now.month &&
+        selectedStartDate.day == now.day;
+    final startDateStr = isToday
+        ? "Today (${selectedStartDate.day}/${selectedStartDate.month}/${selectedStartDate.year})"
+        : "${selectedStartDate.day}/${selectedStartDate.month}/${selectedStartDate.year}";
+
+    final calculatedEndDate = selectedStartDate.add(Duration(days: selectedDurationDays - 1));
+    final endDateStr = "${calculatedEndDate.day}/${calculatedEndDate.month}/${calculatedEndDate.year}";
+
+    final durationChips = [3, 5, 7, 14, 30];
+
     return Container(
-      padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 10),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: surfaceColor,
         borderRadius: BorderRadius.circular(20),
@@ -1038,31 +1075,293 @@ class _MedicationVerificationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Section Title
+          const Row(
             children: [
-              const Text(
-                "Notifications",
+              Icon(Icons.calendar_month_outlined, color: accentCyan, size: 20),
+              SizedBox(width: 8),
+              Text(
+                "MEDICATION DURATION",
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18, // Slightly larger for better readability
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Transform.scale(
-                scale: 0.8, // Slightly smaller switch to look more modern
-                child: Switch(
-                  materialTapTargetSize: MaterialTapTargetSize.padded,
-                  padding: EdgeInsets.zero,
-                  value: remindersEnabled,
-                  activeThumbColor: accentCyan,
-                  activeTrackColor: accentCyan.withAlpha(30),
-                  inactiveThumbColor: Colors.white24,
-                  inactiveTrackColor: Colors.white10,
-                  onChanged: (val) => setState(() => remindersEnabled = val),
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+
+          // Start Date Picker Row
+          InkWell(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: selectedStartDate,
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2040),
+                builder: (context, child) {
+                  return Theme(
+                    data: ThemeData.dark().copyWith(
+                      colorScheme: const ColorScheme.dark(
+                        primary: accentCyan,
+                        surface: surfaceColor,
+                        onSurface: Colors.white,
+                      ),
+                      dialogBackgroundColor: surfaceColor,
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (picked != null) {
+                setState(() {
+                  selectedStartDate = picked;
+                });
+              }
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(10),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.play_circle_outline, color: accentCyan, size: 20),
+                  const SizedBox(width: 10),
+                  const Text(
+                    "Start Date: ",
+                    style: TextStyle(color: Colors.white60, fontSize: 13),
+                  ),
+                  Text(
+                    startDateStr,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.edit_calendar, color: Colors.white38, size: 18),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // [✓] Continue (Ongoing long-term medication)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isContinueMedication ? accentCyan.withAlpha(25) : Colors.white.withAlpha(8),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isContinueMedication ? accentCyan.withAlpha(80) : Colors.white10,
+              ),
+            ),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: isContinueMedication,
+                  activeColor: accentCyan,
+                  checkColor: Colors.black,
+                  onChanged: (val) {
+                    setState(() {
+                      isContinueMedication = val ?? false;
+                    });
+                  },
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Continue indefinitely",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "For ongoing conditions (BP, Sugar) — repeats daily until stopped",
+                        style: TextStyle(
+                          color: isContinueMedication ? Colors.white70 : Colors.white38,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (!isContinueMedication) ...[
+            const SizedBox(height: 16),
+            const Text(
+              "COURSE DURATION",
+              style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+
+            // Quick Day Chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: durationChips.map((days) {
+                final isSelected = selectedDurationDays == days;
+                return ChoiceChip(
+                  label: Text("$days Days"),
+                  selected: isSelected,
+                  selectedColor: accentCyan,
+                  backgroundColor: Colors.white.withAlpha(12),
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.black : Colors.white,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 12,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        selectedDurationDays = days;
+                        customDaysController.text = days.toString();
+                      });
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+
+            // End Date summary badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(8),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.event_available, color: accentCyan, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Ends: $endDateStr ($selectedDurationDays days)",
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleNotificationToggle(bool value) async {
+    if (!value) {
+      final shouldDisable = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: surfaceColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 28),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Disable Notifications?",
+                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            "Switching off will stop critical notifications for the medicines.",
+            style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text(
+                "Keep Enabled",
+                style: TextStyle(color: accentCyan, fontWeight: FontWeight.bold),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text(
+                "Turn Off",
+                style: TextStyle(color: Colors.redAccent),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldDisable == true) {
+        setState(() => remindersEnabled = false);
+      }
+    } else {
+      setState(() => remindersEnabled = true);
+    }
+  }
+
+  /// 🔹 Helper for the Reminder Card
+  Widget _buildNotificationToggleCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withAlpha(14)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Notifications",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 2),
+              Text(
+                "Receive alerts when doses are due",
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          Transform.scale(
+            scale: 0.85,
+            child: Switch(
+              materialTapTargetSize: MaterialTapTargetSize.padded,
+              padding: EdgeInsets.zero,
+              value: remindersEnabled,
+              activeThumbColor: accentCyan,
+              activeTrackColor: accentCyan.withAlpha(60),
+              inactiveThumbColor: Colors.white24,
+              inactiveTrackColor: Colors.white10,
+              onChanged: _handleNotificationToggle,
+            ),
           ),
         ],
       ),

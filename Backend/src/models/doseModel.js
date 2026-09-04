@@ -27,7 +27,7 @@ const doseSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["pending", "taken", "missed"],
+    enum: ["pending", "taken", "missed", "cancelled"],
     default: "pending"
   },
 

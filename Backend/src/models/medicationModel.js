@@ -21,6 +21,32 @@ const medicationSchema = new mongoose.Schema({
 
   instructions: String,
 
+  startDate: {
+    type: Date,
+    default: Date.now
+  },
+
+  duration: {
+    type: Number,
+    default: null // Duration in days
+  },
+
+  endDate: {
+    type: Date,
+    default: null
+  },
+
+  isContinue: {
+    type: Boolean,
+    default: false
+  },
+
+  status: {
+    type: String,
+    enum: ["active", "completed", "stopped", "cancelled"],
+    default: "active"
+  },
+
   frequency: {
     type: String,
     enum: ["daily", "weekly"],

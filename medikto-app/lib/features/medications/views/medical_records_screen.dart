@@ -458,7 +458,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Weekly Compliance',
+                'Weekly Medications record',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

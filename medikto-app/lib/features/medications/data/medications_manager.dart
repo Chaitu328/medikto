@@ -285,4 +285,70 @@ class MedicationManager {
       return ResponseData("Please check your internet", ResponseStatus.FAILED);
     }
   }
+
+  Future<ResponseData> updateMedicationStatus({
+    required String medicationId,
+    required String status,
+  }) async {
+    try {
+      final response = await dioClient.ref!.patch(
+        "${ApiUrls.medications}/$medicationId/status",
+        data: {"status": status},
+      );
+
+      print("UPDATE MEDICATION STATUS RESPONSE => ${response.data}");
+
+      if (response.statusCode == 200) {
+        return ResponseData(
+          response.data['message'] ?? "Status updated successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      } else {
+        return ResponseData(
+          response.data['message'] ?? "Failed to update status",
+          ResponseStatus.FAILED,
+        );
+      }
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> deleteMedication({
+    required String medicationId,
+  }) async {
+    try {
+      final response = await dioClient.ref!.delete(
+        "${ApiUrls.medications}/$medicationId",
+      );
+
+      print("DELETE MEDICATION RESPONSE => ${response.data}");
+
+      if (response.statusCode == 200) {
+        return ResponseData(
+          response.data['message'] ?? "Medication deleted successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      } else {
+        return ResponseData(
+          response.data['message'] ?? "Failed to delete medication",
+          ResponseStatus.FAILED,
+        );
+      }
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
 }

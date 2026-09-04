@@ -589,7 +589,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "Medication",
+                  "Medications",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -597,7 +597,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
                 const Text(
-                  "Compliance",
+                  "record",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

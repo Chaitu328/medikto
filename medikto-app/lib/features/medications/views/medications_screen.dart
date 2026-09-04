@@ -51,14 +51,45 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     List<MedicationModel> medications,
     List<TodayScheduleModel> todayList,
   ) {
+    final selDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+
     final filtered = medications.where((medication) {
-      if (medication.createdAt == null) return false;
+      // Check status
+      final status = medication.status?.toLowerCase() ?? "active";
+      if (status != "active") {
+        return false;
+      }
 
-      final medicationDate = medication.createdAt!;
+      final start = medication.startDate ?? medication.createdAt;
+      if (start == null) return true;
 
-      return medicationDate.year == selectedDate.year &&
-          medicationDate.month == selectedDate.month &&
-          medicationDate.day == selectedDate.day;
+      final startDay = DateTime(start.year, start.month, start.day);
+      if (selDay.isBefore(startDay)) return false;
+
+      if (medication.isContinue == true) {
+        return true;
+      }
+
+      if (medication.endDate != null) {
+        final endDay = DateTime(
+          medication.endDate!.year,
+          medication.endDate!.month,
+          medication.endDate!.day,
+        );
+        if (selDay.isAfter(endDay)) return false;
+      } else if (medication.duration != null && medication.duration! > 0) {
+        final endDay = startDay.add(Duration(days: medication.duration! - 1));
+        if (selDay.isAfter(endDay)) return false;
+      }
+
+      // Check weekly frequency if applicable
+      if (medication.frequency?.toLowerCase() == "weekly") {
+        if (start.weekday != selectedDate.weekday) {
+          return false;
+        }
+      }
+
+      return true;
     }).toList();
 
     filtered.sort((a, b) {
@@ -1089,7 +1120,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             color: Colors.black,
           ),
           label: const Text(
-            "Compliance Records",
+            "Medications record",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),

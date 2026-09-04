@@ -117,11 +117,7 @@ class _AddMedicalMedicationsScreenState
         AppToasts.showSuccess(context, response.message);
         ref.invalidate(getReportsProvider);
 
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),
-          (route) => false,
-        );
+        Navigator.pop(context, true);
       } else {
         AppToasts.showError(context, response.message);
       }

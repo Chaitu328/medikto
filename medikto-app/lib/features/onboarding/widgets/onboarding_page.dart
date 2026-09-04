@@ -1,4 +1,3 @@
-// 🔥 Extracted widget (reduces rebuild cost)
 import 'package:flutter/material.dart';
 
 class OnboardingPage extends StatelessWidget {
@@ -10,7 +9,7 @@ class OnboardingPage extends StatelessWidget {
   final PageController controller;
 
   const OnboardingPage({
-    super.key, // Added super.key for best practice
+    super.key,
     required this.index,
     required this.data,
     required this.size,
@@ -21,92 +20,86 @@ class OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Brand colors for consistency
-    const Color accentCyan = Color(0xFF81DEEA);
-
     return Column(
       children: [
-        index == 1 || index == 2
-            ? SizedBox(height: size.height * 0.02)
-            : const SizedBox.shrink(),
+        // Top navigation bar area (consistent height across all slides)
+        SizedBox(
+          height: 44,
+          child: index > 0
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      if (index > 0) {
+                        controller.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      child: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 22,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                )
+              : null,
+        ),
 
-        index == 1 || index == 2
-            ? Align(
-                alignment: Alignment.centerLeft,
-                child: InkWell(
-                  onTap: () {
-                    if (index > 0) {
-                      controller.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  },
-                  child: const Icon(
-                    Icons.arrow_back_ios,
-                    size: 24,
-                    color: Colors.white, // Changed for Dark Mode
+        // Illustration Image
+        Expanded(
+          flex: 6,
+          child: Center(
+            child: Image.asset(
+              data["image"] ?? "",
+              fit: BoxFit.contain,
+              width: size.width * 0.82,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Content Area (Title & Description)
+        Expanded(
+          flex: 3,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                data["title"] ?? "",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  data["desc"] ?? "",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white70,
+                    height: 1.45,
                   ),
                 ),
-              )
-            : const SizedBox.shrink(),
-
-        index == 1 || index == 2
-            ? SizedBox(height: size.height * 0.06)
-            : const SizedBox.shrink(),
-
-        Text(
-          data["title"]!,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w500,
-            color: Colors.white, // Changed for Dark Mode
-            letterSpacing: 0.5,
+              ),
+            ],
           ),
         ),
-
-        SizedBox(height: size.height * 0.005),
-
-        Text(
-          data["desc"]!,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Colors.white70, // Changed for Dark Mode (softer white)
-          ),
-        ),
-
-        Expanded(child: Image.asset(data["image"]!)),
-
-        SizedBox(height: size.height * 0.02),
-
-        // ValueListenableBuilder<int>(
-        //   valueListenable: currentIndex,
-        //   builder: (_, current, __) {
-        //     return Row(
-        //       mainAxisAlignment: MainAxisAlignment.center,
-        //       children: List.generate(
-        //         total,
-        //         (i) => AnimatedContainer(
-        //           duration: const Duration(milliseconds: 300),
-        //           margin: const EdgeInsets.symmetric(horizontal: 4),
-        //           height: 10,
-        //           width: current == i ? 26 : 10,
-        //           decoration: BoxDecoration(
-        //             color: current == i
-        //                 ? accentCyan // Active indicator changed to Cyan
-        //                 : Colors
-        //                       .white24, // Inactive indicator changed to muted white
-        //             borderRadius: BorderRadius.circular(10),
-        //           ),
-        //         ),
-        //       ),
-        //     );
-        //   },
-        // ),
       ],
     );
   }
 }
+
