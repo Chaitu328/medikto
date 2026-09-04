@@ -13,6 +13,7 @@ services:
       - NODE_ENV=production
       - PORT=4000
       - DOCDB_CA_PATH=/app/certs/global-bundle.pem
+      - FIREBASE_SERVICE_ACCOUNT_PATH=/app/certs/firebase-service-account.json
       - AWS_REGION=ap-south-1
       - S3_BUCKET_NAME=medikto-s3-bucket
     deploy:

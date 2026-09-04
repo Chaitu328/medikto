@@ -29,3 +29,6 @@ temp/
 
 # Firebase Admin SDK Credentials
 *firebase-adminsdk*.json
+*firebase-service-account*.json
+certs/*.json
+*.json.secret

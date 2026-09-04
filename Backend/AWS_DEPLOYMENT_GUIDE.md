@@ -173,6 +173,34 @@ chmod 600 .env
 
 ---
 
+### Step 7A: Firebase Admin SDK Service Account & Android App Signatures
+
+Firebase is used for Push Notifications (FCM) and Phone OTP Authentication.
+
+#### 1. Generate & Place Firebase Admin Service Account Key on the Server
+1. Go to **[Firebase Console](https://console.firebase.google.com)** -> Project **`med-vault-b69a6`** -> **Project Settings** (gear icon) -> **Service Accounts**.
+2. Click **Generate new private key** and confirm.
+3. A JSON file will download (e.g. `firebase-adminsdk.json`).
+4. Transfer or paste this file on the EC2 server at:
+   `/home/ubuntu/medikto/Backend/certs/firebase-service-account.json`
+
+```bash
+# Set secure read permissions for the Firebase credentials
+chmod 600 /home/ubuntu/medikto/Backend/certs/firebase-service-account.json
+```
+
+#### 2. Register Android App SHA-1 & SHA-256 Signatures in Firebase Console
+For SMS OTP Authentication and Google Sign-In to work on production builds:
+1. Extract the SHA-1 and SHA-256 fingerprints from your release keystore:
+   ```bash
+   keytool -list -v -keystore /path/to/upload-keystore.jks -alias upload
+   ```
+2. Or, if using Google Play App Signing, copy the **SHA-1** and **SHA-256** certificate fingerprints from **Google Play Console -> Setup -> App Integrity**.
+3. In **Firebase Console -> Project Settings -> General -> Your apps -> Android app (`com.example.medikto`)**, click **Add fingerprint** and add both SHA-1 and SHA-256.
+4. Download the updated `google-services.json` and replace it in `medikto-app/android/app/google-services.json`.
+
+---
+
 ### Step 8: Build and Run Backend Container via Docker Compose
 
 ```bash
