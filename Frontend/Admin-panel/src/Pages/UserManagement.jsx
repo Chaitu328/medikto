@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../Api/axios.js";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
@@ -610,17 +610,13 @@ const UserManagement = () => {
   // Hospitals list for dropdown
   const [hospitals, setHospitals] = useState([]);
 
-  const API_BASE = import.meta.env.VITE_API_URL || "https://api-prd.medikto.com";
-
   // ─── Fetch Users ─────────────────────────────────────────────────────────
   const fetchUsers = async () => {
     try {
       setIsRefreshing(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_BASE}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-setUsers(response.data?.users || []);    } catch (error) {
+      const response = await api.get("/users");
+      setUsers(response.data?.users || []);
+    } catch (error) {
       toast.error("Failed to fetch users");
       console.error(error);
     } finally {
@@ -632,11 +628,8 @@ setUsers(response.data?.users || []);    } catch (error) {
   // ─── Fetch Hospitals ─────────────────────────────────────────────────────
   const fetchHospitals = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_BASE}/api/hospitals`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-setHospitals(response.data?.hospitals || []);
+      const response = await api.get("/hospitals");
+      setHospitals(response.data?.hospitals || []);
     } catch (error) {
       console.error("Failed to fetch hospitals:", error);
     }
@@ -758,79 +751,41 @@ setHospitals(response.data?.hospitals || []);
   };
 
   const handleResetPassword = async (user) => {
-    if (!window.confirm(`Reset password for ${user.name}?`)) return;
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${API_BASE}/api/users/${user._id || user.id}/reset-password`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success(`Password reset email sent to ${user.email}`);
-    } catch (error) {
-      toast.error("Failed to reset password");
-    }
+    toast.info("Password changes can be performed directly by the user in Settings or upon login.");
   };
 
   const handleChangeRole = async (user) => {
-    const roles = ["Super Admin", "Hospital Admin", "Guardian", "Patient"];
-    const newRole = window.prompt(`Change role for ${user.name}?\nAvailable roles: ${roles.join(", ")}\nCurrent: ${user.role}`);
-    if (!newRole || !roles.includes(newRole)) return;
-    try {
-      const token = localStorage.getItem("token");
-      await axios.patch(
-        `${API_BASE}/api/users/${user._id || user.id}/role`,
-        { role: newRole },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success(`Role updated to ${newRole}`);
-      fetchUsers();
-    } catch (error) {
-      toast.error("Failed to update role");
-    }
+    toast.info("User roles are managed through their respective modules (Admins, Hospitals, Guardians).");
   };
 
   const handleAssignHospital = async (user) => {
-    const hospitalId = window.prompt(`Assign hospital to ${user.name}?\nEnter Hospital ID:`);
-    if (!hospitalId) return;
-    try {
-      const token = localStorage.getItem("token");
-      await axios.patch(
-        `${API_BASE}/api/users/${user._id || user.id}/hospital`,
-        { hospitalId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success("Hospital assigned successfully");
-      fetchUsers();
-    } catch (error) {
-      toast.error("Failed to assign hospital");
-    }
+    toast.info("Hospital affiliations are managed via Hospital Management and Patient OTP connection.");
   };
 
   const handleSuspend = async (user) => {
-    const action = user.status === "active" ? "suspend" : "activate";
-    if (!window.confirm(`${action === "suspend" ? "Suspend" : "Activate"} user ${user.name}?`)) return;
+    const action = user.status === "active" || user.isVerified ? "suspend" : "activate";
+    if (!window.confirm(`${action === "suspend" ? "Suspend" : "Activate"} user ${user.name || user.firstName}?`)) return;
     try {
-      const token = localStorage.getItem("token");
-      await axios.patch(
-        `${API_BASE}/api/users/${user._id || user.id}/status`,
-        { status: action === "suspend" ? "inactive" : "active" },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (user.role === "admin") {
+        await api.patch(`/admins/${user._id || user.id}/status`, { isVerified: action !== "suspend" });
+      } else if (user.role === "guardian") {
+        await api.patch(`/guardians/${user._id || user.id}/status`, { accountStatus: action === "suspend" ? "disabled" : "active" });
+      }
       toast.success(`User ${action === "suspend" ? "suspended" : "activated"} successfully`);
       fetchUsers();
     } catch (error) {
-      toast.error(`Failed to ${action} user`);
+      toast.error(error.response?.data?.message || `Failed to ${action} user`);
     }
   };
 
   const handleDelete = async (user) => {
-    if (!window.confirm(`Are you sure you want to delete ${user.name}? This action cannot be undone.`)) return;
+    if (!window.confirm(`Are you sure you want to delete ${user.name || user.firstName}? This action cannot be undone.`)) return;
     try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`${API_BASE}/api/users/${user._id || user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (user.role === "admin") {
+        await api.delete(`/admins/${user._id || user.id}`);
+      } else if (user.role === "guardian") {
+        await api.delete(`/profile/caretakers/${user._id || user.id}`);
+      }
       toast.success("User deleted successfully");
       fetchUsers();
       if (selectedUser?._id === user._id || selectedUser?.id === user.id) {
@@ -838,7 +793,7 @@ setHospitals(response.data?.hospitals || []);
         setSelectedUser(null);
       }
     } catch (error) {
-      toast.error("Failed to delete user");
+      toast.error(error.response?.data?.message || "Failed to delete user");
     }
   };
 

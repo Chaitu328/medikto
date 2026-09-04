@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import axios from "axios";
+import api from "../Api/axios.js";
 import {
   Search,
   RefreshCcw,
@@ -30,56 +30,6 @@ import {
   ArrowUpDown,
   Loader2,
 } from "lucide-react";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AXIOS INSTANCE
-// ─────────────────────────────────────────────────────────────────────────────
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://api-prd.medikto.com",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Request interceptor – attach auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor – handle 401
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        const res = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || ""}/api/refresh-token`,
-          { refreshToken }
-        );
-        const { token } = res.data;
-        localStorage.setItem("token", token);
-        originalRequest.headers.Authorization = `Bearer ${token}`;
-        return api(originalRequest);
-      } catch {
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        window.location.href = "/login";
-        return Promise.reject(error);
-      }
-    }
-    return Promise.reject(error);
-  }
-);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILITY FUNCTIONS
@@ -507,7 +457,7 @@ const HospitalRequests = () => {
   // ── Fetch all hospitals ──
   const fetchHospitals = useCallback(async () => {
     try {
-      const res = await api.get("/api/hospitals");
+      const res = await api.get("/hospitals");
 
 setHospitals(
   Array.isArray(res.data?.hospitals)
@@ -526,7 +476,7 @@ setHospitals(
     else setLoading(true);
 
     try {
-      const res = await api.get("/api/profile/hospitals");
+      const res = await api.get("/profile/hospitals");
       const rawData = res.data?.data || res.data || [];
 
       // Normalize API response to match component shape
@@ -689,7 +639,7 @@ setHospitals(
   const handleApprove = async (request) => {
     setActionLoading((prev) => ({ ...prev, [request.id]: "approve" }));
     try {
-      await api.patch(`/api/hospitals/${request.id}/status`, { status: "approved" });
+      await api.patch(`/hospitals/${request.id}/status`, { status: "approved" });
       setRequests((prev) => prev.map((r) => (r.id === request.id ? { ...r, status: "approved" } : r)));
       setToast({ message: "Request approved successfully", type: "success" });
     } catch (err) {
@@ -702,7 +652,7 @@ setHospitals(
   const handleReject = async (request) => {
     setActionLoading((prev) => ({ ...prev, [request.id]: "reject" }));
     try {
-      await api.patch(`/api/hospitals/${request.id}/status`, { status: "rejected" });
+      await api.patch(`/hospitals/${request.id}/status`, { status: "rejected" });
       setRequests((prev) => prev.map((r) => (r.id === request.id ? { ...r, status: "rejected" } : r)));
       setToast({ message: "Request rejected", type: "success" });
     } catch (err) {
@@ -720,7 +670,7 @@ setHospitals(
   const handleConfirmDelete = async () => {
     setDeleteLoading(true);
     try {
-      await api.delete(`/api/hospitals/${deletingRequest.id}`);
+      await api.delete(`/hospitals/${deletingRequest.id}`);
       setRequests((prev) => prev.filter((r) => r.id !== deletingRequest.id));
       setToast({ message: "Request deleted successfully", type: "success" });
     } catch (err) {

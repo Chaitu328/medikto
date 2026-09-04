@@ -33,34 +33,13 @@ import {
   UserCheck,
   Crown,
   AlertTriangle,
+  Building2,
+  Lock,
+  Key,
+  Copy,
+  Check,
 } from "lucide-react";
-import axios from "axios";
-
-// ─── AXIOS INSTANCE ───────────────────────────────────────────────────────────
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "https://api-prd.medikto.com/api",
-  headers: { "Content-Type": "application/json" },
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-// ─── COLORS ─────────────────────────────────────────────────────────────────
-const COLORS = {
-  primary: "#2563EB",
-  success: "#10B981",
-  warning: "#F59E0B",
-  danger: "#EF4444",
-  bg: "#F8FAFC",
-  card: "#FFFFFF",
-  border: "#E2E8F0",
-  text: "#0F172A",
-  secondary: "#64748B",
-  muted: "#94A3B8",
-};
+import api from "../Api/axios.js";
 
 // ─── STATUS BADGE ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
@@ -169,7 +148,7 @@ const ActionMenu = ({ admin, onView, onEdit, onDisable, onDelete }) => {
             <Eye size={14} className="text-slate-400" /> View Details
           </button>
           <button onClick={() => { onEdit(); setOpen(false); }} className="w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors">
-            <Edit3 size={14} className="text-slate-400" /> Edit Admin
+            <Edit3 size={14} className="text-slate-400" /> Edit Details
           </button>
           <button
             onClick={() => { onDisable(); setOpen(false); }}
@@ -235,15 +214,283 @@ const StatCard = ({ icon: Icon, title, value, trend, trendUp, subtitle, color = 
   );
 };
 
-// ─── ADMIN DETAILS DRAWER ────────────────────────────────────────────────────
-const AdminDrawer = ({ admin, onClose, onEdit, onDisable, onDelete }) => {
-  if (!admin) return null;
+// ─── ADD ADMIN MODAL ─────────────────────────────────────────────────────────
+const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    hospitalName: "",
+    hospitalAddress: "",
+    adminFirstName: "",
+    adminPhone: "",
+    adminEmail: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const formatDate = (d) => {
-    if (!d) return "N/A";
-    const date = new Date(d);
-    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!formData.hospitalName.trim()) {
+      setError("Hospital Name is required");
+      return;
+    }
+    if (!formData.adminFirstName.trim()) {
+      setError("Administrator Name is required");
+      return;
+    }
+    if (!formData.adminPhone.trim()) {
+      setError("Administrator Phone Number is required");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await api.post("/hospitals/create-with-admin", {
+        hospitalName: formData.hospitalName.trim(),
+        hospitalAddress: formData.hospitalAddress.trim(),
+        adminFirstName: formData.adminFirstName.trim(),
+        adminPhone: formData.adminPhone.trim(),
+        adminEmail: formData.adminEmail.trim() || undefined,
+      });
+
+      onSuccess(res.data);
+      onClose();
+    } catch (err) {
+      console.error("Failed to create hospital and admin:", err);
+      setError(err.response?.data?.message || err.response?.data?.error || "Failed to create administrator");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-slate-900/30 z-50 backdrop-blur-sm" onClick={!loading ? onClose : undefined} />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl shadow-2xl shadow-slate-900/20 z-50 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
+              <Shield size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Add Administrator</h3>
+              <p className="text-xs text-slate-500">Provision a hospital administrator and assign a facility</p>
+            </div>
+          </div>
+          <button onClick={onClose} disabled={loading} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div className="mx-6 mt-5 p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2.5 text-xs text-red-700 font-medium">
+            <AlertTriangle size={15} className="text-red-500 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Section: Facility Details */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Building2 size={15} className="text-blue-600" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Hospital Facility Details</h4>
+            </div>
+            <div className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Hospital Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.hospitalName}
+                  onChange={(e) => setFormData({ ...formData, hospitalName: e.target.value })}
+                  placeholder="e.g. City General Hospital"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-[#2563EB] transition-all"
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Hospital Address
+                </label>
+                <input
+                  type="text"
+                  value={formData.hospitalAddress}
+                  onChange={(e) => setFormData({ ...formData, hospitalAddress: e.target.value })}
+                  placeholder="e.g. 100 Healthcare Blvd, Suite 200"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-[#2563EB] transition-all"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-slate-100" />
+
+          {/* Section: Admin Details */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <UserCheck size={15} className="text-blue-600" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Administrator Profile</h4>
+            </div>
+            <div className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  Administrator Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.adminFirstName}
+                  onChange={(e) => setFormData({ ...formData, adminFirstName: e.target.value })}
+                  placeholder="e.g. Dr. Jane Smith"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-[#2563EB] transition-all"
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.adminPhone}
+                    onChange={(e) => setFormData({ ...formData, adminPhone: e.target.value })}
+                    placeholder="e.g. 9876543210"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-[#2563EB] transition-all"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.adminEmail}
+                    onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                    placeholder="admin@hospital.com"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-[#2563EB] transition-all"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-100 text-xs text-blue-800 space-y-1">
+            <p className="font-semibold flex items-center gap-1.5">
+              <Key size={13} className="text-blue-600" /> Default Temporary Password
+            </p>
+            <p className="text-blue-700">
+              A temporary password (<span className="font-mono font-bold">Admin@123</span>) will be generated. The administrator can change this password after logging in.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all shadow-sm disabled:opacity-50"
+            >
+              {loading && <Loader2 size={15} className="animate-spin" />}
+              Create Administrator
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  );
+};
+
+// ─── CREDENTIALS SUCCESS MODAL ───────────────────────────────────────────────
+const CredentialsModal = ({ data, onClose }) => {
+  const [copied, setCopied] = useState(false);
+  if (!data) return null;
+
+  const admin = data.admin || {};
+  const hospital = data.hospital || {};
+  const tempPass = admin.temporaryPassword || data.temporaryPassword || "Admin@123";
+
+  const handleCopy = () => {
+    const text = `Hospital: ${hospital.name || "N/A"}\nAdmin: ${admin.firstName || "N/A"}\nEmail/Phone: ${admin.email || admin.phone}\nTemporary Password: ${tempPass}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-slate-900/40 z-50 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-slate-900/20 z-50 p-6 text-center">
+        <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+          <CheckCircle2 size={28} className="text-emerald-500" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-900">Administrator Created</h3>
+        <p className="text-sm text-slate-500 mt-1">
+          Hospital administrator account has been successfully provisioned.
+        </p>
+
+        <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-left space-y-2.5 font-mono text-xs text-slate-800">
+          <div>
+            <span className="text-slate-400 font-sans block text-[11px] uppercase font-semibold">Hospital</span>
+            <span className="font-semibold text-slate-900">{hospital.name || "Hospital Facility"}</span>
+          </div>
+          <div>
+            <span className="text-slate-400 font-sans block text-[11px] uppercase font-semibold">Admin Name</span>
+            <span className="font-semibold text-slate-900">{admin.firstName || "Administrator"}</span>
+          </div>
+          <div>
+            <span className="text-slate-400 font-sans block text-[11px] uppercase font-semibold">Login Identifier</span>
+            <span className="font-semibold text-slate-900">{admin.email || admin.phone}</span>
+          </div>
+          <div className="pt-1.5 border-t border-slate-200">
+            <span className="text-slate-400 font-sans block text-[11px] uppercase font-semibold">Temporary Password</span>
+            <span className="font-bold text-blue-600 text-sm">{tempPass}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 mt-6">
+          <button
+            onClick={handleCopy}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+          >
+            {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
+            {copied ? "Copied!" : "Copy Credentials"}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ─── ADMIN DETAILS DRAWER ────────────────────────────────────────────────────
+const AdminDrawer = ({ admin, onClose, onDisable, onDelete }) => {
+  if (!admin) return null;
 
   const formatDateTime = (d) => {
     if (!d) return "N/A";
@@ -276,7 +523,7 @@ const AdminDrawer = ({ admin, onClose, onEdit, onDisable, onDelete }) => {
               <Avatar name={admin.name || admin.firstName} src={admin.profilePic || admin.avatar} size={64} />
               <div className="min-w-0 flex-1">
                 <h4 className="text-lg font-semibold text-slate-900">{admin.name || admin.firstName || "N/A"}</h4>
-                <p className="text-sm text-slate-500">{admin.email}</p>
+                <p className="text-sm text-slate-500">{admin.email || admin.phone || "No email"}</p>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <StatusBadge status={admin.status || admin.isVerified} />
                   <SubscriptionBadge subscription={admin.subscription || admin.plan} />
@@ -292,30 +539,18 @@ const AdminDrawer = ({ admin, onClose, onEdit, onDisable, onDelete }) => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <InfoRow icon={Shield} label="Role" value={admin.role} />
-                <InfoRow icon={UserCheck} label="Age" value={admin.age} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <InfoRow icon={User} label="Gender" value={admin.gender} />
-                <InfoRow icon={HeartPulse} label="Blood Group" value={admin.bloodGroup} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <InfoRow icon={Ruler} label="Height" value={admin.height} />
-                <InfoRow icon={Weight} label="Weight" value={admin.weight} />
+                <InfoRow icon={Building2} label="Hospital ID" value={admin.hospital?._id || admin.hospital || "Assigned"} />
               </div>
               <div className="h-px bg-slate-100 my-2" />
-              <InfoRow icon={Clock} label="Timezone" value={admin.timezone} />
-              <InfoRow icon={Calendar} label="Created" value={formatDateTime(admin.createdAt)} />
-              <InfoRow icon={Calendar} label="Updated" value={formatDateTime(admin.updatedAt)} />
-              <InfoRow icon={Users} label="Family Members" value={admin.familyMembersCount || admin.familyMembers?.length || 0} />
+              <InfoRow icon={Clock} label="Timezone" value={admin.timezone || "UTC"} />
+              <InfoRow icon={Calendar} label="Created At" value={formatDateTime(admin.createdAt)} />
+              <InfoRow icon={Calendar} label="Last Updated" value={formatDateTime(admin.updatedAt)} />
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
         <div className="px-6 py-5 border-t border-slate-100 space-y-2.5">
-          <button onClick={() => onEdit(admin)} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-            <Edit3 size={16} /> Edit Admin
-          </button>
           <button
             onClick={() => onDisable(admin)}
             className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
@@ -343,13 +578,13 @@ const EmptyState = ({ onCreate }) => (
     </div>
     <h3 className="text-lg font-semibold text-slate-900">No Admins Found</h3>
     <p className="text-sm text-slate-500 mt-1.5 text-center max-w-sm">
-      There are currently no administrator accounts in the system.
+      There are currently no administrator accounts configured in the system.
     </p>
     <button
       onClick={onCreate}
       className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
     >
-      <Plus size={16} /> Add Admin
+      <Plus size={16} /> Add Administrator
     </button>
   </div>
 );
@@ -412,6 +647,8 @@ const Admins = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [credentialsData, setCredentialsData] = useState(null);
 
   const itemsPerPage = 10;
 
@@ -426,7 +663,7 @@ const Admins = () => {
       );
       setAdmins(adminUsers);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to fetch admins:", error);
       setAdmins([]);
     } finally {
       setLoading(false);
@@ -502,30 +739,30 @@ const Admins = () => {
   };
 
   const handleEdit = (admin) => {
-    console.log("Edit admin:", admin);
-    // toast.info("Edit admin — implement modal");
+    setSelectedAdmin(admin);
+    setDrawerOpen(true);
   };
 
   const handleDisable = async (admin) => {
     try {
       const enable = !admin.isVerified;
-      await api.patch(`/admins/${admin._id}/status`, { isVerified: enable });
+      await api.patch(`/admins/${admin._id || admin.id}/status`, { isVerified: enable });
       await fetchAdmins();
-      alert(`Admin ${enable ? "enabled" : "disabled"} successfully`);
+      if (selectedAdmin && (selectedAdmin._id === admin._id || selectedAdmin.id === admin.id)) {
+        setSelectedAdmin({ ...selectedAdmin, isVerified: enable });
+      }
     } catch (error) {
-      alert(error.response?.data?.message || "Something went wrong");
+      alert(error.response?.data?.message || "Something went wrong toggling admin status");
     }
   };
 
   const handleDelete = async (admin) => {
-    if (!window.confirm(`Are you sure you want to delete ${admin.name || admin.firstName}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete administrator "${admin.name || admin.firstName}"?`)) return;
     try {
       await api.delete(`/admins/${admin._id || admin.id}`);
-      // toast.success("Admin deleted");
       setDrawerOpen(false);
       await fetchAdmins();
     } catch (error) {
-      // toast.error(error.response?.data?.message || "Failed to delete admin");
       alert(error.response?.data?.message || "Failed to delete admin");
     }
   };
@@ -564,11 +801,16 @@ const Admins = () => {
     return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   };
 
+  const handleAdminCreated = (creationData) => {
+    setCredentialsData(creationData);
+    fetchAdmins();
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* ─── PAGE HEADER ────────────────────────────────────────────────────── */}
       <div className="px-8 pt-8 pb-6">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
@@ -576,11 +818,11 @@ const Admins = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Admins</h1>
-                <p className="text-sm text-slate-500 mt-0.5">Manage all administrator accounts across the hospital system.</p>
+                <p className="text-sm text-slate-500 mt-0.5">Manage all hospital administrators across the Medikto platform.</p>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <button
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
@@ -594,12 +836,12 @@ const Admins = () => {
             >
               <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} /> Refresh
             </button>
-            {/* <button
-              onClick={() => console.log("Add admin — implement modal")}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+            <button
+              onClick={() => setAddModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.99]"
             >
               <Plus size={16} /> Add Admin
-            </button> */}
+            </button>
           </div>
         </div>
       </div>
@@ -621,7 +863,7 @@ const Admins = () => {
               value={stats.total}
               trend={12}
               trendUp={true}
-              subtitle="All administrator accounts"
+              subtitle="All hospital administrators"
               color="blue"
             />
             <StatCard
@@ -639,7 +881,7 @@ const Admins = () => {
               value={stats.inactive}
               trend={5}
               trendUp={false}
-              subtitle="Pending verification"
+              subtitle="Disabled / pending accounts"
               color="amber"
             />
             <StatCard
@@ -735,7 +977,7 @@ const Admins = () => {
                 ) : paginatedAdmins.length === 0 ? (
                   <tr>
                     <td colSpan={7}>
-                      <EmptyState onCreate={() => console.log("Add admin — implement modal")} />
+                      <EmptyState onCreate={() => setAddModalOpen(true)} />
                     </td>
                   </tr>
                 ) : (
@@ -751,7 +993,7 @@ const Admins = () => {
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-sm font-semibold text-slate-900">{admin.name || admin.firstName || "N/A"}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{admin.role || "Admin"}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{admin.email || admin.role || "Admin"}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -797,12 +1039,24 @@ const Admins = () => {
         </div>
       </div>
 
+      {/* ─── ADD ADMIN MODAL ─────────────────────────────────────────────────── */}
+      <AddAdminModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSuccess={handleAdminCreated}
+      />
+
+      {/* ─── CREDENTIALS SUCCESS MODAL ─────────────────────────────────────────── */}
+      <CredentialsModal
+        data={credentialsData}
+        onClose={() => setCredentialsData(null)}
+      />
+
       {/* ─── DRAWER ─────────────────────────────────────────────────────────── */}
       {drawerOpen && (
         <AdminDrawer
           admin={selectedAdmin}
           onClose={() => setDrawerOpen(false)}
-          onEdit={handleEdit}
           onDisable={handleDisable}
           onDelete={handleDelete}
         />

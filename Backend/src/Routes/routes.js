@@ -152,7 +152,7 @@
     passport.authenticate("google", {
         session: false,
         failureRedirect:
-            "http://localhost:5173/superadmin/login?error=unauthorized",
+            "https://admin.medikto.com/superadmin/login?error=unauthorized",
     }),
     loginSuccess
 );
