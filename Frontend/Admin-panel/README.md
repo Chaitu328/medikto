@@ -1,16 +1,83 @@
-# React + Vite
+# Medikto Admin Panel
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The **Medikto Admin Panel** is an enterprise healthcare management interface built with **React 19**, **Vite**, and **Tailwind CSS v4**. It serves **Super Administrators**, **Hospital Administrators**, and **Guardians** through role-based access control.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ Tech Stack
+- **Framework**: React `19.2.5`
+- **Build Tool**: Vite `8.0.10`
+- **Styling**: Tailwind CSS `v4.3.0`
+- **Routing**: React Router DOM `v7.15.0`
+- **HTTP Client**: Axios with JWT Bearer Interceptors
+- **Container Server**: Nginx Alpine (`<20 MB` RAM consumption)
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 💻 Local Development
 
-## Expanding the ESLint configuration
+### 1. Install Dependencies
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. Configure Environment (Optional for Dev)
+Create a `.env.local` file:
+```env
+VITE_API_BASE_URL=http://localhost:4000/api
+```
+
+### 3. Run Development Server
+```bash
+npm run dev
+```
+
+---
+
+## 🏗️ Production Build (Local)
+
+Compile the optimized static bundle into the `dist/` directory:
+```bash
+npm ci
+npm run build
+```
+
+---
+
+## 🐳 Docker Deployment
+
+### 1. Build and Run via Docker Compose (Recommended)
+```bash
+# Build and start container in detached mode on port 3000
+docker compose up -d --build
+
+# View container status & health
+docker compose ps
+
+# View real-time logs
+docker compose logs -f
+```
+
+### 2. Build and Run via Docker CLI
+```bash
+# 1. Build the production Docker image with build argument
+docker build -t medikto-admin-panel:latest \
+  --build-arg VITE_API_BASE_URL=https://api-prd.medikto.com/api .
+
+# 2. Run the lightweight container
+docker run -d \
+  --name medikto-admin-panel \
+  --restart unless-stopped \
+  -p 3000:80 \
+  medikto-admin-panel:latest
+
+# 3. Test container health
+curl -I http://localhost:3000
+```
+
+---
+
+## 🌐 Production Architecture & AWS Deployment
+
+For complete end-to-end AWS EC2 deployment, host Nginx reverse proxy setup, and Let's Encrypt SSL instructions:
+👉 Refer to **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
