@@ -11,6 +11,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - TZ=Asia/Kolkata
       - PORT=4000
       - DOCDB_CA_PATH=/app/certs/global-bundle.pem
       - FIREBASE_SERVICE_ACCOUNT_PATH=/app/certs/firebase-service-account.json

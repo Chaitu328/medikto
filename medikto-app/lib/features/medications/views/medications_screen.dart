@@ -165,6 +165,44 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     }
   }
 
+  bool _isDoseInFuture(String? dateStr, String? timeStr) {
+    if (timeStr == null || timeStr.trim().isEmpty) return false;
+    try {
+      final now = DateTime.now();
+      int year = now.year;
+      int month = now.month;
+      int day = now.day;
+
+      if (dateStr != null && dateStr.trim().isNotEmpty) {
+        final dateParts = dateStr.split("-");
+        if (dateParts.length >= 3) {
+          year = int.parse(dateParts[0]);
+          month = int.parse(dateParts[1]);
+          day = int.parse(dateParts[2]);
+        }
+      }
+
+      final cleanTime = timeStr.trim();
+      final isPM = cleanTime.toUpperCase().endsWith("PM");
+      final isAM = cleanTime.toUpperCase().endsWith("AM");
+      final timePart = cleanTime.replaceAll(RegExp(r'[a-zA-Z\s]'), '');
+      final timeParts = timePart.split(":");
+      if (timeParts.length < 2) return false;
+
+      int hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+
+      if (isPM && hour < 12) hour += 12;
+      if (isAM && hour == 12) hour = 0;
+
+      final scheduled = DateTime(year, month, day, hour, minute);
+      return scheduled.isAfter(now);
+    } catch (e) {
+      debugPrint("Error checking dose future status: $e");
+    }
+    return false;
+  }
+
   bool _isDoseEarly(TodayScheduleModel schedule) {
     if (schedule.date == null || schedule.time == null) return false;
     try {
@@ -427,6 +465,11 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                               schedule.status?.toLowerCase() == "taken" ||
                               takenMap[scheduleId] == true;
 
+                          final isFuture = _isDoseInFuture(
+                            schedule.date,
+                            schedule.time ?? time,
+                          );
+
                           final isCurrent = isTodaySelected && !isTaken;
 
                           return RepaintBoundary(
@@ -440,17 +483,11 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                                 sub:
                                     "${medication.dosage ?? ""}${medication.unit ?? ""}",
                                 icon: Icons.medication,
-                                // isTaken: false,
-                                // isTaken: takenMap[scheduleId ?? ""] ?? false,
                                 isTaken: isTaken,
-                                // isTaken:
-                                //     schedule.status?.toLowerCase() ==
-                                //         "taken" ||
-                                //     takenMap[scheduleId] == true,
                               ),
                               isLast: index == filteredMedications.length - 1,
-                              // isCurrent: index == 0,
                               isCurrent: isCurrent,
+                              isFuture: isFuture,
                               isGuardian: isGuardian,
                               onMarkTaken: () async {
                                 final doseId = scheduleId;
@@ -804,6 +841,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     required TimelineMedicine item,
     required bool isLast,
     required bool isCurrent,
+    bool isFuture = false,
     required VoidCallback onMarkTaken,
     required VoidCallback onVerifyWithSelfie,
     bool isGuardian = false,
@@ -894,8 +932,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
 
                   const SizedBox(height: 12),
 
-                  /// 🔥 ACTION BUTTONS WITH ICONS FIXED
-                  if (!isTaken && isCurrent && !isGuardian) ...[
+                  /// 🔥 ACTION BUTTONS (Available at or after scheduled dose time)
+                  if (!isTaken && isCurrent && !isFuture && !isGuardian) ...[
                     SizedBox(
                       width: double.infinity,
                       height: 42,
@@ -927,26 +965,12 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                       width: double.infinity,
                       height: 42,
                       child: OutlinedButton.icon(
-                        // ✅ Changed to .icon
                         onPressed: isLoading ? null : onVerifyWithSelfie,
-                        //                         onPressed: () {
-                        //                           Navigator.push(
-                        //                             context,
-                        //                             MaterialPageRoute(
-                        //                               builder: (_) => SelfieVerficationMedicineScreen(
-                        //   doseId:m.id ?? "",
-                        //   medicineName: schedule.name ?? "",
-                        //   dosage: schedule.dosage ?? "",
-                        //   unit: schedule.unit ?? "mg",
-                        // ),
-                        //                             ),
-                        //                           );
-                        //                         },
                         icon: const Icon(
                           Icons.camera_alt_outlined,
                           size: 18,
                           color: accentCyan,
-                        ), // ✅ Added Icon
+                        ),
                         label: const Text("Verify with Selfie"),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.white24),
@@ -958,6 +982,39 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                       ),
                     ),
                   ],
+
+                  /// ⏳ UPCOMING BADGE (Scheduled in the future)
+                  if (!isTaken && isFuture)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            color: accentCyan.withOpacity(0.8),
+                            size: 12,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Upcoming (Scheduled ${item.time})",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   /// ✅ TAKEN STATUS (Verification Badge)
                   if (isTaken)

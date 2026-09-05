@@ -1022,3 +1022,111 @@ exports.sendInviteEmail = async (to, patientName, relation) => {
     return { success: false, error: err.message };
   }
 };
+
+/**
+ * ===========================================
+ * SEND ISSUE REPORT EMAIL TO SUPPORT
+ * Destination: shahmedikto@gmail.com
+ * ===========================================
+ */
+exports.sendIssueReportEmail = async ({
+  userId,
+  userName,
+  userEmail,
+  userPhone,
+  userRole,
+  category,
+  description,
+  appVersion,
+  platform
+}) => {
+  try {
+    const supportEmail = "shahmedikto@gmail.com";
+    const emailSubject = `[Medikto Support Issue] - ${category || "General Inquiry"} - ${userName || "User"}`;
+
+    const infoCardHtml = `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
+        <tr>
+          <td style="padding:20px 24px;">
+            <p style="margin:0 0 8px 0; font-family:'Segoe UI', sans-serif; font-size:14px; font-weight:600; color:#1E293B;">User Details:</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; font-family:'Segoe UI', sans-serif; font-size:13px; color:#475569;">
+              <tr><td style="padding:4px 0; width:120px; font-weight:600;">Name:</td><td style="padding:4px 0;">${userName || "N/A"}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">User ID:</td><td style="padding:4px 0;">${userId || "N/A"}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">Email:</td><td style="padding:4px 0;">${userEmail || "N/A"}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">Phone:</td><td style="padding:4px 0;">${userPhone || "N/A"}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">Role:</td><td style="padding:4px 0;">${userRole || "patient"}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">Category:</td><td style="padding:4px 0; color:#2563EB; font-weight:600;">${category || "General"}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">Platform / Version:</td><td style="padding:4px 0;">${platform || "Mobile"} / v${appVersion || "1.0.0"}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">Submitted At:</td><td style="padding:4px 0;">${new Date().toISOString()}</td></tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    const descriptionCardHtml = `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:12px;">
+        <tr>
+          <td style="padding:20px 24px;">
+            <p style="margin:0 0 8px 0; font-family:'Segoe UI', sans-serif; font-size:14px; font-weight:700; color:#1E40AF;">Issue Description:</p>
+            <p style="margin:0; font-family:'Segoe UI', sans-serif; font-size:14px; color:#1E293B; line-height:1.6; white-space:pre-wrap;">${description}</p>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    const emailBody = generateEmailTemplate(
+      "Medikto Support",
+      "New User Issue Reported",
+      "Hello Support Team,",
+      "A user has submitted an issue report from the Medikto mobile application. Details are provided below:",
+      infoCardHtml,
+      descriptionCardHtml,
+      "",
+      ""
+    );
+
+    const isSmtpConfigured =
+      process.env.SMTP_HOST &&
+      process.env.SMTP_PORT &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS;
+
+    if (isSmtpConfigured) {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT),
+        secure: parseInt(process.env.SMTP_PORT) === 465,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS
+        }
+      });
+
+      const info = await transporter.sendMail({
+        from: `"Medikto App Support" <${process.env.SMTP_USER}>`,
+        to: supportEmail,
+        replyTo: userEmail || undefined,
+        subject: emailSubject,
+        html: emailBody
+      });
+
+      console.log("Support issue email dispatched successfully. Message ID:", info.messageId);
+      return { success: true, provider: "smtp", messageId: info.messageId };
+    }
+
+    console.log(`\n======================================================`);
+    console.log(`[DEV EMAIL LOG] Support Issue Report:`);
+    console.log(`[DEV EMAIL LOG] To: ${supportEmail}`);
+    console.log(`[DEV EMAIL LOG] Subject: ${emailSubject}`);
+    console.log(`[DEV EMAIL LOG] User: ${userName} (${userEmail || userPhone})`);
+    console.log(`[DEV EMAIL LOG] Category: ${category}`);
+    console.log(`[DEV EMAIL LOG] Description: ${description}`);
+    console.log(`======================================================\n`);
+    return { success: true, provider: "mock" };
+
+  } catch (err) {
+    console.error("Support Issue Email Error:", err.message);
+    return { success: false, error: err.message };
+  }
+};

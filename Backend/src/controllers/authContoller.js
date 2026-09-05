@@ -87,12 +87,24 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "User with this phone number already exists. Please log in." });
     }
 
-    // Create the user
+    // Create the user with consent record
+    const termsAccepted = req.body.termsAccepted === true || req.body.termsAccepted === "true";
+    const privacyPolicyAccepted = req.body.privacyPolicyAccepted === true || req.body.privacyPolicyAccepted === "true";
+    const termsVersion = req.body.termsVersion || "1.0";
+    const privacyPolicyVersion = req.body.privacyPolicyVersion || "1.0";
+
     user = await User.create({
       phone,
       firstName: name,
       role: "patient",
-      isVerified: true
+      authProvider: "phone",
+      isVerified: true,
+      termsAccepted: termsAccepted,
+      privacyPolicyAccepted: privacyPolicyAccepted,
+      consentTimestamp: (termsAccepted && privacyPolicyAccepted) ? new Date() : undefined,
+      termsVersion: termsVersion,
+      privacyPolicyVersion: privacyPolicyVersion,
+      accountStatus: "active"
     });
 
     // If caretaker details are provided during patient registration
@@ -437,5 +449,226 @@ exports.checkPhone = async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
+  }
+};
+
+// ================= GOOGLE AUTHENTICATION =================
+exports.googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Firebase ID Token is required for Google authentication"
+      });
+    }
+
+    // 1. Verify Firebase ID Token via Firebase Admin SDK
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const { uid, email, name, picture } = decodedToken;
+
+    if (!uid) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Firebase token: UID not found"
+      });
+    }
+
+    const normalizedEmail = email ? email.trim().toLowerCase() : null;
+
+    // 2. Identify if user already exists (by firebaseUid OR matching email)
+    let user = await User.findOne({
+      $or: [
+        { firebaseUid: uid },
+        ...(normalizedEmail ? [{ email: normalizedEmail }] : [])
+      ]
+    });
+
+    // 3. Existing User Flow
+    if (user) {
+      // Check account status
+      if (user.accountStatus === "disabled" || user.isVerified === false && user.role === "admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Your account is currently disabled. Please contact support."
+        });
+      }
+
+      // Link firebaseUid if it was not linked yet
+      if (!user.firebaseUid) {
+        user.firebaseUid = uid;
+      }
+      if (normalizedEmail && !user.email) {
+        user.email = normalizedEmail;
+      }
+      if (picture && !user.profilePic) {
+        user.profilePic = picture;
+      }
+      user.isVerified = true;
+      await user.save();
+
+      // Check for pending caretaker invitations
+      await linkPendingCaretakerInvites(user);
+
+      // Generate App JWT Token
+      const appToken = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      return res.json({
+        success: true,
+        isNewUser: false,
+        message: "Login successful",
+        token: appToken,
+        user
+      });
+    }
+
+    // 4. New Google User -> Return prompt for explicit consent & account creation
+    return res.json({
+      success: true,
+      isNewUser: true,
+      message: "New user. Explicit consent and profile completion required.",
+      firebaseUid: uid,
+      email: normalizedEmail,
+      name: name || "Medikto User",
+      picture: picture || null
+    });
+
+  } catch (err) {
+    console.error("Google Auth Firebase ID Token verification error:", err.message);
+    return res.status(401).json({
+      success: false,
+      message: "Unable to sign in with Google. Please try again.",
+      error: err.message
+    });
+  }
+};
+
+// ================= COMPLETE GOOGLE REGISTRATION (WITH EXPLICIT CONSENT) =================
+exports.completeGoogleRegistration = async (req, res) => {
+  try {
+    const {
+      token,
+      fullName,
+      phone,
+      termsAccepted,
+      privacyPolicyAccepted,
+      termsVersion,
+      privacyPolicyVersion
+    } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: "Firebase ID Token is required"
+      });
+    }
+
+    // 1. Verify consent
+    const hasConsented = (termsAccepted === true || termsAccepted === "true") &&
+                         (privacyPolicyAccepted === true || privacyPolicyAccepted === "true");
+
+    if (!hasConsented) {
+      return res.status(400).json({
+        success: false,
+        message: "Please agree to the Terms & Conditions and Privacy Policy to continue."
+      });
+    }
+
+    // 2. Verify Firebase token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const { uid, email, name, picture } = decodedToken;
+
+    const normalizedEmail = email ? email.trim().toLowerCase() : null;
+
+    // 3. Double check if user already exists
+    let existingUser = await User.findOne({
+      $or: [
+        { firebaseUid: uid },
+        ...(normalizedEmail ? [{ email: normalizedEmail }] : [])
+      ]
+    });
+
+    if (existingUser) {
+      // User already registered
+      existingUser.termsAccepted = true;
+      existingUser.privacyPolicyAccepted = true;
+      existingUser.consentTimestamp = new Date();
+      existingUser.termsVersion = termsVersion || "1.0";
+      existingUser.privacyPolicyVersion = privacyPolicyVersion || "1.0";
+      existingUser.isVerified = true;
+      await existingUser.save();
+
+      const appToken = jwt.sign(
+        { id: existingUser._id, role: existingUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      return res.json({
+        success: true,
+        message: "Account verified and logged in successfully",
+        token: appToken,
+        user: existingUser
+      });
+    }
+
+    // If phone is provided, verify it's not already used
+    if (phone) {
+      const phoneUser = await User.findOne({ phone });
+      if (phoneUser) {
+        return res.status(400).json({
+          success: false,
+          message: "This phone number is already associated with another account."
+        });
+      }
+    }
+
+    // 4. Create new user with explicit consent record
+    const user = await User.create({
+      firstName: fullName || name || "Medikto User",
+      email: normalizedEmail || undefined,
+      phone: phone || undefined,
+      profilePic: picture || undefined,
+      role: "patient",
+      authProvider: "google",
+      firebaseUid: uid,
+      isVerified: true,
+      termsAccepted: true,
+      privacyPolicyAccepted: true,
+      consentTimestamp: new Date(),
+      termsVersion: termsVersion || "1.0",
+      privacyPolicyVersion: privacyPolicyVersion || "1.0",
+      accountStatus: "active"
+    });
+
+    // Link any pending caretaker invites
+    await linkPendingCaretakerInvites(user);
+
+    // Generate App JWT Token
+    const appToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      token: appToken,
+      user
+    });
+
+  } catch (err) {
+    console.error("Complete Google Registration Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to create your account. Please try again.",
+      error: err.message
+    });
   }
 };

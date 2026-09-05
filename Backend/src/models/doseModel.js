@@ -75,6 +75,11 @@ planType: {
   downloadReminderSent: {
     type: Boolean,
     default: false
+  },
+
+  missedReminderSent: {
+    type: Boolean,
+    default: false
   }
 
 }, { timestamps: true });

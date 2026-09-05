@@ -9,6 +9,7 @@ import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:medikto/features/auth/login_view/otp_screen.dart';
 import 'package:medikto/features/auth/register_view/register_screen.dart';
+import 'package:medikto/features/auth/register_view/google_consent_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/bottom_bar.dart';
@@ -263,6 +264,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         Navigator.pop(context); // Close loading dialog
         AppToasts.showError(context, "Failed to send verification code: $e");
+      }
+    }
+  }
+
+  Future<void> handleGoogleLogin() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const Center(child: CircularProgressIndicator(color: accentCyan)),
+    );
+
+    try {
+      final response = await ref.read(authProvider).signInWithGoogle();
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+      }
+
+      if (response.status == ResponseStatus.SUCCESS) {
+        final data = response.data as Map<String, dynamic>;
+        final bool isNewUser = data['isNewUser'] == true;
+
+        if (isNewUser) {
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GoogleConsentScreen(
+                  idToken: data['idToken'] as String,
+                  email: data['email'] as String?,
+                  name: data['name'] as String?,
+                  picture: data['picture'] as String?,
+                ),
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            AppToasts.showSuccess(context, "Login successful");
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const BaseBottomNavigationPage(),
+              ),
+              (route) => false,
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          final isCancelled = (response.data is Map) && response.data['cancelled'] == true;
+          if (isCancelled) {
+            AppToasts.showError(context, "Google sign-in was cancelled.");
+          } else {
+            AppToasts.showError(context, response.message);
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        AppToasts.showError(context, "Unable to sign in with Google. Please try again.");
       }
     }
   }
@@ -607,6 +671,64 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     color: isButtonEnabled ? Colors.black : Colors.white24,
                   ),
                 ),
+
+                if (!isGuardianMode) ...[
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.white.withOpacity(0.12))),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          "OR",
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Colors.white.withOpacity(0.12))),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  InkWell(
+                    onTap: handleGoogleLogin,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.network(
+                            "https://cdn1.iconfinder.com/data/icons/google-s-logo/150/Google_Icons-09-512.png",
+                            height: 22,
+                            width: 22,
+                            errorBuilder: (ctx, err, stack) => const Icon(
+                              Icons.g_mobiledata,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            "Continue with Google",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
 
                 if (kDebugMode) ...[
                   const SizedBox(height: 15),

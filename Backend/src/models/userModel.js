@@ -3,9 +3,24 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
   firstName: String,
 
-  phone: { type: String, unique: true },
+  phone: { type: String, unique: true, sparse: true },
 
   email: { type: String, sparse: true },
+
+  firebaseUid: { type: String, sparse: true, unique: true },
+
+  authProvider: {
+    type: String,
+    enum: ["phone", "google", "password"],
+    default: "phone"
+  },
+
+  // Consent Tracking & Legal Versions
+  termsAccepted: { type: Boolean, default: false },
+  privacyPolicyAccepted: { type: Boolean, default: false },
+  consentTimestamp: { type: Date },
+  termsVersion: { type: String, default: "1.0" },
+  privacyPolicyVersion: { type: String, default: "1.0" },
 
   age: Number,
 

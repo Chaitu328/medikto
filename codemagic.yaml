@@ -23,3 +23,4 @@ workflows:
 
     artifacts:
       - build/ios/iphoneos/**/*.app
+      - medikto-app/build/ios/iphoneos/**/*.app

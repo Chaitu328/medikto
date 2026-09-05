@@ -22,8 +22,57 @@ const timingToTimeMap = {
   night: "09:00 PM"
 };
 
-const getTodayDate = () => {
-  return new Date().toISOString().split("T")[0];
+const getTodayDate = (timezone = "Asia/Kolkata") => {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
+    const year = parts.find(p => p.type === "year").value;
+    const month = parts.find(p => p.type === "month").value;
+    const day = parts.find(p => p.type === "day").value;
+    return `${year}-${month}-${day}`;
+  } catch (_) {
+    return new Date().toISOString().split("T")[0];
+  }
+};
+
+const isDoseInFuture = (doseDate, doseTime, timezone = "Asia/Kolkata") => {
+  if (!doseDate || !doseTime) return false;
+  try {
+    const today = getTodayDate(timezone);
+    if (doseDate > today) return true;
+    if (doseDate < today) return false;
+
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    });
+    const parts = formatter.format(now).split(":");
+    const currHour = parseInt(parts[0], 10);
+    const currMinute = parseInt(parts[1], 10);
+    const currTotalMinutes = currHour * 60 + currMinute;
+
+    const cleanTime = doseTime.trim();
+    const isPM = cleanTime.toUpperCase().endsWith("PM");
+    const isAM = cleanTime.toUpperCase().endsWith("AM");
+    const timeDigits = cleanTime.replace(/[a-zA-Z\s]/g, "");
+    const [hStr, mStr] = timeDigits.split(":");
+    let doseHour = parseInt(hStr, 10);
+    const doseMinute = parseInt(mStr, 10);
+    if (isPM && doseHour < 12) doseHour += 12;
+    if (isAM && doseHour === 12) doseHour = 0;
+    const doseTotalMinutes = doseHour * 60 + doseMinute;
+
+    return currTotalMinutes < doseTotalMinutes;
+  } catch (err) {
+    return false;
+  }
 };
 
 // ================= ADD MEDICATION =================
@@ -281,6 +330,13 @@ exports.markAsTaken = async (req, res) => {
       });
     }
 
+    const tz = (dose.user && dose.user.timezone) || "Asia/Kolkata";
+    if (isDoseInFuture(dose.date, dose.time, tz)) {
+      return res.status(400).json({
+        message: "Cannot mark a future dose as taken before its scheduled time"
+      });
+    }
+
     dose.status = "taken";
     dose.takenAt = new Date();
 
@@ -327,6 +383,14 @@ exports.verifyWithSelfie = async (req, res) => {
         message: "Access denied"
       });
     }
+
+    const tz = (dose.user && dose.user.timezone) || "Asia/Kolkata";
+    if (isDoseInFuture(dose.date, dose.time, tz)) {
+      return res.status(400).json({
+        message: "Cannot mark a future dose as taken before its scheduled time"
+      });
+    }
+
     const now = new Date();
 
     // 1. Apply watermark with Sharp in memory (bounded at 32MB)

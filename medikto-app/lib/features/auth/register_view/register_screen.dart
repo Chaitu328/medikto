@@ -12,6 +12,10 @@ import 'package:medikto/features/auth/widgets/gender_selection_widget.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'dart:io';
+import 'package:flutter/gestures.dart';
+import 'package:medikto/core/constants/legal_content.dart';
+import 'package:medikto/features/profile/views/privacy_policy_screen.dart';
+import 'package:medikto/features/profile/views/terms_and_conditions_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -40,6 +44,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   bool inviteCaretaker = false;
   bool obscureCaretakerPassword = true;
+  bool isConsentChecked = false;
 
   void _showCountryCodePicker() {
     final List<Map<String, String>> countries = [
@@ -139,6 +144,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String selectedCaretakerRelation = "Son";
 
   Future<void> handleRegister() async {
+    // 0. Consent Validation
+    if (!isConsentChecked) {
+      AppToasts.showError(context, "Please agree to the Terms & Conditions and Privacy Policy to continue.");
+      return;
+    }
+
     // 1. Basic Validation
     if (nameController.text.trim().isEmpty) {
       AppToasts.showError(context, "Please enter your full name");
@@ -303,13 +314,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 throw Exception("Firebase ID token is null");
                               }
 
-                              // Call register Profile API with Firebase ID Token
+                              // Call register Profile API with Firebase ID Token & Consent
                               final data = {
                                 "full_name": nameController.text.trim(),
                                 "mobile_number": phone,
                                 "dob": dobController.text.trim(),
                                 "gender": selectedGender,
                                 "token": idToken, // Send Firebase ID Token to Backend!
+                                "termsAccepted": true,
+                                "privacyPolicyAccepted": true,
+                                "termsVersion": LegalContent.termsVersion,
+                                "privacyPolicyVersion": LegalContent.privacyPolicyVersion,
                                 if (inviteCaretaker) ...{
                                   "caretakerEmail": caretakerEmailController.text.trim(),
                                   "caretakerName": caretakerNameController.text.trim(),
@@ -668,6 +683,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 /// 🔥 BOTTOM SECTION
                 _BottomSection(
                   size: size,
+                  isConsentChecked: isConsentChecked,
+                  onConsentChanged: (val) {
+                    setState(() {
+                      isConsentChecked = val ?? false;
+                    });
+                  },
+                  onTapTerms: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TermsAndConditionsScreen(),
+                      ),
+                    );
+                  },
+                  onTapPrivacy: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyScreen(),
+                      ),
+                    );
+                  },
                   onRegister: handleRegister,
                 ),
               ],
@@ -923,9 +960,20 @@ class _FormFields extends StatelessWidget {
 
 class _BottomSection extends StatelessWidget {
   final Size size;
-  final VoidCallback onRegister; // Add this line
+  final bool isConsentChecked;
+  final ValueChanged<bool?> onConsentChanged;
+  final VoidCallback onTapTerms;
+  final VoidCallback onTapPrivacy;
+  final VoidCallback onRegister;
 
-  const _BottomSection({required this.size, required this.onRegister});
+  const _BottomSection({
+    required this.size,
+    required this.isConsentChecked,
+    required this.onConsentChanged,
+    required this.onTapTerms,
+    required this.onTapPrivacy,
+    required this.onRegister,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -933,8 +981,61 @@ class _BottomSection extends StatelessWidget {
 
     return Column(
       children: [
+        // Consent Checkbox Row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Theme(
+              data: ThemeData(
+                unselectedWidgetColor: Colors.white54,
+              ),
+              child: Checkbox(
+                value: isConsentChecked,
+                activeColor: accentCyan,
+                checkColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                onChanged: onConsentChanged,
+              ),
+            ),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: "I agree to the ",
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  children: [
+                    TextSpan(
+                      text: "Terms & Conditions",
+                      style: const TextStyle(
+                        color: accentCyan,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: TapGestureRecognizer()..onTap = onTapTerms,
+                    ),
+                    const TextSpan(text: " and "),
+                    TextSpan(
+                      text: "Privacy Policy",
+                      style: const TextStyle(
+                        color: accentCyan,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: TapGestureRecognizer()..onTap = onTapPrivacy,
+                    ),
+                    const TextSpan(text: "."),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        SizedBox(height: size.height * 0.015),
+
         CustomButton(
-          onPressed: onRegister, // Use the callback here
+          onPressed: onRegister,
           buttonText: "Create Account",
           buttonColor: accentCyan,
           textStyle: const TextStyle(
@@ -943,34 +1044,6 @@ class _BottomSection extends StatelessWidget {
             color: Colors.black,
           ),
         ),
-
-        SizedBox(height: size.height * 0.02),
-
-        const Text.rich(
-          textAlign: TextAlign.center,
-          TextSpan(
-            text: "By signing up, I agree to health safe ",
-            style: TextStyle(fontSize: 11, color: Colors.white38),
-            children: [
-              TextSpan(
-                text: "Terms of use ",
-                style: TextStyle(
-                  color: accentCyan,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              TextSpan(text: "and "),
-              TextSpan(
-                text: "Privacy Policy",
-                style: TextStyle(
-                  color: accentCyan,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-        // SizedBox(height: size.height * 0.01),
       ],
     );
   }

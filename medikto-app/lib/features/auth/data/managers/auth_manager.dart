@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:medikto/core/constants/api_urls.dart';
@@ -133,12 +134,130 @@ Future<ResponseData> verifyFirebaseOTP({
     return ResponseData("Verification failed: $e", ResponseStatus.FAILED);
   }
 }
-// Inside lib/features/auth/data/managers/auth_manager.dart
+
+// ================= GOOGLE SIGN IN =================
+Future<ResponseData> signInWithGoogle() async {
+  try {
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    
+    // Trigger native Google Sign-In prompt
+    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+    if (googleUser == null) {
+      return ResponseData("Google sign-in was cancelled.", ResponseStatus.FAILED, data: {"cancelled": true});
+    }
+
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final OAuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    final String? firebaseIdToken = await userCredential.user?.getIdToken();
+
+    if (firebaseIdToken == null) {
+      return ResponseData("Unable to retrieve Firebase ID token. Please try again.", ResponseStatus.FAILED);
+    }
+
+    // Send Firebase ID Token to Medikto Backend
+    final response = await dioClient.tokenRef!.post(
+      ApiUrls.googleAuth,
+      data: {"token": firebaseIdToken},
+      options: Options(headers: {"Content-Type": "application/json"}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final isNewUser = response.data['isNewUser'] == true;
+
+      if (isNewUser) {
+        // Return payload for GoogleConsentScreen
+        return ResponseData(
+          "New Google user. Consent required.",
+          ResponseStatus.SUCCESS,
+          data: {
+            "isNewUser": true,
+            "idToken": firebaseIdToken,
+            "email": response.data['email'],
+            "name": response.data['name'],
+            "picture": response.data['picture'],
+          },
+        );
+      } else {
+        // Existing user: Store JWT session token
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(StorageKeys.token, response.data['token']);
+
+        return ResponseData(
+          response.data['message'] ?? "Login successful",
+          ResponseStatus.SUCCESS,
+          data: {
+            "isNewUser": false,
+            "user": response.data['user'],
+            "token": response.data['token'],
+          },
+        );
+      }
+    } else {
+      final msg = response.data?["message"] ?? "Unable to sign in with Google. Please try again.";
+      return ResponseData(msg, ResponseStatus.FAILED);
+    }
+  } on FirebaseAuthException catch (e) {
+    return ResponseData(e.message ?? "Unable to sign in with Google. Please try again.", ResponseStatus.FAILED);
+  } on DioException catch (e) {
+    final msg = e.response?.data?["message"] ?? e.response?.data?["error"] ?? "Unable to connect to server. Please try again.";
+    return ResponseData(msg, ResponseStatus.FAILED);
+  } catch (e) {
+    return ResponseData("Unable to sign in with Google. Please try again.", ResponseStatus.FAILED);
+  }
+}
+
+// ================= COMPLETE GOOGLE REGISTRATION =================
+Future<ResponseData> completeGoogleRegistration({
+  required String idToken,
+  required String fullName,
+  String? phone,
+  required bool termsAccepted,
+  required bool privacyPolicyAccepted,
+  String? termsVersion,
+  String? privacyPolicyVersion,
+}) async {
+  try {
+    final response = await dioClient.tokenRef!.post(
+      ApiUrls.googleCompleteRegistration,
+      data: {
+        "token": idToken,
+        "fullName": fullName,
+        "phone": phone,
+        "termsAccepted": termsAccepted,
+        "privacyPolicyAccepted": privacyPolicyAccepted,
+        "termsVersion": termsVersion ?? "1.0",
+        "privacyPolicyVersion": privacyPolicyVersion ?? "1.0",
+      },
+      options: Options(headers: {"Content-Type": "application/json"}),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(StorageKeys.token, response.data['token']);
+      return ResponseData(
+        response.data['message'] ?? "Registration successful",
+        ResponseStatus.SUCCESS,
+        data: response.data,
+      );
+    } else {
+      final msg = response.data?["message"] ?? "Unable to create your account. Please try again.";
+      return ResponseData(msg, ResponseStatus.FAILED);
+    }
+  } on DioException catch (e) {
+    final msg = e.response?.data?["message"] ?? e.response?.data?["error"] ?? "Unable to create your account. Please try again.";
+    return ResponseData(msg, ResponseStatus.FAILED);
+  } catch (e) {
+    return ResponseData("Unable to create your account. Please try again.", ResponseStatus.FAILED);
+  }
+}
 
 Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) async {
   try {
-    // We use .ref! because registration usually requires the Auth Token 
-    // from the OTP verification step
     final response = await dioClient.ref!.post(
       ApiUrls.register,
       data: registrationData,
@@ -196,12 +315,20 @@ Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) asyn
   }
 
 Future<void> logout(BuildContext context) async {
+  try {
+    await GoogleSignIn().signOut();
+  } catch (_) {}
+  try {
+    await FirebaseAuth.instance.signOut();
+  } catch (_) {}
   await (await SharedPreferences.getInstance()).clear();
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (_) => const LoginScreen()),
-    (route) => false,
-  );
+  if (context.mounted) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
 }
 }
 

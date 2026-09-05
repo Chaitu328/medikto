@@ -92,6 +92,14 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     return schedules.map((item) {
       final parsedDate = DateTime.tryParse(item.date ?? "");
 
+      String? takenAtFormatted;
+      if (item.takenAt != null && item.takenAt!.trim().isNotEmpty) {
+        try {
+          final dt = DateTime.parse(item.takenAt!).toLocal();
+          takenAtFormatted = DateFormat("hh:mm a").format(dt);
+        } catch (_) {}
+      }
+
       return {
         "id": item.id,
         "name": item.name ?? "",
@@ -102,9 +110,12 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
         "dateString": parsedDate != null
             ? DateFormat("d MMM yyyy, EEEE").format(parsedDate)
             : "",
-        "status": item.status?.toLowerCase() == "taken"
+        "status": _formatStatus(item.status ?? ""),
+        "earlyLabel": item.status?.toLowerCase() == "taken"
             ? _getEarlyTakenLabel(item.date, item.time, item.takenAt)
-            : _formatStatus(item.status ?? ""),
+            : null,
+        "takenAt": item.takenAt,
+        "takenAtFormatted": takenAtFormatted,
         "isVerified": item.verified ?? false,
         "proofImage": item.proofImage,
       };
@@ -454,8 +465,11 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               const Text(
                 'Weekly Medications record',
@@ -465,12 +479,12 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                   fontSize: 14,
                 ),
               ),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 4,
                 children: [
                   _chartLegend(Colors.greenAccent, 'Taken'),
-                  const SizedBox(width: 10),
                   _chartLegend(Colors.redAccent, 'Missed'),
-                  const SizedBox(width: 10),
                   _chartLegend(Colors.orangeAccent, 'Pending'),
                 ],
               ),
@@ -740,13 +754,34 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                 ],
               ),
             ),
-            // Time
+            // Time (Scheduled + Taken At)
             Expanded(
               flex: 3,
-              child: Text(
-                item['time'],
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 11),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    item['time'],
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (item['status'] == "Taken" &&
+                      item['takenAtFormatted'] != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      "Taken: ${item['takenAtFormatted']}",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontSize: 9,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             // Status + Verified Badge
@@ -1254,7 +1289,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
 
 
                 data: <List<String>>[
-                  <String>['Date', 'Medicine', 'Dose', 'Time', 'Status'],
+                  <String>['Date', 'Medicine', 'Dose', 'Scheduled', 'Taken At', 'Status'],
 
                   ...currentList.map(
                     (item) => [
@@ -1262,6 +1297,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                       item['name'],
                       "${item['dose']} ${item['unit']}",
                       item['time'],
+                      item['takenAtFormatted'] ?? '-',
                       item['status'],
                     ],
                   ),

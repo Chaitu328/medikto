@@ -66,10 +66,16 @@
     register,
     adminLogin,
     changePassword,
-      toggleAdminStatus,
+    toggleAdminStatus,
     deleteAdmin,
     checkPhone,
+    googleAuth,
+    completeGoogleRegistration,
   } = require("../controllers/authContoller");
+
+  const {
+    reportIssue
+  } = require("../controllers/supportController");
 
   const {
     getVitals,
@@ -120,6 +126,11 @@
   router.post("/auth/verifyOTP", verifyOTP);
   router.post("/auth/register", register);
   router.post("/auth/check-phone", checkPhone);
+  router.post("/auth/google", googleAuth);
+  router.post("/auth/google/complete-registration", completeGoogleRegistration);
+
+  // ================= SUPPORT & ISSUE REPORTING =================
+  router.post("/support/report-issue", auth, reportIssue);
 
   // ================= ADMIN AUTH (HOSPITAL ADMINS) =================
   router.post("/admin/login", adminLogin);

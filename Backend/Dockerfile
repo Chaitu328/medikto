@@ -1,8 +1,12 @@
 # Use Node.js 22 LTS Alpine image (lean and lightweight)
 FROM node:22-alpine
 
-# Set production environment
+# Install timezone data for Asia/Kolkata
+RUN apk add --no-cache tzdata
+
+# Set production environment and timezone
 ENV NODE_ENV=production
+ENV TZ=Asia/Kolkata
 ENV DOCDB_CA_PATH=/app/certs/global-bundle.pem
 
 # Create app directory

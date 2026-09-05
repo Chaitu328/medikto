@@ -14,6 +14,10 @@ import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:medikto/features/profile/views/edit_profile.dart';
 import 'package:medikto/features/profile/views/connected_hospitals_screen.dart';
 import 'package:medikto/features/profile/views/manage_caretakers_screen.dart';
+import 'package:medikto/features/profile/views/faq_screen.dart';
+import 'package:medikto/features/profile/views/contact_support_screen.dart';
+import 'package:medikto/features/profile/views/policies_and_terms_screen.dart';
+import 'package:medikto/features/profile/views/report_issue_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -758,27 +762,60 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 /// 🔹 Help
                 _buildSection(
                   title: "Help & Support",
-                  children: const [
+                  children: [
                     _ListItem(
                       icon: Icons.info_outline,
                       title: "FAQs",
-                      trailing: Icons.keyboard_arrow_down,
+                      trailing: Icons.arrow_forward_ios,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const FaqScreen(),
+                          ),
+                        );
+                      },
                     ),
                     _ListItem(
                       icon: Icons.phone_outlined,
                       title: "Contact Support",
                       subtitle: "User Query",
-                      trailing: Icons.keyboard_arrow_down,
+                      trailing: Icons.arrow_forward_ios,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ContactSupportScreen(),
+                          ),
+                        );
+                      },
                     ),
                     _ListItem(
                       icon: Icons.security,
                       title: "Policies & Terms",
                       subtitle: "Service Terms & Conditions",
-                      trailing: Icons.keyboard_arrow_down,
+                      trailing: Icons.arrow_forward_ios,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PoliciesAndTermsScreen(),
+                          ),
+                        );
+                      },
                     ),
                     _ListItem(
                       icon: Icons.report_outlined,
                       title: "Report an Issue",
+                      trailing: Icons.arrow_forward_ios,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ReportIssueScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
