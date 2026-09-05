@@ -247,6 +247,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               controller: _tabController,
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
               indicator: BoxDecoration(
                 color: accentCyan.withOpacity(0.18),
                 borderRadius: BorderRadius.circular(10),
@@ -254,12 +255,12 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               ),
               labelColor: accentCyan,
               unselectedLabelColor: Colors.white54,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               unselectedLabelStyle:
-                  const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                  const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
               tabs: const [
-                Tab(text: "Health Vitals"),
-                Tab(text: "Medical Reports"),
+                Tab(text: "Vitals"),
+                Tab(text: "Reports"),
                 Tab(text: "Prescriptions"),
               ],
             ),
@@ -383,32 +384,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 _vitalSearchController,
                 "Search vitals by name, value, date, notes...",
               ),
-              const SizedBox(height: 8),
-
-              // Overview Section Title
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                child: Text(
-                  "Latest Health Readings",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // 4 Quick Summary & Add Cards (Grid)
-              _buildVitalSummaryGrid(
-                latestBP: latestBP,
-                latestHR: latestHR,
-                latestSugar: latestSugar,
-                latestTemp: latestTemp,
-                isGuardian: isGuardian,
-              ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // Filter Chips
               _buildVitalFilterChips(),
@@ -480,7 +456,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 _buildEmptyState(
                   icon: Icons.monitor_heart_outlined,
                   title: "No Vital Readings Found",
-                  subtitle: "Tap '+ Add Reading' above to record your first entry.",
+                  subtitle: "Tap the floating '+' button to record a new entry.",
                 )
               else
                 ...filteredRecords.map((r) => _buildUnifiedVitalRecordCard(r)),

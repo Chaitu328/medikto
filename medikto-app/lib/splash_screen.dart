@@ -114,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen> {
           decoration: const BoxDecoration(color: darkBg),
           child: Center(
             child: Image.asset(
-              "assets/images/main-logo.png",
+              "assets/images/medikto_logo.png",
               width: MediaQuery.sizeOf(context).width * 0.5,
             ),
           ),

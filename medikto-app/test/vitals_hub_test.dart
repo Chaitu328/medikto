@@ -126,24 +126,9 @@ void main() {
       expect(find.text('Medical Documents Hub'), findsOneWidget);
 
       // Verify Tab Labels
-      expect(find.text('Health Vitals'), findsOneWidget);
-      expect(find.text('Medical Reports'), findsOneWidget);
+      expect(find.text('Vitals'), findsOneWidget);
+      expect(find.text('Reports'), findsOneWidget);
       expect(find.text('Prescriptions'), findsOneWidget);
-
-      // Verify Quick Summary Card titles
-      expect(find.text('Blood Pressure'), findsWidgets);
-      expect(find.text('Heart Rate'), findsWidgets);
-      expect(find.text('Blood Sugar'), findsWidgets);
-      expect(find.text('Body Temperature'), findsWidgets);
-
-      // Verify values displayed in cards
-      expect(find.text('120/80 mmHg'), findsWidgets);
-      expect(find.text('75 BPM'), findsWidgets);
-      expect(find.text('100 mg/dL'), findsWidgets);
-      expect(find.text('98.4 °F'), findsWidgets);
-
-      // Verify Add Reading button presence
-      expect(find.text('Add Reading'), findsWidgets);
     });
   });
 }

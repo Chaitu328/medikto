@@ -279,7 +279,7 @@ const LeftPanel = () => {
         >
           <div className="w-12 h-12 rounded-2xl bg-black backdrop-blur flex items-center justify-center">
   <img
-    src="/Medikto.logo.png"
+    src="/medikto_icon.png"
     alt="Medikto Healthcare"
     className="w-full max-w-md xl:max-w-lg object-contain drop-shadow-2xl"
   />          </div>
