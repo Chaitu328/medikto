@@ -38,11 +38,26 @@ DateTime? parseDoseDateTime(String? dateStr, String? timeStr) {
   }
 }
 
+bool isDoseInFuture(String? dateStr, String? timeStr, {DateTime? referenceNow}) {
+  final scheduled = parseDoseDateTime(dateStr, timeStr);
+  if (scheduled == null) return false;
+  final now = referenceNow ?? DateTime.now();
+  return scheduled.isAfter(now);
+}
+
+bool isDoseExpired(String? dateStr, String? timeStr, {DateTime? referenceNow}) {
+  final scheduled = parseDoseDateTime(dateStr, timeStr);
+  if (scheduled == null) return false;
+  final now = referenceNow ?? DateTime.now();
+  final expirationTime = scheduled.add(const Duration(minutes: 60));
+  return now.isAfter(expirationTime) || now.isAtSameMomentAs(expirationTime);
+}
+
 enum DoseUIActionState {
   taken,
   missed,
   upcoming,
-  actionable, // Mark as Taken & Verify with Selfie available
+  actionable, // Within 60-minute window: Mark as Taken & Verify with Selfie available
 }
 
 DoseUIActionState evaluateDoseState(TodayScheduleModel dose, {DateTime? referenceNow}) {
@@ -57,26 +72,133 @@ DoseUIActionState evaluateDoseState(TodayScheduleModel dose, {DateTime? referenc
     return DoseUIActionState.missed;
   }
 
-  // 2. FOR PENDING DOSES: COMPARE DATE + TIME WITH REFERENCE TIME
-  final scheduled = parseDoseDateTime(dose.date, dose.time);
-  if (scheduled == null) {
-    return DoseUIActionState.actionable;
+  // 2. 60-MINUTE EXPIRATION EVALUATION
+  if (isDoseExpired(dose.date, dose.time, referenceNow: now)) {
+    return DoseUIActionState.missed;
   }
 
-  if (scheduled.isAfter(now)) {
+  // 3. FUTURE EVALUATION
+  if (isDoseInFuture(dose.date, dose.time, referenceNow: now)) {
     return DoseUIActionState.upcoming;
   }
 
+  // 4. ACTION WINDOW (Scheduled Time Reached and within 60 minutes)
   return DoseUIActionState.actionable;
 }
 
 void main() {
-  group('Medikto Medication Action State Machine Tests', () {
-    test('TEST A: Future dose (05:30 PM at 01:36 PM) -> Upcoming, no action buttons', () {
-      final refTime = DateTime(2026, 9, 6, 13, 36); // 01:36 PM
+  group('Medikto Medication Reminder & 60-Minute Dose Action Window Tests', () {
+    test('Test 1: Scheduled 11:30 AM, current 11:15 AM -> Upcoming, no take action yet', () {
+      final refTime = DateTime(2026, 9, 6, 11, 15);
       final dose = TodayScheduleModel(
         id: "dose-1",
-        name: "Pill",
+        name: "Paracetamol",
+        dosage: "500mg",
+        date: "2026-09-06",
+        time: "11:30 AM",
+        status: "pending",
+      );
+
+      final state = evaluateDoseState(dose, referenceNow: refTime);
+      expect(state, equals(DoseUIActionState.upcoming));
+    });
+
+    test('Test 2: Scheduled 11:30 AM, current 11:30 AM -> Action window starts, Mark as Taken & Verify with Selfie available', () {
+      final refTime = DateTime(2026, 9, 6, 11, 30);
+      final dose = TodayScheduleModel(
+        id: "dose-2",
+        name: "Paracetamol",
+        dosage: "500mg",
+        date: "2026-09-06",
+        time: "11:30 AM",
+        status: "pending",
+      );
+
+      final state = evaluateDoseState(dose, referenceNow: refTime);
+      expect(state, equals(DoseUIActionState.actionable));
+    });
+
+    test('Test 3: Scheduled 11:30 AM, current 11:45 AM -> Action window active (15 mins past schedule)', () {
+      final refTime = DateTime(2026, 9, 6, 11, 45);
+      final dose = TodayScheduleModel(
+        id: "dose-3",
+        name: "Paracetamol",
+        dosage: "500mg",
+        date: "2026-09-06",
+        time: "11:30 AM",
+        status: "pending",
+      );
+
+      final state = evaluateDoseState(dose, referenceNow: refTime);
+      expect(state, equals(DoseUIActionState.actionable));
+    });
+
+    test('Test 4: Scheduled 11:30 AM, current 12:29 PM -> Still pending and actionable (minute 59)', () {
+      final refTime = DateTime(2026, 9, 6, 12, 29);
+      final dose = TodayScheduleModel(
+        id: "dose-4",
+        name: "Paracetamol",
+        dosage: "500mg",
+        date: "2026-09-06",
+        time: "11:30 AM",
+        status: "pending",
+      );
+
+      final state = evaluateDoseState(dose, referenceNow: refTime);
+      expect(state, equals(DoseUIActionState.actionable));
+    });
+
+    test('Test 5: Scheduled 11:30 AM, current 12:30 PM -> 60 minutes expire, dose becomes Missed, no actions', () {
+      final refTime = DateTime(2026, 9, 6, 12, 30);
+      final dose = TodayScheduleModel(
+        id: "dose-5",
+        name: "Paracetamol",
+        dosage: "500mg",
+        date: "2026-09-06",
+        time: "11:30 AM",
+        status: "pending",
+      );
+
+      final state = evaluateDoseState(dose, referenceNow: refTime);
+      expect(state, equals(DoseUIActionState.missed));
+    });
+
+    test('Test 6: Scheduled 11:30 AM, current 12:45 PM -> Missed, no actions', () {
+      final refTime = DateTime(2026, 9, 6, 12, 45);
+      final dose = TodayScheduleModel(
+        id: "dose-6",
+        name: "Paracetamol",
+        dosage: "500mg",
+        date: "2026-09-06",
+        time: "11:30 AM",
+        status: "pending",
+      );
+
+      final state = evaluateDoseState(dose, referenceNow: refTime);
+      expect(state, equals(DoseUIActionState.missed));
+    });
+
+    test('Test 7: Dose already taken at 11:45 AM -> Taken, no actions, regardless of current time', () {
+      final refTime = DateTime(2026, 9, 6, 20, 43); // 8:43 PM
+      final dose = TodayScheduleModel(
+        id: "dose-7",
+        name: "Paracetamol",
+        dosage: "500mg",
+        date: "2026-09-06",
+        time: "11:30 AM",
+        status: "taken",
+        takenAt: "2026-09-06T06:15:00.000Z",
+      );
+
+      final state = evaluateDoseState(dose, referenceNow: refTime);
+      expect(state, equals(DoseUIActionState.taken));
+    });
+
+    test('Test 8: Future dose (05:30 PM at 01:36 PM) -> Upcoming, no actions', () {
+      final refTime = DateTime(2026, 9, 6, 13, 36);
+      final dose = TodayScheduleModel(
+        id: "dose-8",
+        name: "Paracetamol",
         dosage: "500mg",
         date: "2026-09-06",
         time: "05:30 PM",
@@ -87,92 +209,29 @@ void main() {
       expect(state, equals(DoseUIActionState.upcoming));
     });
 
-    test('TEST B: Scheduled time reached (08:30 AM at 08:35 AM) -> Mark as Taken & Verify with Selfie available', () {
-      final refTime = DateTime(2026, 9, 6, 8, 35); // 08:35 AM
-      final dose = TodayScheduleModel(
-        id: "dose-2",
-        name: "Pill",
-        dosage: "500mg",
-        date: "2026-09-06",
-        time: "08:30 AM",
-        status: "pending",
-      );
-
-      final state = evaluateDoseState(dose, referenceNow: refTime);
-      expect(state, equals(DoseUIActionState.actionable));
-    });
-
-    test('TEST C: Past pending dose (12:30 PM at 08:43 PM same date) -> Mark as Taken available', () {
-      final refTime = DateTime(2026, 9, 6, 20, 43); // 08:43 PM
-      final dose = TodayScheduleModel(
-        id: "dose-3",
-        name: "Pill",
-        dosage: "500mg",
-        date: "2026-09-06",
-        time: "12:30 PM",
-        status: "pending",
-      );
-
-      final state = evaluateDoseState(dose, referenceNow: refTime);
-      expect(state, equals(DoseUIActionState.actionable));
-    });
-
-    test('TEST D: Already taken dose (status: taken) -> Taken, no actions, regardless of time', () {
-      final refTime = DateTime(2026, 9, 6, 20, 43);
-      final dose = TodayScheduleModel(
-        id: "dose-4",
-        name: "Pill",
-        dosage: "500mg",
-        date: "2026-09-06",
-        time: "12:30 PM",
-        status: "taken",
-        takenAt: "2026-09-06T13:30:00.000Z",
-      );
-
-      final state = evaluateDoseState(dose, referenceNow: refTime);
-      expect(state, equals(DoseUIActionState.taken));
-    });
-
-    test('TEST E: Missed dose (status: missed) -> Missed, no actions', () {
-      final refTime = DateTime(2026, 9, 6, 13, 31);
-      final dose = TodayScheduleModel(
-        id: "dose-5",
-        name: "Pill",
-        dosage: "500mg",
-        date: "2026-09-06",
-        time: "12:30 PM",
-        status: "missed",
-      );
-
-      final state = evaluateDoseState(dose, referenceNow: refTime);
-      expect(state, equals(DoseUIActionState.missed));
-    });
-
-    test('TEST F: Yesterday dose (2026-09-05 12:30 PM at 2026-09-06 08:35 AM) is NOT future', () {
-      final refTime = DateTime(2026, 9, 6, 8, 35); // Today 08:35 AM
+    test('Test 9: Yesterday pending dose (2026-09-05 12:30 PM at 2026-09-06 08:35 AM) -> Expired / Missed, no actions', () {
+      final refTime = DateTime(2026, 9, 6, 8, 35);
       final yesterdayDose = TodayScheduleModel(
-        id: "dose-6",
-        name: "Pill",
+        id: "dose-9",
+        name: "Paracetamol",
         dosage: "500mg",
         date: "2026-09-05", // Yesterday
-        time: "12:30 PM", // 12:30 PM > 08:35 AM if compared by time only
+        time: "12:30 PM",
         status: "pending",
       );
 
       final state = evaluateDoseState(yesterdayDose, referenceNow: refTime);
-      // Because full date+time is compared, yesterday 12:30 PM is BEFORE today 08:35 AM
-      expect(state, equals(DoseUIActionState.actionable));
-      expect(state, isNot(equals(DoseUIActionState.upcoming)));
+      expect(state, equals(DoseUIActionState.missed));
     });
 
-    test('TEST G: Scheduled time and takenAt remain separate and distinct', () {
-      final scheduledTime = "08:30 AM";
-      final actualTakenDateTime = DateTime(2026, 9, 6, 13, 30); // 01:30 PM
+    test('Test 10: Scheduled time and takenAt remain separate and distinct', () {
+      final scheduledTime = "11:30 AM";
+      final actualTakenDateTime = DateTime(2026, 9, 6, 11, 45); // Taken at 11:45 AM
       final takenAtISO = actualTakenDateTime.toIso8601String();
 
       final dose = TodayScheduleModel(
-        id: "dose-7",
-        name: "Pill",
+        id: "dose-10",
+        name: "Paracetamol",
         dosage: "500mg",
         date: "2026-09-06",
         time: scheduledTime,
@@ -180,13 +239,11 @@ void main() {
         takenAt: takenAtISO,
       );
 
-      // Scheduled time is intact
-      expect(dose.time, equals("08:30 AM"));
+      expect(dose.time, equals("11:30 AM"));
 
-      // TakenAt is formatted separately
       final dt = DateTime.parse(dose.takenAt!).toLocal();
       final formattedTakenAt = DateFormat("hh:mm a").format(dt);
-      expect(formattedTakenAt, equals("01:30 PM"));
+      expect(formattedTakenAt, equals("11:45 AM"));
     });
   });
 }

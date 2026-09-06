@@ -55,8 +55,30 @@ flutter test
 
 ---
 
+## 💊 Medication Lifecycle & 60-Minute Action Window
+
+The Medikto mobile app adheres strictly to the unified medication lifecycle and action eligibility rules:
+
+### 1. Multi-Stage Controlled Reminders
+- **Pre-Reminder (~15 min before schedule)**: Advance notification (`"Your {name} dose is scheduled at {time}"`). Action buttons remain **hidden** (Dose is Upcoming).
+- **Scheduled Reminder (at scheduled time)**: Action window alert (`"It's time to take your {name}"`). Action buttons (`Mark as Taken` & `Verify with Selfie`) become **active**.
+- **Post-Reminder (~15 min after schedule)**: Pending dose reminder (`"Your {name} dose scheduled for {time} is still pending"`) dispatched only if the dose is still pending.
+- **Missed Alert (+60 min after schedule)**: Dispatched once when the dose action window expires and transitions to `missed`.
+
+### 2. State Machine Hierarchy
+`1. Status (taken/missed/cancelled) -> 2. Scheduled Date -> 3. Scheduled Time -> 4. Current Asia/Kolkata Time`
+
+- **Pending + Scheduled in Future**: Badge displays **"Upcoming"**; action buttons are hidden.
+- **Pending + Reached / Within 60m Window**: **"Mark as Taken"** and **"Verify with Selfie"** are visible.
+- **Pending + >60m Exceeded**: Badge displays **"Missed Dose"**; action buttons are permanently hidden.
+- **Taken**: Badge displays **"Medicine Taken"**; action buttons are hidden regardless of time.
+- **Notification Tap**: Tapping a reminder notification opens the app directly to the **"My Medications"** tab (`BaseBottomNavigationPage(index: 1)`).
+
+---
+
 ## 📖 Complete Guides
 
 For detailed setup instructions, including backend connection settings, release build compilation, and general troubleshooting:
 👉 Refer to the main workspace guide: **[MOBILE_SETUP.md](file:///d:/medikto/MOBILE_SETUP.md)**
+
 

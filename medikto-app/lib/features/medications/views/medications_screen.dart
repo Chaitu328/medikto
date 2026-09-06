@@ -95,61 +95,11 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     return scheduled.isAfter(DateTime.now());
   }
 
-  bool _isDoseEarly(TodayScheduleModel schedule) {
-    final scheduled = _parseDoseDateTime(schedule.date, schedule.time);
+  bool _isDoseExpired(String? dateStr, String? timeStr) {
+    final scheduled = _parseDoseDateTime(dateStr, timeStr);
     if (scheduled == null) return false;
-    final now = DateTime.now();
-    final diff = scheduled.difference(now);
-    return diff.inMinutes > 10;
-  }
-
-  Future<bool> _showEarlyWarningDialog(BuildContext context, TodayScheduleModel schedule) async {
-    final colors = context.themeColors;
-    int minutesEarly = 0;
-    final scheduled = _parseDoseDateTime(schedule.date, schedule.time);
-    if (scheduled != null) {
-      minutesEarly = scheduled.difference(DateTime.now()).inMinutes;
-    }
-
-    String timeLabel = minutesEarly >= 60 
-        ? "${(minutesEarly / 60).floor()} hour(s) and ${minutesEarly % 60} minute(s)"
-        : "$minutesEarly minute(s)";
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: colors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 28),
-            const SizedBox(width: 10),
-            Text("Early Dose Alert", style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(
-          "This dose of ${schedule.name} is scheduled for ${schedule.time}.\n\n"
-          "You are marking it as taken $timeLabel early.\n\n"
-          "Taking medications too early can be unsafe. Are you sure you want to log this dose now?",
-          style: TextStyle(color: colors.textSecondary, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text("Cancel", style: TextStyle(color: colors.textMuted)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orangeAccent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Yes, Log Early", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
+    final expirationTime = scheduled.add(const Duration(minutes: 60));
+    return DateTime.now().isAfter(expirationTime) || DateTime.now().isAtSameMomentAs(expirationTime);
   }
 
   Future<void> selectDate() async {
@@ -219,8 +169,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
           color: colors.accentPrimary,
           backgroundColor: colors.surface,
           onRefresh: () async {
-            await ref.refresh(getScheduleForDateProvider(formattedDate).future);
-            await ref.refresh(getTodayScheduleProvider.future);
+            ref.invalidate(getScheduleForDateProvider(formattedDate));
+            ref.invalidate(getTodayScheduleProvider);
           },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
@@ -368,7 +318,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
 
                           // Exact State Machine Evaluation:
                           final isTaken = rawStatus == "taken" || takenMap[scheduleId] == true;
-                          final isMissed = rawStatus == "missed" && !isTaken;
+                          final isExpired = _isDoseExpired(schedule.date, schedule.time);
+                          final isMissed = (rawStatus == "missed" || isExpired) && !isTaken;
                           final isCancelled = rawStatus == "cancelled" && !isTaken;
                           final isFuture = !isTaken && !isMissed && !isCancelled && _isDoseInFuture(schedule.date, schedule.time);
 
@@ -389,11 +340,6 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                               isGuardian: isGuardian,
                               onMarkTaken: () async {
                                 if (scheduleId.isEmpty) return;
-
-                                if (_isDoseEarly(schedule)) {
-                                  final proceed = await _showEarlyWarningDialog(context, schedule);
-                                  if (!proceed) return;
-                                }
 
                                 setState(() {
                                   loadingDoseIds.add(scheduleId);
@@ -419,11 +365,6 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                               },
                               onVerifyWithSelfie: () async {
                                 if (scheduleId.isEmpty) return;
-
-                                if (_isDoseEarly(schedule)) {
-                                  final proceed = await _showEarlyWarningDialog(context, schedule);
-                                  if (!proceed) return;
-                                }
 
                                 final result = await Navigator.push(
                                   context,
@@ -1029,10 +970,10 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                 );
 
                 if (result == true) {
-                  await ref.refresh(getMedicationsProvider.future);
-                  await ref.refresh(getTodayScheduleProvider.future);
+                  ref.invalidate(getMedicationsProvider);
+                  ref.invalidate(getTodayScheduleProvider);
                   final formattedDate = _formatDate(selectedDate);
-                  await ref.refresh(getScheduleForDateProvider(formattedDate).future);
+                  ref.invalidate(getScheduleForDateProvider(formattedDate));
                   setState(() {});
                 }
               },

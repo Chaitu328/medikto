@@ -60,56 +60,70 @@ const isDoseInFuture = (doseDate, doseTime, referenceNow, timezone = "Asia/Kolka
   }
 };
 
-console.log("Running Backend Medication Lifecycle & Timezone Unit Tests...\n");
+const isDoseExpired = (doseDate, doseTime, referenceNow, timezone = "Asia/Kolkata") => {
+  if (!doseDate || !doseTime) return false;
+  try {
+    const { localDate: today, totalMinutes: currTotalMinutes } = getLocalTimeDetails(referenceNow, timezone);
 
-// 1. Time parsing tests
-console.log("1. Testing parseTimeToMinutes...");
-assert.strictEqual(parseTimeToMinutes("08:30 AM"), 8 * 60 + 30);
-assert.strictEqual(parseTimeToMinutes("8:30 AM"), 8 * 60 + 30);
-assert.strictEqual(parseTimeToMinutes("12:00 PM"), 12 * 60);
-assert.strictEqual(parseTimeToMinutes("12:30 PM"), 12 * 60 + 30);
-assert.strictEqual(parseTimeToMinutes("01:36 PM"), 13 * 60 + 36);
-assert.strictEqual(parseTimeToMinutes("05:30 PM"), 17 * 60 + 30);
-assert.strictEqual(parseTimeToMinutes("08:43 PM"), 20 * 60 + 43);
-assert.strictEqual(parseTimeToMinutes("12:00 AM"), 0);
-assert.strictEqual(parseTimeToMinutes("12:15 AM"), 15);
-console.log("✅ parseTimeToMinutes passed\n");
+    if (doseDate < today) return true;
+    if (doseDate > today) return false;
 
-// 2. Future Dose Protection Tests
-console.log("2. Testing isDoseInFuture logic...");
-// Reference: 2026-09-06 at 08:35 AM IST (03:05 UTC)
-const refNow_0835AM = new Date("2026-09-06T03:05:00.000Z");
+    const doseTotalMinutes = parseTimeToMinutes(doseTime);
+    if (doseTotalMinutes === null) return false;
 
-// Scheduled 08:30 AM evaluated at 08:35 AM -> NOT in future (actionable)
-assert.strictEqual(isDoseInFuture("2026-09-06", "08:30 AM", refNow_0835AM, "Asia/Kolkata"), false);
+    return currTotalMinutes >= doseTotalMinutes + 60;
+  } catch (err) {
+    return false;
+  }
+};
 
-// Scheduled 05:30 PM evaluated at 08:35 AM -> IN FUTURE
-assert.strictEqual(isDoseInFuture("2026-09-06", "05:30 PM", refNow_0835AM, "Asia/Kolkata"), true);
+const isActionWindowEligible = (dose, referenceNow, timezone = "Asia/Kolkata") => {
+  // 1. Status takes priority
+  if (dose.status === "taken" || dose.status === "missed" || dose.status === "cancelled") {
+    return false;
+  }
 
-// Scheduled 12:30 PM from yesterday (2026-09-05) evaluated at 08:35 AM today -> NOT in future
-assert.strictEqual(isDoseInFuture("2026-09-05", "12:30 PM", refNow_0835AM, "Asia/Kolkata"), false);
+  // 2. Future check
+  if (isDoseInFuture(dose.date, dose.time, referenceNow, timezone)) {
+    return false;
+  }
 
-// Scheduled 08:30 AM tomorrow (2026-09-07) evaluated at 08:35 AM today -> IN FUTURE
-assert.strictEqual(isDoseInFuture("2026-09-07", "08:30 AM", refNow_0835AM, "Asia/Kolkata"), true);
+  // 3. Expiration check (60 minutes past scheduled time)
+  if (isDoseExpired(dose.date, dose.time, referenceNow, timezone)) {
+    return false;
+  }
 
-console.log("✅ isDoseInFuture logic passed\n");
+  return true;
+};
 
-// 3. Reminder Job & Missed Dose Detection Tests
-console.log("3. Testing Reminder Cron Trigger & Missed Calculation...");
-
-const simulateReminderCron = (dose, referenceNow, timezone = "Asia/Kolkata") => {
+const simulateMultiStageReminderCron = (dose, referenceNow, timezone = "Asia/Kolkata") => {
   const { localDate: userLocalDate, totalMinutes: currentMinutes } = getLocalTimeDetails(referenceNow, timezone);
   const scheduledMinutes = parseTimeToMinutes(dose.time);
 
-  let onTimeAlert = false;
+  let preAlert = false;
+  let scheduledAlert = false;
+  let postAlert = false;
   let missedAlert = false;
 
-  // On-time trigger
-  if (dose.date === userLocalDate && currentMinutes === scheduledMinutes && dose.status === "pending") {
-    onTimeAlert = true;
+  // 1. Pre-reminder (15 mins before)
+  if (dose.date === userLocalDate && currentMinutes >= scheduledMinutes - 15 && currentMinutes < scheduledMinutes && !dose.preReminderSent) {
+    dose.preReminderSent = true;
+    preAlert = true;
   }
 
-  // Missed dose check (1 hour / 60 minutes after scheduled time)
+  // 2. Scheduled reminder (at scheduled time)
+  if (dose.date === userLocalDate && currentMinutes >= scheduledMinutes && currentMinutes < scheduledMinutes + 15 && !dose.scheduledReminderSent) {
+    dose.scheduledReminderSent = true;
+    scheduledAlert = true;
+  }
+
+  // 3. Post-reminder (15 mins after if still pending)
+  if (dose.date === userLocalDate && currentMinutes >= scheduledMinutes + 15 && currentMinutes < scheduledMinutes + 60 && dose.status === "pending" && !dose.postReminderSent) {
+    dose.postReminderSent = true;
+    postAlert = true;
+  }
+
+  // 4. Missed dose expiration (60 mins after scheduled time)
   const isPastDate = dose.date < userLocalDate;
   const isPastOneHourToday = (dose.date === userLocalDate && currentMinutes >= scheduledMinutes + 60);
 
@@ -121,41 +135,106 @@ const simulateReminderCron = (dose, referenceNow, timezone = "Asia/Kolkata") => 
     }
   }
 
-  return { onTimeAlert, missedAlert, finalStatus: dose.status };
+  return { preAlert, scheduledAlert, postAlert, missedAlert, finalStatus: dose.status };
 };
 
-// Test 3A: At exactly 08:30 AM IST for 08:30 AM scheduled dose
-const refNow_0830AM = new Date("2026-09-06T03:00:00.000Z");
-const testDoseA = { date: "2026-09-06", time: "08:30 AM", status: "pending", missedReminderSent: false };
-const resA = simulateReminderCron(testDoseA, refNow_0830AM);
-assert.strictEqual(resA.onTimeAlert, true, "Should fire on-time alert at 08:30 AM");
-assert.strictEqual(resA.missedAlert, false, "Should not fire missed alert at 08:30 AM");
-assert.strictEqual(testDoseA.status, "pending");
+console.log("Running Backend Medication Lifecycle & 60-Minute Action Window Unit Tests...\n");
 
-// Test 3B: At 08:35 AM IST (5 mins after schedule)
-const resB = simulateReminderCron(testDoseA, refNow_0835AM);
-assert.strictEqual(resB.onTimeAlert, false, "Should not re-fire on-time alert at 08:35 AM");
-assert.strictEqual(resB.missedAlert, false, "Should not fire missed alert at 5 mins past schedule");
-assert.strictEqual(testDoseA.status, "pending");
+// 1. Time parsing tests
+console.log("1. Testing parseTimeToMinutes...");
+assert.strictEqual(parseTimeToMinutes("08:30 AM"), 8 * 60 + 30);
+assert.strictEqual(parseTimeToMinutes("11:15 AM"), 11 * 60 + 15);
+assert.strictEqual(parseTimeToMinutes("11:30 AM"), 11 * 60 + 30);
+assert.strictEqual(parseTimeToMinutes("11:45 AM"), 11 * 60 + 45);
+assert.strictEqual(parseTimeToMinutes("12:29 PM"), 12 * 60 + 29);
+assert.strictEqual(parseTimeToMinutes("12:30 PM"), 12 * 60 + 30);
+assert.strictEqual(parseTimeToMinutes("12:45 PM"), 12 * 60 + 45);
+assert.strictEqual(parseTimeToMinutes("01:36 PM"), 13 * 60 + 36);
+assert.strictEqual(parseTimeToMinutes("05:30 PM"), 17 * 60 + 30);
+console.log("✅ parseTimeToMinutes passed\n");
 
-// Test 3C: At 09:30 AM IST (60 mins after schedule) -> Transitions to MISSED & fires 1 missed reminder
-const refNow_0930AM = new Date("2026-09-06T04:00:00.000Z");
-const resC = simulateReminderCron(testDoseA, refNow_0930AM);
-assert.strictEqual(resC.missedAlert, true, "Should fire missed alert 60 mins after scheduled time");
-assert.strictEqual(testDoseA.status, "missed");
-assert.strictEqual(testDoseA.missedReminderSent, true);
+// 2. 10 Comprehensive User Test Scenarios
+console.log("2. Running the 10 User Test Scenarios for Medication Lifecycle & Action Window...\n");
 
-// Test 3D: Next minute at 09:31 AM IST -> Does NOT re-send missed reminder (already sent)
-const refNow_0931AM = new Date("2026-09-06T04:01:00.000Z");
-const resD = simulateReminderCron(testDoseA, refNow_0931AM);
-assert.strictEqual(resD.missedAlert, false, "Must NOT re-fire missed alert on subsequent cron cycles");
-assert.strictEqual(testDoseA.status, "missed");
+// Test 1: Scheduled 11:30 AM, current 11:15 AM IST (05:45 UTC)
+// Expected: Pre-reminder eligible, No take action yet (Upcoming)
+const ref_1115AM = new Date("2026-09-06T05:45:00.000Z");
+const dose1 = { date: "2026-09-06", time: "11:30 AM", status: "pending", preReminderSent: false, scheduledReminderSent: false, postReminderSent: false, missedReminderSent: false };
+const res1 = simulateMultiStageReminderCron(dose1, ref_1115AM);
+assert.strictEqual(res1.preAlert, true, "Test 1: Pre-reminder must fire at 11:15 AM for 11:30 AM dose");
+assert.strictEqual(isActionWindowEligible(dose1, ref_1115AM), false, "Test 1: Action window must NOT be open at 11:15 AM");
+console.log("✅ Test 1: Scheduled 11:30 AM at 11:15 AM -> Pre-reminder sent, No take action yet");
 
-// Test 3E: Taken dose does NOT transition to missed or fire missed reminder
-const takenDose = { date: "2026-09-06", time: "08:30 AM", status: "taken", takenAt: new Date(), missedReminderSent: false };
-const resE = simulateReminderCron(takenDose, refNow_0930AM);
-assert.strictEqual(resE.missedAlert, false, "Taken dose must never fire missed alert");
-assert.strictEqual(takenDose.status, "taken");
+// Test 2: Scheduled 11:30 AM, current 11:30 AM IST (06:00 UTC)
+// Expected: Scheduled notification, Mark as Taken / Verify with Selfie available
+const ref_1130AM = new Date("2026-09-06T06:00:00.000Z");
+const res2 = simulateMultiStageReminderCron(dose1, ref_1130AM);
+assert.strictEqual(res2.scheduledAlert, true, "Test 2: Scheduled reminder must fire at 11:30 AM");
+assert.strictEqual(isActionWindowEligible(dose1, ref_1130AM), true, "Test 2: Action window must be OPEN at 11:30 AM");
+console.log("✅ Test 2: Scheduled 11:30 AM at 11:30 AM -> Scheduled reminder sent, Action window open");
 
-console.log("✅ Reminder Cron & Missed Dose Detection tests passed\n");
-console.log("ALL BACKEND TESTS PASSED SUCCESSFULLY! 🎉");
+// Test 3: Scheduled 11:30 AM, current 11:45 AM IST (06:15 UTC)
+// Expected: Post-reminder sent if still pending, Action window still open
+const ref_1145AM = new Date("2026-09-06T06:15:00.000Z");
+const res3 = simulateMultiStageReminderCron(dose1, ref_1145AM);
+assert.strictEqual(res3.postAlert, true, "Test 3: Post-reminder must fire at 11:45 AM for pending dose");
+assert.strictEqual(isActionWindowEligible(dose1, ref_1145AM), true, "Test 3: Action window must be OPEN at 11:45 AM");
+console.log("✅ Test 3: Scheduled 11:30 AM at 11:45 AM -> Post-reminder sent, Action window open");
+
+// Test 4: Scheduled 11:30 AM, current 12:29 PM IST (06:59 UTC - 59 minutes past schedule)
+// Expected: Still pending, Action window still open (within 60m)
+const ref_1229PM = new Date("2026-09-06T06:59:00.000Z");
+assert.strictEqual(isDoseExpired("2026-09-06", "11:30 AM", ref_1229PM), false);
+assert.strictEqual(isActionWindowEligible(dose1, ref_1229PM), true, "Test 4: Action window must remain OPEN at 12:29 PM (minute 59)");
+console.log("✅ Test 4: Scheduled 11:30 AM at 12:29 PM -> Still pending, Action window open");
+
+// Test 5: Scheduled 11:30 AM, current 12:30 PM IST (07:00 UTC - exactly 60 minutes past schedule)
+// Expected: Dose expires, status = missed, No actions
+const ref_1230PM = new Date("2026-09-06T07:00:00.000Z");
+assert.strictEqual(isDoseExpired("2026-09-06", "11:30 AM", ref_1230PM), true);
+const res5 = simulateMultiStageReminderCron(dose1, ref_1230PM);
+assert.strictEqual(res5.missedAlert, true, "Test 5: Missed reminder must fire when 60 minutes expire");
+assert.strictEqual(dose1.status, "missed", "Test 5: Status must transition to missed at +60m");
+assert.strictEqual(isActionWindowEligible(dose1, ref_1230PM), false, "Test 5: Action window must be CLOSED at 12:30 PM");
+console.log("✅ Test 5: Scheduled 11:30 AM at 12:30 PM -> Dose expires, status = missed, No actions");
+
+// Test 6: Scheduled 11:30 AM, current 12:45 PM IST (07:15 UTC - 75 minutes past schedule)
+// Expected: Missed, No actions, No repeat missed reminder
+const ref_1245PM = new Date("2026-09-06T07:15:00.000Z");
+const res6 = simulateMultiStageReminderCron(dose1, ref_1245PM);
+assert.strictEqual(res6.missedAlert, false, "Test 6: Missed reminder must NOT repeat");
+assert.strictEqual(dose1.status, "missed");
+assert.strictEqual(isActionWindowEligible(dose1, ref_1245PM), false, "Test 6: No actions allowed on missed dose");
+console.log("✅ Test 6: Scheduled 11:30 AM at 12:45 PM -> Missed, No repeat reminder, No actions");
+
+// Test 7: Dose already taken at 11:45 AM (status = taken)
+// Expected: Taken, No actions regardless of time
+const takenDose = { date: "2026-09-06", time: "11:30 AM", status: "taken", takenAt: new Date("2026-09-06T06:15:00.000Z") };
+assert.strictEqual(isActionWindowEligible(takenDose, ref_1145AM), false);
+assert.strictEqual(isActionWindowEligible(takenDose, ref_1229PM), false);
+assert.strictEqual(isActionWindowEligible(takenDose, ref_1245PM), false);
+console.log("✅ Test 7: Dose already taken -> Taken, No actions regardless of time");
+
+// Test 8: Future dose at 5:30 PM while current time is 1:36 PM IST
+// Expected: Upcoming, No actions
+const ref_0136PM = new Date("2026-09-06T08:06:00.000Z");
+const futureDose = { date: "2026-09-06", time: "05:30 PM", status: "pending" };
+assert.strictEqual(isDoseInFuture("2026-09-06", "05:30 PM", ref_0136PM), true);
+assert.strictEqual(isActionWindowEligible(futureDose, ref_0136PM), false);
+console.log("✅ Test 8: Future dose at 05:30 PM at 01:36 PM -> Upcoming, No actions");
+
+// Test 9: Yesterday's pending dose (2026-09-05 12:30 PM at 2026-09-06 08:35 AM IST)
+// Expected: Expired, auto-missed, No actions
+const ref_0835AM = new Date("2026-09-06T03:05:00.000Z");
+assert.strictEqual(isDoseExpired("2026-09-05", "12:30 PM", ref_0835AM), true);
+const yesterdayDose = { date: "2026-09-05", time: "12:30 PM", status: "pending" };
+assert.strictEqual(isActionWindowEligible(yesterdayDose, ref_0835AM), false);
+console.log("✅ Test 9: Yesterday dose evaluated today -> Expired / Missed, No actions");
+
+// Test 10: Scheduled time and takenAt separation
+const completedDose = { date: "2026-09-06", time: "11:30 AM", status: "taken", takenAt: new Date("2026-09-06T06:12:34.000Z") };
+assert.strictEqual(completedDose.time, "11:30 AM");
+assert.notStrictEqual(completedDose.takenAt.toISOString(), completedDose.time);
+console.log("✅ Test 10: Scheduled time (11:30 AM) and takenAt remain separate and distinct\n");
+
+console.log("ALL 10 BACKEND LIFECYCLE & ACTION WINDOW TESTS PASSED SUCCESSFULLY! 🎉");

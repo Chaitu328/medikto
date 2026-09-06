@@ -29,6 +29,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   final firstNameController = TextEditingController();
   final phoneController = TextEditingController();
+  final emailController = TextEditingController();
   final bloodGroupController = TextEditingController();
   final ageController = TextEditingController();
   final heightController = TextEditingController();
@@ -163,6 +164,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         phoneController.text = rawPhone;
       }
 
+      emailController.text = profile.email ?? "";
       bloodGroupController.text = profile.bloodGroup ?? "";
       ageController.text = profile.age?.toString() ?? "";
       heightController.text = profile.height?.toString() ?? "";
@@ -260,6 +262,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           .updateProfile(
             firstName: firstNameController.text.trim(),
             phone: selectedCountryCode + phoneController.text.trim(),
+            email: emailController.text.trim(),
             bloodGroup: bloodGroupController.text.trim(),
             gender: selectedGender.toLowerCase(),
             age: ageController.text.trim(),
@@ -322,6 +325,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void dispose() {
     firstNameController.dispose();
     phoneController.dispose();
+    emailController.dispose();
     bloodGroupController.dispose();
     ageController.dispose();
     heightController.dispose();
@@ -529,6 +533,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   const SizedBox(height: 15),
 
                   _buildField(
+                    controller: emailController,
+                    title: "Email Address",
+                    hint: "Enter your email address",
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  _buildField(
                     controller: bloodGroupController,
                     title: "Blood Group",
                     hint: "Select Blood Group",
@@ -624,12 +637,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     required String title,
     required String hint,
     IconData? suffixIcon,
+    TextInputType? keyboardType,
   }) {
     final themeColors = context.themeColors;
     return AppTextFormFieldTitled(
       controller: controller,
       focusColor: themeColors.accentPrimary,
       hintText: hint,
+      textInputType: keyboardType,
       hintStyle: TextStyle(
         fontSize: 16,
         color: themeColors.textMuted,

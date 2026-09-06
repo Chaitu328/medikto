@@ -15,6 +15,7 @@ class ProfileModel {
   final String? role;
   final String? email;
   final Map<String, dynamic>? hospital;
+  final String? authProvider;
 
   ProfileModel({
     this.id,
@@ -33,6 +34,7 @@ class ProfileModel {
     this.role,
     this.email,
     this.hospital,
+    this.authProvider,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -58,6 +60,7 @@ class ProfileModel {
       role: json['role'],
       email: json['email'],
       hospital: json['hospital'] is Map<String, dynamic> ? json['hospital'] : null,
+      authProvider: json['authProvider'],
     );
   }
 }

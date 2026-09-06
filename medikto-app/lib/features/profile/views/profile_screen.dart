@@ -816,28 +816,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
 
-                SizedBox(height: screenSize.height * 0.02),
-
-                /// 🔹 Password
-                _buildSection(
-                  title: "Password",
-                  colors: colors,
-                  children: [
-                    _ListItem(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ChangePasswordScreen(),
-                          ),
-                        );
-                      },
-                      icon: Icons.key_outlined,
-                      title: "Change Password",
-                      trailing: Icons.arrow_forward_ios,
-                    ),
-                  ],
-                ),
+                /// 🔹 Password (Only for accounts with password authentication)
+                if (profile?.authProvider == "password") ...[
+                  SizedBox(height: screenSize.height * 0.02),
+                  _buildSection(
+                    title: "Password",
+                    colors: colors,
+                    children: [
+                      _ListItem(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ChangePasswordScreen(),
+                            ),
+                          );
+                        },
+                        icon: Icons.key_outlined,
+                        title: "Change Password",
+                        trailing: Icons.arrow_forward_ios,
+                      ),
+                    ],
+                  ),
+                ],
 
                 SizedBox(height: screenSize.height * 0.02),
 

@@ -103,6 +103,7 @@ exports.updateProfile = async (req, res) => {
     const {
       firstName,
       phone,
+      email,
       age,
       gender,
       bloodGroup,
@@ -125,13 +126,14 @@ exports.updateProfile = async (req, res) => {
 
     const updateData = {};
 
-    if (firstName) updateData.firstName = firstName;
-    if (phone) updateData.phone = phone;
-    if (age) updateData.age = age;
-    if (gender) updateData.gender = gender.toLowerCase();
-    if (bloodGroup) updateData.bloodGroup = bloodGroup.toUpperCase();
-    if (height) updateData.height = height;
-    if (weight) updateData.weight = weight;
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (phone !== undefined) updateData.phone = phone;
+    if (email !== undefined) updateData.email = email ? email.trim().toLowerCase() : null;
+    if (age !== undefined) updateData.age = age;
+    if (gender !== undefined) updateData.gender = gender.toLowerCase();
+    if (bloodGroup !== undefined) updateData.bloodGroup = bloodGroup.toUpperCase();
+    if (height !== undefined) updateData.height = height;
+    if (weight !== undefined) updateData.weight = weight;
 
     if (profilePic) updateData.profilePic = profilePic;
 

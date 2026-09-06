@@ -82,6 +82,34 @@ const isDoseInFuture = (doseDate, doseTime, timezone = "Asia/Kolkata") => {
   }
 };
 
+const isDoseExpired = (doseDate, doseTime, timezone = "Asia/Kolkata") => {
+  if (!doseDate || !doseTime) return false;
+  try {
+    const today = getTodayDate(timezone);
+    if (doseDate < today) return true;
+    if (doseDate > today) return false;
+
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    });
+    const parts = formatter.formatToParts(now);
+    const currHour = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
+    const currMinute = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
+    const currTotalMinutes = currHour * 60 + currMinute;
+
+    const doseTotalMinutes = parseTimeToMinutes(doseTime);
+    if (doseTotalMinutes === null) return false;
+
+    return currTotalMinutes >= doseTotalMinutes + 60;
+  } catch (err) {
+    return false;
+  }
+};
+
 // ================= ADD MEDICATION =================
 exports.addMedication = async (req, res) => {
   try {
@@ -285,6 +313,18 @@ exports.getTodaySchedule = async (req, res) => {
 
     const doses = await query;
 
+    // Auto-expire any pending doses where 60-minute action window has passed
+    const defaultTz = "Asia/Kolkata";
+    for (const d of doses) {
+      if (d.status === "pending") {
+        const userTz = (d.user && d.user.timezone) || defaultTz;
+        if (isDoseExpired(d.date, d.time, userTz)) {
+          d.status = "missed";
+          await d.save();
+        }
+      }
+    }
+
     // Resolve presigned URLs for private proof images and profile pictures
     const resolvedSchedules = await Promise.all(
       doses.map(async (d) => {
@@ -343,10 +383,30 @@ exports.markAsTaken = async (req, res) => {
       });
     }
 
+    if (dose.status === "missed") {
+      return res.status(400).json({
+        message: "Dose action window has expired (marked as missed)"
+      });
+    }
+
+    if (dose.status === "cancelled") {
+      return res.status(400).json({
+        message: "Dose is cancelled"
+      });
+    }
+
     const tz = (dose.user && dose.user.timezone) || "Asia/Kolkata";
     if (isDoseInFuture(dose.date, dose.time, tz)) {
       return res.status(400).json({
         message: "Cannot mark a future dose as taken before its scheduled time"
+      });
+    }
+
+    if (isDoseExpired(dose.date, dose.time, tz)) {
+      dose.status = "missed";
+      await dose.save();
+      return res.status(400).json({
+        message: "Dose action window has expired (60 minutes exceeded). This dose is marked as missed."
       });
     }
 
@@ -403,10 +463,30 @@ exports.verifyWithSelfie = async (req, res) => {
       });
     }
 
+    if (dose.status === "missed") {
+      return res.status(400).json({
+        message: "Dose action window has expired (marked as missed)"
+      });
+    }
+
+    if (dose.status === "cancelled") {
+      return res.status(400).json({
+        message: "Dose is cancelled"
+      });
+    }
+
     const tz = (dose.user && dose.user.timezone) || "Asia/Kolkata";
     if (isDoseInFuture(dose.date, dose.time, tz)) {
       return res.status(400).json({
         message: "Cannot mark a future dose as taken before its scheduled time"
+      });
+    }
+
+    if (isDoseExpired(dose.date, dose.time, tz)) {
+      dose.status = "missed";
+      await dose.save();
+      return res.status(400).json({
+        message: "Dose action window has expired (60 minutes exceeded). This dose is marked as missed."
       });
     }
 

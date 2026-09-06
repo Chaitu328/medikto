@@ -93,12 +93,35 @@ cron.schedule("* * * * *", async () => {
         continue;
       }
 
-      // 1. Regular on-time reminder
-      if (dose.date === userLocalDate && currentMinutes === scheduledMinutes) {
-        console.log(`[Reminder:Scheduled] Dose=${dose._id} User=${dose.user._id} (${tz}) Time=${dose.time} CurrentIST=${userLocalDate} ${currH}:${currM}`);
-        
+      // 1. PRE-REMINDER (~15 minutes before scheduled time)
+      if (dose.date === userLocalDate && currentMinutes >= scheduledMinutes - 15 && currentMinutes < scheduledMinutes && !dose.preReminderSent) {
+        console.log(`[Reminder:Pre] Dose=${dose._id} User=${dose.user._id} (${tz}) Time=${dose.time} CurrentIST=${userLocalDate} ${currH}:${currM}`);
+        dose.preReminderSent = true;
+
         const userName = dose.user.firstName || dose.user.phone || "User";
         const title = "💊 Medication Reminder";
+        const body = `Hi ${userName}, your ${dose.name} (${dose.dosage}) dose is scheduled at ${dose.time}.`;
+        const data = {
+          type: "medicine",
+          doseId: dose._id.toString(),
+          medicineName: dose.name || "",
+          dosage: dose.dosage || "",
+          time: dose.time || "",
+          reminderType: "pre_reminder"
+        };
+
+        const dispatchResult = await sendPushNotification(dose.user._id.toString(), title, body, data);
+        console.log(`[Reminder:Pre:Result] Dose=${dose._id} Success=${dispatchResult?.success} Reason=${dispatchResult?.reason || dispatchResult?.error || "OK"}`);
+        await dose.save();
+      }
+
+      // 2. SCHEDULED-TIME REMINDER (at scheduled dose time)
+      if (dose.date === userLocalDate && currentMinutes >= scheduledMinutes && currentMinutes < scheduledMinutes + 15 && !dose.scheduledReminderSent) {
+        console.log(`[Reminder:Scheduled] Dose=${dose._id} User=${dose.user._id} (${tz}) Time=${dose.time} CurrentIST=${userLocalDate} ${currH}:${currM}`);
+        dose.scheduledReminderSent = true;
+
+        const userName = dose.user.firstName || dose.user.phone || "User";
+        const title = "💊 Medication Due";
         const body = `Hi ${userName}, it's time to take your ${dose.name} (${dose.dosage}).`;
         const data = {
           type: "medicine",
@@ -106,13 +129,37 @@ cron.schedule("* * * * *", async () => {
           medicineName: dose.name || "",
           dosage: dose.dosage || "",
           time: dose.time || "",
+          reminderType: "scheduled_reminder"
         };
 
         const dispatchResult = await sendPushNotification(dose.user._id.toString(), title, body, data);
         console.log(`[Reminder:Scheduled:Result] Dose=${dose._id} Success=${dispatchResult?.success} Reason=${dispatchResult?.reason || dispatchResult?.error || "OK"}`);
+        await dose.save();
       }
 
-      // 2. Missed dose check (1 hour / 60 minutes after scheduled time)
+      // 3. POST-REMINDER (~15 minutes after scheduled time if still pending)
+      if (dose.date === userLocalDate && currentMinutes >= scheduledMinutes + 15 && currentMinutes < scheduledMinutes + 60 && dose.status === "pending" && !dose.postReminderSent) {
+        console.log(`[Reminder:Post] Dose=${dose._id} User=${dose.user._id} (${tz}) Time=${dose.time} CurrentIST=${userLocalDate} ${currH}:${currM}`);
+        dose.postReminderSent = true;
+
+        const userName = dose.user.firstName || dose.user.phone || "User";
+        const title = "💊 Medication Reminder";
+        const body = `Hi ${userName}, your ${dose.name} (${dose.dosage}) dose scheduled for ${dose.time} is still pending.`;
+        const data = {
+          type: "medicine",
+          doseId: dose._id.toString(),
+          medicineName: dose.name || "",
+          dosage: dose.dosage || "",
+          time: dose.time || "",
+          reminderType: "post_reminder"
+        };
+
+        const dispatchResult = await sendPushNotification(dose.user._id.toString(), title, body, data);
+        console.log(`[Reminder:Post:Result] Dose=${dose._id} Success=${dispatchResult?.success} Reason=${dispatchResult?.reason || dispatchResult?.error || "OK"}`);
+        await dose.save();
+      }
+
+      // 4. MISSED DOSE EXPIRATION (60 minutes after scheduled time)
       const isPastDate = dose.date < userLocalDate;
       const isPastOneHourToday = (dose.date === userLocalDate && currentMinutes >= scheduledMinutes + 60);
 
@@ -131,6 +178,7 @@ cron.schedule("* * * * *", async () => {
             medicineName: dose.name || "",
             dosage: dose.dosage || "",
             time: dose.time || "",
+            reminderType: "missed_reminder"
           };
 
           const missedResult = await sendPushNotification(dose.user._id.toString(), title, body, data);

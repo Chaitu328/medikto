@@ -24,13 +24,14 @@ final updateProfileProvider =
       return ref
           .watch(profileProvider)
           .updateProfile(
-            firstName: body['firstName'],
-            phone: body['phone'],
-            bloodGroup: body['bloodGroup'],
-            gender: body['gender'],
-            age: body['age'],
-            height: body['height'],
-            weight: body['weight'],
+            firstName: body['firstName'] ?? "",
+            phone: body['phone'] ?? "",
+            email: body['email'] ?? "",
+            bloodGroup: body['bloodGroup'] ?? "",
+            gender: body['gender'] ?? "",
+            age: body['age'] ?? "",
+            height: body['height'] ?? "",
+            weight: body['weight'] ?? "",
             image: body['image'],
           );
     });

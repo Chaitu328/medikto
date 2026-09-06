@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/constants/legal_content.dart';
 
@@ -8,6 +9,74 @@ class TermsAndConditionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.themeColors;
+
+    final markdownStyle = MarkdownStyleSheet(
+      h1: TextStyle(
+        color: themeColors.textPrimary,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        height: 1.4,
+      ),
+      h2: TextStyle(
+        color: themeColors.textPrimary,
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        height: 1.4,
+      ),
+      h3: TextStyle(
+        color: themeColors.textPrimary,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        height: 1.4,
+      ),
+      p: TextStyle(
+        color: themeColors.textSecondary,
+        fontSize: 14,
+        height: 1.6,
+      ),
+      strong: TextStyle(
+        color: themeColors.textPrimary,
+        fontWeight: FontWeight.bold,
+      ),
+      em: TextStyle(
+        color: themeColors.textMuted,
+        fontStyle: FontStyle.italic,
+      ),
+      listBullet: TextStyle(
+        color: themeColors.accentPrimary,
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+      ),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: themeColors.border,
+            width: 1.0,
+          ),
+        ),
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: themeColors.surface,
+        border: Border(
+          left: BorderSide(
+            color: themeColors.accentPrimary,
+            width: 4,
+          ),
+        ),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      blockquote: TextStyle(
+        color: themeColors.textSecondary,
+        fontSize: 14,
+        fontStyle: FontStyle.italic,
+      ),
+      pPadding: const EdgeInsets.only(bottom: 12),
+      h1Padding: const EdgeInsets.only(top: 8, bottom: 8),
+      h2Padding: const EdgeInsets.only(top: 16, bottom: 8),
+      h3Padding: const EdgeInsets.only(top: 16, bottom: 8),
+      listIndent: 20,
+    );
+
     return Scaffold(
       backgroundColor: themeColors.bg,
       appBar: AppBar(
@@ -56,14 +125,11 @@ class TermsAndConditionsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              LegalContent.termsAndConditions,
-              style: TextStyle(
-                color: themeColors.textSecondary,
-                fontSize: 14,
-                height: 1.6,
-              ),
+            const SizedBox(height: 16),
+            MarkdownBody(
+              data: LegalContent.termsAndConditions,
+              styleSheet: markdownStyle,
+              selectable: true,
             ),
             const SizedBox(height: 40),
           ],

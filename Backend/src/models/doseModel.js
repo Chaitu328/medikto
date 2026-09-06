@@ -77,6 +77,21 @@ planType: {
     default: false
   },
 
+  preReminderSent: {
+    type: Boolean,
+    default: false
+  },
+
+  scheduledReminderSent: {
+    type: Boolean,
+    default: false
+  },
+
+  postReminderSent: {
+    type: Boolean,
+    default: false
+  },
+
   missedReminderSent: {
     type: Boolean,
     default: false

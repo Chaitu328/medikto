@@ -151,6 +151,59 @@ npm run dev
 
 ---
 
+## 💊 Medication Reminder Lifecycle & 60-Minute Action Window
+
+The Medikto medication management system enforces a strict separation between notification delivery and dose action availability:
+
+### 1. Multi-Stage Notification Timeline (Controlled Reminders)
+For a dose scheduled at **11:30 AM IST**:
+- **Pre-Reminder (~11:15 AM IST)**: Dispatches `💊 Medication Reminder` (`"Your {name} dose is scheduled at 11:30 AM"`). The dose is **Upcoming**; the action window has not opened yet.
+- **Scheduled-Time Reminder (11:30 AM IST)**: Dispatches `💊 Medication Due` (`"It's time to take your {name}"`). The **60-Minute Action Window begins**.
+- **Post-Reminder (~11:45 AM IST)**: Dispatches `💊 Medication Reminder` (`"Your {name} dose scheduled for 11:30 AM is still pending"`) **only if the dose remains pending**.
+- **Missed Expiration Alert (12:30 PM IST)**: Dispatches `⚠️ Missed Medication Reminder`. Sent exactly once when the 60-minute action window expires. No further reminders are sent.
+
+### 2. 60-Minute Action Window & State Machine
+```
+                    ┌─────────────────────┐
+                    │      PENDING        │
+                    └──────────┬──────────┘
+                               │
+                     Before scheduled time
+                               │
+                               ▼
+                         UPCOMING
+                      No take actions
+                               │
+                               │
+                     Scheduled time reached
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │   60 MINUTE WINDOW  │
+                    │                     │
+                    │ Mark as Taken       │
+                    │ Verify with Selfie  │
+                    └─────────┬───────────┘
+                              │
+               ┌──────────────┴──────────────┐
+               │                             │
+          User takes medicine          60 minutes expire
+               │                             │
+               ▼                             ▼
+            TAKEN                          MISSED
+               │                             │
+               ▼                             ▼
+        No take actions              No take actions
+```
+
+- **Timezone**: `Asia/Kolkata` across all calculations.
+- **Status Priority Rule**: `1. Status (taken/missed/cancelled) -> 2. Scheduled Date -> 3. Scheduled Time -> 4. Current Asia/Kolkata Time`.
+- **Taken Doses**: Permanently `taken`, distinct `time` (e.g. `11:30 AM`) and `takenAt` (ISO timestamp).
+- **Missed Doses**: Permanently `missed` after 60 minutes. Server rejects any take action on expired doses.
+- **Notification Tap**: Tapping a reminder notification opens the app directly to the **"My Medications"** tab.
+
+---
+
 ## 📄 License & Compliance
 
 Medikto is proprietary software. All rights reserved.

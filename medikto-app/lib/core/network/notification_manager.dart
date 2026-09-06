@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:medikto/firebase_options.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -5,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:medikto/core/network/dio_client.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:medikto/main.dart';
+import 'package:medikto/bottom_bar.dart';
 
 // Android notification channel specification
 const AndroidNotificationChannel mediktoNotificationChannel =
@@ -19,6 +22,23 @@ const AndroidNotificationChannel mediktoNotificationChannel =
 
 final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
+
+void _navigateToMedications() {
+  try {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const BaseBottomNavigationPage(index: 1),
+        ),
+        (route) => false,
+      );
+    });
+  } catch (e) {
+    if (kDebugMode) {
+      print("Error navigating to medications on notification click: $e");
+    }
+  }
+}
 
 // Background message handler
 @pragma('vm:entry-point')
@@ -78,6 +98,7 @@ class NotificationManager {
         if (kDebugMode) {
           print('Local notification clicked with payload: ${response.payload}');
         }
+        _navigateToMedications();
       },
     );
 
@@ -142,6 +163,7 @@ class NotificationManager {
       if (kDebugMode) {
         print('Notification clicked! Opened app: ${message.data}');
       }
+      _navigateToMedications();
     });
 
     // 7. Check if app was opened directly from terminated state via notification click
@@ -150,6 +172,7 @@ class NotificationManager {
       if (kDebugMode) {
         print('App launched from terminated state via notification: ${initialMessage.data}');
       }
+      _navigateToMedications();
     }
 
     // 8. Listen for token refresh events

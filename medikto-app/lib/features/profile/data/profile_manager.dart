@@ -63,6 +63,7 @@ class ProfileManager {
   Future<ResponseData> updateProfile({
     String firstName = "",
     String phone = "",
+    String email = "",
     String bloodGroup = "",
     String gender = "",
     String age = "",
@@ -74,6 +75,7 @@ class ProfileManager {
       FormData formData = FormData.fromMap({
         "firstName": firstName.trim(),
         "phone": phone.trim(),
+        "email": email.trim(),
         "bloodGroup": bloodGroup.trim().toUpperCase(),
         "gender": gender.trim().toLowerCase(),
         "age": age.trim(),
