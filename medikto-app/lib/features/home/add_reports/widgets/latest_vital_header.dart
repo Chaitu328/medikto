@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
 
@@ -11,6 +12,7 @@ class LatestVitalHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = context.themeColors;
     final vitalsAsync = ref.watch(getVitalsProvider);
 
     return vitalsAsync.when(
@@ -29,18 +31,18 @@ class LatestVitalHeader extends ConsumerWidget {
             margin: const EdgeInsets.symmetric(vertical: 10),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: theme.card,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: theme.borderSubtle),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.white54, size: 20),
-                SizedBox(width: 10),
+                Icon(Icons.info_outline, color: theme.textMuted, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     "No existing records found. Enter a new record below.",
-                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                    style: TextStyle(color: theme.textSecondary, fontSize: 13),
                   ),
                 ),
               ],
@@ -62,7 +64,7 @@ class LatestVitalHeader extends ConsumerWidget {
                 : "--/--";
             unit = "mmHg";
             icon = Icons.bloodtype;
-            color = const Color(0xFF00E5FF); // Premium accent Cyan
+            color = theme.accentPrimary;
             break;
           case "heartRate":
             title = "Latest Pulse / Heart Rate";
@@ -97,16 +99,16 @@ class LatestVitalHeader extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [color.withOpacity(0.12), Colors.white.withOpacity(0.02)],
+              colors: [color.withOpacity(0.12), theme.card],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            color: const Color(0xFF1E1E1E),
+            color: theme.card,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: color.withOpacity(0.25)),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.03),
+                color: color.withOpacity(0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -129,8 +131,8 @@ class LatestVitalHeader extends ConsumerWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: theme.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.5,
@@ -152,8 +154,8 @@ class LatestVitalHeader extends ConsumerWidget {
                         const SizedBox(width: 6),
                         Text(
                           unit,
-                          style: const TextStyle(
-                            color: Colors.white38,
+                          style: TextStyle(
+                            color: theme.textMuted,
                             fontSize: 12,
                           ),
                         ),
@@ -166,15 +168,15 @@ class LatestVitalHeader extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text(
+                    Text(
                       "Recorded on",
-                      style: TextStyle(color: Colors.white38, fontSize: 10),
+                      style: TextStyle(color: theme.textMuted, fontSize: 10),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       dateStr,
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: theme.textSecondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -189,17 +191,17 @@ class LatestVitalHeader extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(vertical: 10),
         height: 75,
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: theme.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(color: theme.borderSubtle),
         ),
-        child: const Center(
+        child: Center(
           child: SizedBox(
             height: 20,
             width: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2.0,
-              color: Color(0xFF81DEEA),
+              color: theme.accentPrimary,
             ),
           ),
         ),
@@ -208,18 +210,18 @@ class LatestVitalHeader extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(vertical: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: theme.card,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
-            SizedBox(width: 10),
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 "Unable to retrieve latest vital record.",
-                style: TextStyle(color: Colors.white54, fontSize: 13),
+                style: TextStyle(color: theme.textSecondary, fontSize: 13),
               ),
             ),
           ],

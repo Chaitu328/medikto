@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
@@ -22,22 +23,22 @@ import 'package:permission_handler/permission_handler.dart';
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
-  // Dark Mode Palette
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  // Controllers for all fields
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final dobController = TextEditingController();
 
-  String selectedGender = "Male"; // Default value for GenderSelectionWidget
+  final caretakerNameController = TextEditingController();
+  final caretakerEmailController = TextEditingController();
+  final caretakerPhoneController = TextEditingController();
+  final caretakerPasswordController = TextEditingController();
+  String selectedCaretakerRelation = "Son";
+
+  String selectedGender = "Male";
   File? selectedImage;
   final ImagePicker _picker = ImagePicker();
   String selectedCountryCode = "+91";
@@ -47,6 +48,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool isConsentChecked = false;
 
   void _showCountryCodePicker() {
+    final colors = context.themeColors;
     final List<Map<String, String>> countries = [
       {"code": "+91", "name": "India"},
       {"code": "+1", "name": "USA / Canada"},
@@ -64,10 +66,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: RegisterScreen.surfaceColor,
-          title: const Text(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: colors.border),
+          ),
+          title: Text(
             "Select Country Code",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -79,10 +85,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     return ListTile(
                       title: Text(
                         "${c['name']} (${c['code']})",
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: colors.textPrimary),
                       ),
                       trailing: selectedCountryCode == c['code']
-                          ? const Icon(Icons.check, color: RegisterScreen.accentCyan)
+                          ? Icon(Icons.check, color: colors.accentPrimary)
                           : null,
                       onTap: () {
                         setState(() {
@@ -91,43 +97,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         Navigator.pop(context);
                       },
                     );
-                  }).toList(),
-                  const Divider(color: Colors.white24),
+                  }),
+                  Divider(color: colors.borderSubtle),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: TextField(
                       controller: customCodeController,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: colors.textPrimary),
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        hintText: "Enter custom code (e.g. +353)",
-                        hintStyle: TextStyle(color: Colors.white38),
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white24),
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: RegisterScreen.accentCyan),
+                      decoration: InputDecoration(
+                        hintText: "Enter custom code (e.g. +81)",
+                        hintStyle: TextStyle(color: colors.textMuted),
+                        filled: true,
+                        fillColor: colors.inputFill,
+                        suffixIcon: IconButton(
+                          icon: Icon(Icons.add, color: colors.accentPrimary),
+                          onPressed: () {
+                            final custom = customCodeController.text.trim();
+                            if (custom.isNotEmpty && custom.startsWith("+")) {
+                              setState(() {
+                                selectedCountryCode = custom;
+                              });
+                              Navigator.pop(context);
+                            }
+                          },
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  CustomButton(
-                    buttonText: "Apply Custom Code",
-                    buttonColor: RegisterScreen.accentCyan,
-                    textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                    onPressed: () {
-                      String code = customCodeController.text.trim();
-                      if (code.isNotEmpty) {
-                        if (!code.startsWith("+")) {
-                          code = "+$code";
-                        }
-                        setState(() {
-                          selectedCountryCode = code;
-                        });
-                      }
-                      Navigator.pop(context);
-                    },
                   ),
                 ],
               ),
@@ -137,27 +133,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       },
     );
   }
-  final caretakerNameController = TextEditingController();
-  final caretakerEmailController = TextEditingController();
-  final caretakerPhoneController = TextEditingController();
-  final caretakerPasswordController = TextEditingController();
-  String selectedCaretakerRelation = "Son";
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    phoneController.dispose();
+    dobController.dispose();
+    caretakerNameController.dispose();
+    caretakerEmailController.dispose();
+    caretakerPhoneController.dispose();
+    caretakerPasswordController.dispose();
+    super.dispose();
+  }
 
   Future<void> handleRegister() async {
-    // 0. Consent Validation
-    if (!isConsentChecked) {
-      AppToasts.showError(context, "Please agree to the Terms & Conditions and Privacy Policy to continue.");
-      return;
-    }
-
-    // 1. Basic Validation
     if (nameController.text.trim().isEmpty) {
       AppToasts.showError(context, "Please enter your full name");
       return;
     }
 
     if (phoneController.text.trim().length != 10) {
-      AppToasts.showError(context, "Contact number must be exactly 10 digits");
+      AppToasts.showError(context, "Please enter a valid 10-digit phone number");
       return;
     }
 
@@ -168,55 +164,44 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     if (inviteCaretaker) {
       if (caretakerNameController.text.trim().isEmpty) {
-        AppToasts.showError(context, "Caretaker name is required");
+        AppToasts.showError(context, "Please enter caretaker name");
         return;
       }
       if (caretakerEmailController.text.trim().isEmpty) {
-        AppToasts.showError(context, "Caretaker email is required");
+        AppToasts.showError(context, "Please enter caretaker email");
         return;
       }
       if (caretakerPhoneController.text.trim().length != 10) {
-        AppToasts.showError(context, "Caretaker phone number must be exactly 10 digits");
+        AppToasts.showError(context, "Please enter valid 10-digit caretaker phone number");
         return;
       }
-      if (caretakerPasswordController.text.trim().isEmpty) {
-        AppToasts.showError(context, "Caretaker password is required");
+      if (caretakerPasswordController.text.trim().length < 6) {
+        AppToasts.showError(context, "Caretaker password must be at least 6 characters");
         return;
       }
     }
 
-    // 2. Show Loading
+    if (!isConsentChecked) {
+      AppToasts.showError(context, "Please accept the Terms & Conditions and Privacy Policy");
+      return;
+    }
+
+    final fullPhoneNumber = selectedCountryCode + phoneController.text.trim();
+    final colors = context.themeColors;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF81DEEA)),
-      ),
+      builder: (context) =>
+          Center(child: CircularProgressIndicator(color: colors.accentPrimary)),
     );
 
-    final String fullPhoneNumber = selectedCountryCode + phoneController.text.trim();
-
     try {
-      // Check if user is already registered
-      final checkResponse = await ref.read(authProvider).checkIfPhoneRegistered(fullPhoneNumber);
-      if (checkResponse.status == ResponseStatus.FAILED) {
+      final checkResp = await ref.read(authProvider).checkIfPhoneRegistered(fullPhoneNumber);
+      if (checkResp.status == ResponseStatus.SUCCESS && checkResp.data == true) {
         if (mounted) {
-          Navigator.pop(context); // Close loading dialog
-          AppToasts.showError(context, checkResponse.message);
-        }
-        return;
-      }
-
-      final bool exists = checkResponse.data as bool;
-      if (exists) {
-        if (mounted) {
-          Navigator.pop(context); // Close loading dialog
-          AppToasts.showError(context, "User with this phone number already exists. Please log in.");
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => LoginScreen()),
-            (route) => false,
-          );
+          Navigator.pop(context);
+          AppToasts.showError(context, "This phone number is already registered. Please log in.");
         }
         return;
       }
@@ -225,102 +210,119 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         phone: fullPhoneNumber,
         onCodeSent: (verificationId, resendToken) {
           if (mounted) {
-            Navigator.pop(context); // Close loading dialog
-            _showOtpVerificationDialog(verificationId, fullPhoneNumber);
+            Navigator.pop(context);
+            _showOtpVerificationDialog(fullPhoneNumber, verificationId);
+            AppToasts.showSuccess(context, "OTP sent to $fullPhoneNumber");
           }
         },
         onVerificationFailed: (FirebaseAuthException e) {
           if (mounted) {
-            Navigator.pop(context); // Close loading dialog
-            AppToasts.showError(context, e.message ?? "Verification failed");
+            Navigator.pop(context);
+            AppToasts.showError(context, e.message ?? "Firebase OTP failed");
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        AppToasts.showError(context, "Failed to send verification code: $e");
+        Navigator.pop(context);
+        AppToasts.showError(context, "Registration error: $e");
       }
     }
   }
 
-  void _showOtpVerificationDialog(String verificationId, String phone) {
+  void _showOtpVerificationDialog(String phone, String verificationId) {
+    final colors = context.themeColors;
     final pinController = TextEditingController();
     bool dialogLoading = false;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
+      builder: (dialogCtx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              backgroundColor: RegisterScreen.surfaceColor,
-              title: const Text(
+              backgroundColor: colors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: colors.border),
+              ),
+              title: Text(
                 "Verify Phone Number",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    "Enter the 6-digit OTP code sent to $phone",
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    "Enter the 6-digit code sent to $phone to complete registration.",
+                    style: TextStyle(color: colors.textSecondary, fontSize: 13),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: pinController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
                     maxLength: 6,
-                    decoration: const InputDecoration(
-                      hintText: "Enter 6-digit code",
-                      hintStyle: TextStyle(color: Colors.white24),
-                      counterText: "",
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white24),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: RegisterScreen.accentCyan),
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      letterSpacing: 8,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: "------",
+                      hintStyle: TextStyle(color: colors.textMuted),
+                      filled: true,
+                      fillColor: colors.inputFill,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: colors.border),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
                   if (dialogLoading)
-                    const CircularProgressIndicator(color: RegisterScreen.accentCyan)
-                  else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: CircularProgressIndicator(color: colors.accentPrimary),
+                    ),
+                  if (!dialogLoading)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+                          child: Text("Cancel", style: TextStyle(color: colors.textMuted)),
                         ),
-                        TextButton(
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colors.accentPrimary,
+                            foregroundColor: colors.onAccentPrimary,
+                          ),
                           onPressed: () async {
                             if (pinController.text.length != 6) return;
 
                             setDialogState(() => dialogLoading = true);
-                            
+
                             try {
                               final credential = PhoneAuthProvider.credential(
                                 verificationId: verificationId,
                                 smsCode: pinController.text,
                               );
-                              final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+                              final userCredential =
+                                  await FirebaseAuth.instance.signInWithCredential(credential);
                               final idToken = await userCredential.user?.getIdToken();
 
                               if (idToken == null) {
                                 throw Exception("Firebase ID token is null");
                               }
 
-                              // Call register Profile API with Firebase ID Token & Consent
                               final data = {
                                 "full_name": nameController.text.trim(),
                                 "mobile_number": phone,
                                 "dob": dobController.text.trim(),
                                 "gender": selectedGender,
-                                "token": idToken, // Send Firebase ID Token to Backend!
+                                "token": idToken,
                                 "termsAccepted": true,
                                 "privacyPolicyAccepted": true,
                                 "termsVersion": LegalContent.termsVersion,
@@ -335,9 +337,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               };
 
                               final response = await ref.read(authProvider).registerProfile(data);
-                              
+
                               if (!mounted) return;
-                              Navigator.pop(context); // Close OTP Dialog
+                              Navigator.pop(context);
 
                               if (response.status == ResponseStatus.SUCCESS) {
                                 if (selectedImage != null) {
@@ -365,7 +367,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 AppToasts.showSuccess(context, "Account created successfully. Please log in.");
                                 Navigator.pushAndRemoveUntil(
                                   context,
-                                  MaterialPageRoute(builder: (_) => LoginScreen()),
+                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                                   (route) => false,
                                 );
                               } else {
@@ -380,7 +382,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           },
                           child: const Text(
                             "Verify & Register",
-                            style: TextStyle(color: RegisterScreen.accentCyan, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -395,9 +397,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   void _showImagePickerSheet() {
+    final colors = context.themeColors;
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: RegisterScreen.surfaceColor,
+      backgroundColor: colors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -407,23 +411,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 "Select Profile Image",
-                style: TextStyle(color: Colors.white, fontSize: 18),
+                style: TextStyle(color: colors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _sheetOption(Icons.camera_alt, "Camera", () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.camera);
-                  }),
+                  }, colors),
                   _sheetOption(Icons.photo, "Gallery", () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.gallery);
-                  }),
+                  }, colors),
                 ],
               ),
             ],
@@ -434,7 +437,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    // 🔥 Request permission
     if (source == ImageSource.camera) {
       var status = await Permission.camera.request();
       if (!status.isGranted) {
@@ -449,267 +451,238 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
     }
 
-    // 🔥 Pick image
-    final picked = await _picker.pickImage(source: source, imageQuality: 70);
+    final XFile? file = await _picker.pickImage(
+      source: source,
+      imageQuality: 85,
+    );
 
-    if (picked != null) {
+    if (file != null) {
       setState(() {
-        selectedImage = File(picked.path);
+        selectedImage = File(file.path);
       });
-    } else {
-      debugPrint("No image selected");
     }
   }
 
-  Widget _sheetOption(IconData icon, String title, VoidCallback onTap) {
+  Widget _sheetOption(IconData icon, String label, VoidCallback onTap, AppThemeColors colors) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: RegisterScreen.accentCyan,
-            child: Icon(icon, color: Colors.black),
+            backgroundColor: colors.accentSubtle,
+            child: Icon(icon, color: colors.accentPrimary, size: 26),
           ),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.white70)),
+          Text(
+            label,
+            style: TextStyle(color: colors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+          ),
         ],
       ),
     );
   }
-  
-  
+
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
     final size = MediaQuery.sizeOf(context);
-    
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // White icons for dark mode
+    return Scaffold(
+      backgroundColor: colors.bg,
+      appBar: CustomAppBar(
+        title: "Create Account",
+        showBackButton: true,
+        onBack: () => Navigator.pop(context),
       ),
-      child: SafeArea(
-        top: true,
-        bottom: true,
-        child: Scaffold(
-          backgroundColor: RegisterScreen.darkBg,
-          appBar: CustomAppBar(
-            title: "",
-            backgroundColor: RegisterScreen.darkBg,
-            showBackButton: true,
-            onBack: () => Navigator.pop(context),
-          ),
-          body: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            child: Column(
-              children: [
-                /// 🔹 SCROLLABLE CONTENT
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: size.height * 0.04),
-
-                        /// 🔹 TITLE
-                        const Center(
-                          child: Text(
-                            "Your journey starts here",
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: size.height * 0.02),
+                    Center(
+                      child: Text(
+                        "Your journey starts here",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
                         ),
-
-                        const SizedBox(height: 8),
-
-                        const Center(
-                          child: Text(
-                            "Start your healthy journey with simple details.",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.white54,
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: size.height * 0.04),
-
-                        /// 🔹 PROFILE IMAGE
-                        Center(
-                          child: _ProfileAvatar(
-                            image: selectedImage,
-                            onTap: _showImagePickerSheet,
-                          ),
-                        ),
-
-                        SizedBox(height: size.height * 0.04),
-
-                        _FormFields(
-                          nameCont: nameController,
-                          phoneCont: phoneController,
-                          dobCont: dobController,
-                          selectedGender: selectedGender,
-                          onGenderChanged: (value) {
-                            setState(() {
-                              selectedGender = value;
-                            });
-                          },
-                          selectedCountryCode: selectedCountryCode,
-                          onCountryCodeTap: _showCountryCodePicker,
-                        ),
-
-                        const SizedBox(height: 15),
-
-                        /// 🔹 CARETAKER CHECKBOX
-                        Theme(
-                          data: Theme.of(context).copyWith(
-                            unselectedWidgetColor: Colors.white24,
-                          ),
-                          child: CheckboxListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const Text(
-                              "Invite a Caretaker / Relative",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            subtitle: const Text(
-                              "Allow a relative (e.g. Son, Spouse) to monitor your medications and vitals in read-only mode.",
-                              style: TextStyle(fontSize: 12, color: Colors.white38),
-                            ),
-                            value: inviteCaretaker,
-                            activeColor: const Color(0xFF81DEEA),
-                            checkColor: Colors.black,
-                            onChanged: (val) {
-                              setState(() {
-                                inviteCaretaker = val ?? false;
-                              });
-                            },
-                          ),
-                        ),
-
-                        if (inviteCaretaker) ...[
-                          const SizedBox(height: 12),
-                          _buildCaretakerField("Caretaker Full Name", "Enter caretaker name", caretakerNameController),
-                          const SizedBox(height: 12),
-                          _buildCaretakerField("Caretaker Email", "Enter caretaker email", caretakerEmailController, keyboardType: TextInputType.emailAddress),
-                          const SizedBox(height: 12),
-                          _buildCaretakerField(
-                            "Caretaker Phone",
-                            "Enter 10-digit phone number",
-                            caretakerPhoneController,
-                            keyboardType: TextInputType.phone,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(10),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _buildCaretakerField(
-                            "Caretaker Password",
-                            "Enter caretaker password",
-                            caretakerPasswordController,
-                            obscureText: obscureCaretakerPassword,
-                            suffix: Icon(
-                              obscureCaretakerPassword
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              color: Colors.white54,
-                              size: 20,
-                            ),
-                            suffixIconOnTap: () {
-                              setState(() {
-                                obscureCaretakerPassword = !obscureCaretakerPassword;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 15),
-                          const Text(
-                            "Relationship",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white70,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white10),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: selectedCaretakerRelation,
-                                dropdownColor: const Color(0xFF1E1E1E),
-                                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
-                                style: const TextStyle(color: Colors.white, fontSize: 16),
-                                items: [
-                                  "Son",
-                                  "Daughter",
-                                  "Spouse",
-                                  "Parents",
-                                  "Sibling",
-                                  "Caretaker",
-                                  "Friend"
-                                ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() => selectedCaretakerRelation = val);
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-
-                        SizedBox(height: size.height * 0.02),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-
-                /// 🔥 BOTTOM SECTION
-                _BottomSection(
-                  size: size,
-                  isConsentChecked: isConsentChecked,
-                  onConsentChanged: (val) {
-                    setState(() {
-                      isConsentChecked = val ?? false;
-                    });
-                  },
-                  onTapTerms: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const TermsAndConditionsScreen(),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        "Start your healthy journey with simple details.",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: colors.textSecondary,
+                        ),
                       ),
-                    );
-                  },
-                  onTapPrivacy: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const PrivacyPolicyScreen(),
+                    ),
+                    SizedBox(height: size.height * 0.03),
+                    Center(
+                      child: _ProfileAvatar(
+                        image: selectedImage,
+                        onTap: _showImagePickerSheet,
                       ),
-                    );
-                  },
-                  onRegister: handleRegister,
+                    ),
+                    SizedBox(height: size.height * 0.03),
+                    _FormFields(
+                      nameCont: nameController,
+                      phoneCont: phoneController,
+                      dobCont: dobController,
+                      selectedGender: selectedGender,
+                      onGenderChanged: (value) {
+                        setState(() {
+                          selectedGender = value;
+                        });
+                      },
+                      selectedCountryCode: selectedCountryCode,
+                      onCountryCodeTap: _showCountryCodePicker,
+                    ),
+                    const SizedBox(height: 15),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        "Invite a Caretaker / Relative",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      subtitle: Text(
+                        "Allow a relative (e.g. Son, Spouse) to monitor your medications and vitals in read-only mode.",
+                        style: TextStyle(fontSize: 12, color: colors.textMuted),
+                      ),
+                      value: inviteCaretaker,
+                      activeColor: colors.accentPrimary,
+                      checkColor: colors.onAccentPrimary,
+                      onChanged: (val) {
+                        setState(() {
+                          inviteCaretaker = val ?? false;
+                        });
+                      },
+                    ),
+                    if (inviteCaretaker) ...[
+                      const SizedBox(height: 12),
+                      _buildCaretakerField("Caretaker Full Name", "Enter caretaker name", caretakerNameController, colors),
+                      const SizedBox(height: 12),
+                      _buildCaretakerField("Caretaker Email", "Enter caretaker email", caretakerEmailController, colors, keyboardType: TextInputType.emailAddress),
+                      const SizedBox(height: 12),
+                      _buildCaretakerField(
+                        "Caretaker Phone",
+                        "Enter 10-digit phone number",
+                        caretakerPhoneController,
+                        colors,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCaretakerField(
+                        "Caretaker Password",
+                        "Enter caretaker password",
+                        caretakerPasswordController,
+                        colors,
+                        obscureText: obscureCaretakerPassword,
+                        suffix: Icon(
+                          obscureCaretakerPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: colors.textSecondary,
+                          size: 20,
+                        ),
+                        suffixIconOnTap: () {
+                          setState(() {
+                            obscureCaretakerPassword = !obscureCaretakerPassword;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 15),
+                      Text(
+                        "Relationship",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: colors.border),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: selectedCaretakerRelation,
+                            dropdownColor: colors.surface,
+                            icon: Icon(Icons.keyboard_arrow_down, color: colors.textSecondary),
+                            style: TextStyle(color: colors.textPrimary, fontSize: 16),
+                            items: [
+                              "Son",
+                              "Daughter",
+                              "Spouse",
+                              "Parents",
+                              "Sibling",
+                              "Caretaker",
+                              "Friend"
+                            ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => selectedCaretakerRelation = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: size.height * 0.02),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            _BottomSection(
+              size: size,
+              isConsentChecked: isConsentChecked,
+              onConsentChanged: (val) {
+                setState(() {
+                  isConsentChecked = val ?? false;
+                });
+              },
+              onTapTerms: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TermsAndConditionsScreen(),
+                  ),
+                );
+              },
+              onTapPrivacy: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyPolicyScreen(),
+                  ),
+                );
+              },
+              onRegister: handleRegister,
+            ),
+          ],
         ),
       ),
     );
@@ -718,7 +691,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget _buildCaretakerField(
     String title,
     String hint,
-    TextEditingController controller, {
+    TextEditingController controller,
+    AppThemeColors colors, {
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
     List<TextInputFormatter>? inputFormatters,
@@ -729,17 +703,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       controller: controller,
       title: title,
       hintText: hint,
-      focusColor: const Color(0xFF81DEEA),
-      fillColor: const Color(0xFF1E1E1E),
-      color: Colors.white,
-      borderColor: Colors.white10,
+      focusColor: colors.accentPrimary,
+      fillColor: colors.surface,
+      color: colors.textPrimary,
+      borderColor: colors.border,
       textInputType: keyboardType,
       obscureText: obscureText,
       inputFormatters: inputFormatters,
       suffix: suffix,
       suffixIconOnTap: suffixIconOnTap,
-      hintStyle: const TextStyle(fontSize: 16, color: Colors.white24),
-      titleTextStyle: const TextStyle(fontSize: 14, color: Colors.white70),
+      hintStyle: TextStyle(fontSize: 16, color: colors.textMuted),
+      titleTextStyle: TextStyle(fontSize: 14, color: colors.textSecondary),
     );
   }
 }
@@ -752,6 +726,8 @@ class _ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -760,15 +736,15 @@ class _ProfileAvatar extends StatelessWidget {
             height: 120,
             width: 120,
             decoration: BoxDecoration(
-              color: const Color(0xFF252525),
+              color: colors.cardSecondary,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white10, width: 2),
+              border: Border.all(color: colors.border, width: 2),
               image: image != null
                   ? DecorationImage(image: FileImage(image!), fit: BoxFit.cover)
                   : null,
             ),
             child: image == null
-                ? const Icon(Icons.person, size: 60, color: Colors.white24)
+                ? Icon(Icons.person, size: 60, color: colors.textMuted)
                 : null,
           ),
           Positioned(
@@ -777,11 +753,11 @@ class _ProfileAvatar extends StatelessWidget {
             child: Container(
               height: 32,
               width: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFF81DEEA),
+              decoration: BoxDecoration(
+                color: colors.accentPrimary,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.edit, size: 16, color: Colors.black),
+              child: Icon(Icons.edit, size: 16, color: colors.onAccentPrimary),
             ),
           ),
         ],
@@ -789,6 +765,7 @@ class _ProfileAvatar extends StatelessWidget {
     );
   }
 }
+
 class _FormFields extends StatelessWidget {
   final TextEditingController nameCont;
   final TextEditingController phoneCont;
@@ -797,7 +774,7 @@ class _FormFields extends StatelessWidget {
   final Function(String) onGenderChanged;
   final String selectedCountryCode;
   final VoidCallback onCountryCodeTap;
-  
+
   const _FormFields({
     required this.nameCont,
     required this.phoneCont,
@@ -807,9 +784,6 @@ class _FormFields extends StatelessWidget {
     required this.selectedCountryCode,
     required this.onCountryCodeTap,
   });
-
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
 
   Future<void> _selectDOB(
     BuildContext context,
@@ -822,24 +796,9 @@ class _FormFields extends StatelessWidget {
       initialDate: DateTime(now.year - 18),
       firstDate: DateTime(1900),
       lastDate: now,
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF81DEEA), // Cyan
-              onPrimary: Colors.black,
-              surface: Color(0xFF1E1E1E),
-              onSurface: Colors.white,
-            ),
-            dialogBackgroundColor: const Color(0xFF1E1E1E),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (pickedDate != null) {
-      /// ✅ DD/MM/YYYY FORMAT
       String formatted =
           "${pickedDate.day.toString().padLeft(2, '0')}/"
           "${pickedDate.month.toString().padLeft(2, '0')}/"
@@ -851,21 +810,21 @@ class _FormFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
     final size = MediaQuery.sizeOf(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildField("Full Name", "Enter your full name", nameCont),
+        _buildField("Full Name", "Enter your full name", nameCont, colors),
         SizedBox(height: size.height * 0.01),
-
         AppTextFormFieldTitled(
           controller: phoneCont,
           title: "Contact",
           hintText: "Enter phone number",
-          focusColor: accentCyan,
-          fillColor: surfaceColor,
-          color: Colors.white,
+          focusColor: colors.accentPrimary,
+          fillColor: colors.surface,
+          color: colors.textPrimary,
           textInputType: TextInputType.phone,
           inputFormatters: [LengthLimitingTextInputFormatter(10)],
           prefix: GestureDetector(
@@ -876,47 +835,41 @@ class _FormFields extends StatelessWidget {
               children: [
                 Text(
                   selectedCountryCode,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: accentCyan,
+                    color: colors.accentPrimary,
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.arrow_drop_down,
-                  color: Colors.white54,
+                  color: colors.textSecondary,
                   size: 18,
                 ),
                 const SizedBox(width: 4),
               ],
             ),
           ),
-          borderColor: Colors.white10,
-          hintStyle: const TextStyle(
+          borderColor: colors.border,
+          hintStyle: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
-            color: Colors.white24,
+            color: colors.textMuted,
           ),
-          titleTextStyle: const TextStyle(
+          titleTextStyle: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white70,
+            color: colors.textSecondary,
           ),
         ),
-
         SizedBox(height: size.height * 0.01),
-
-        /// 🔹 DOB
         GestureDetector(
           onTap: () => _selectDOB(context, dobCont),
           child: AbsorbPointer(
-            child: _buildField("DOB", "DD/MM/YYYY", dobCont),
+            child: _buildField("DOB", "DD/MM/YYYY", dobCont, colors),
           ),
         ),
-
         SizedBox(height: size.height * 0.01),
-
-        /// 🔹 GENDER
         GenderSection(
           selectedGender: selectedGender,
           onChanged: onGenderChanged,
@@ -928,7 +881,8 @@ class _FormFields extends StatelessWidget {
   Widget _buildField(
     String title,
     String hint,
-    TextEditingController controller, {
+    TextEditingController controller,
+    AppThemeColors colors, {
     bool obscureText = false,
     Widget? suffix,
     VoidCallback? suffixIconOnTap,
@@ -937,22 +891,22 @@ class _FormFields extends StatelessWidget {
       controller: controller,
       title: title,
       hintText: hint,
-      focusColor: accentCyan,
-      fillColor: surfaceColor,
-      color: Colors.white,
-      borderColor: Colors.white10,
+      focusColor: colors.accentPrimary,
+      fillColor: colors.surface,
+      color: colors.textPrimary,
+      borderColor: colors.border,
       obscureText: obscureText,
       suffix: suffix,
       suffixIconOnTap: suffixIconOnTap,
-      hintStyle: const TextStyle(
+      hintStyle: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w400,
-        color: Colors.white24,
+        color: colors.textMuted,
       ),
-      titleTextStyle: const TextStyle(
+      titleTextStyle: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: Colors.white70,
+        color: colors.textSecondary,
       ),
     );
   }
@@ -977,38 +931,32 @@ class _BottomSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color accentCyan = Color(0xFF81DEEA);
+    final colors = context.themeColors;
 
     return Column(
       children: [
-        // Consent Checkbox Row
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Theme(
-              data: ThemeData(
-                unselectedWidgetColor: Colors.white54,
+            Checkbox(
+              value: isConsentChecked,
+              activeColor: colors.accentPrimary,
+              checkColor: colors.onAccentPrimary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
               ),
-              child: Checkbox(
-                value: isConsentChecked,
-                activeColor: accentCyan,
-                checkColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                onChanged: onConsentChanged,
-              ),
+              onChanged: onConsentChanged,
             ),
             Expanded(
               child: Text.rich(
                 TextSpan(
                   text: "I agree to the ",
-                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
                   children: [
                     TextSpan(
                       text: "Terms & Conditions",
-                      style: const TextStyle(
-                        color: accentCyan,
+                      style: TextStyle(
+                        color: colors.accentMedium,
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
                       ),
@@ -1017,8 +965,8 @@ class _BottomSection extends StatelessWidget {
                     const TextSpan(text: " and "),
                     TextSpan(
                       text: "Privacy Policy",
-                      style: const TextStyle(
-                        color: accentCyan,
+                      style: TextStyle(
+                        color: colors.accentMedium,
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
                       ),
@@ -1031,17 +979,15 @@ class _BottomSection extends StatelessWidget {
             ),
           ],
         ),
-
         SizedBox(height: size.height * 0.015),
-
         CustomButton(
           onPressed: onRegister,
           buttonText: "Create Account",
-          buttonColor: accentCyan,
-          textStyle: const TextStyle(
+          buttonColor: colors.accentPrimary,
+          textStyle: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: colors.onAccentPrimary,
           ),
         ),
       ],

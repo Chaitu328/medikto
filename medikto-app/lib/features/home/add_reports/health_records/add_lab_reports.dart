@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
@@ -14,14 +15,10 @@ class AddLabMedicationsScreen extends StatefulWidget {
 }
 
 class _AddLabMedicationsScreenState extends State<AddLabMedicationsScreen> {
-  // Dark Mode Palette
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   void _showBottomSheet(BuildContext context) {
+    final themeColors = context.themeColors;
     showModalBottomSheet(
-      backgroundColor: surfaceColor,
+      backgroundColor: themeColors.surface,
       constraints: const BoxConstraints(maxWidth: double.infinity),
       context: context,
       shape: const RoundedRectangleBorder(
@@ -39,17 +36,20 @@ class _AddLabMedicationsScreenState extends State<AddLabMedicationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     final size = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
         title: "Lab Reports",
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: themeColors.bg,
+        titleStyle: TextStyle(
+          color: themeColors.textPrimary,
           fontWeight: FontWeight.bold,
+          fontSize: 18,
         ),
+        onBack: () => Navigator.pop(context),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -89,10 +89,10 @@ class _AddLabMedicationsScreenState extends State<AddLabMedicationsScreen> {
                           horizontal: 20,
                         ),
                         decoration: BoxDecoration(
-                          color: surfaceColor,
+                          color: themeColors.surface,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: accentCyan.withOpacity(0.2),
+                            color: themeColors.accentPrimary.withOpacity(0.2),
                             width: 1.5,
                           ),
                         ),
@@ -102,27 +102,27 @@ class _AddLabMedicationsScreenState extends State<AddLabMedicationsScreen> {
                               height: 50,
                               width: 50,
                               decoration: BoxDecoration(
-                                color: accentCyan.withOpacity(0.1),
+                                color: themeColors.accentSubtle,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.cloud_upload_outlined,
-                                color: accentCyan,
+                                color: themeColors.accentPrimary,
                                 size: 28,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               "Upload Lab Report",
                               style: TextStyle(
-                                color: Colors.white,
+                                color: themeColors.textPrimary,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Text(
+                            Text(
                               "PDF, PNG or JPG (Max 5MB)",
                               style: TextStyle(
-                                color: Colors.white38,
+                                color: themeColors.textMuted,
                                 fontSize: 12,
                               ),
                             ),
@@ -151,12 +151,12 @@ class _AddLabMedicationsScreenState extends State<AddLabMedicationsScreen> {
                 ),
                 (route) => false,
               ),
-              buttonColor: accentCyan,
+              buttonColor: themeColors.accentPrimary,
               buttonText: "Add Lab Report",
-              textStyle: const TextStyle(
+              textStyle: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black, // Dark text on light button
+                color: themeColors.onAccentPrimary,
               ),
             ),
 
@@ -173,35 +173,37 @@ class _AddLabMedicationsScreenState extends State<AddLabMedicationsScreen> {
     int maxLines = 1,
     Widget? suffix,
   }) {
+    final themeColors = context.themeColors;
     return AppTextFormFieldTitled(
       title: title,
       hintText: hint,
       maxLines: maxLines,
-      borderColor: Colors.white10,
-      focusColor: accentCyan,
-      fillColor: surfaceColor,
-      color: Colors.white,
+      borderColor: themeColors.border,
+      focusColor: themeColors.accentPrimary,
+      fillColor: themeColors.surface,
+      color: themeColors.textPrimary,
       suffix: suffix,
-      hintStyle: const TextStyle(
+      hintStyle: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,
-        color: Colors.white24,
+        color: themeColors.textMuted,
       ),
-      titleTextStyle: const TextStyle(
+      titleTextStyle: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: Colors.white70,
+        color: themeColors.textSecondary,
       ),
     );
   }
 
   Widget _buildAddLabReportCard() {
+    final themeColors = context.themeColors;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: themeColors.border),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -213,23 +215,23 @@ class _AddLabMedicationsScreenState extends State<AddLabMedicationsScreen> {
                 height: 40,
                 width: 40,
                 decoration: BoxDecoration(
-                  color: accentCyan.withOpacity(0.1),
+                  color: themeColors.accentSubtle,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.biotech_outlined, color: accentCyan),
+                child: Icon(Icons.biotech_outlined, color: themeColors.accentPrimary),
               ),
               const SizedBox(width: 15),
-              const Text(
+              Text(
                 "Add Lab Result",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: themeColors.textPrimary,
                 ),
               ),
             ],
           ),
-          const Icon(Icons.add_circle, color: accentCyan, size: 36),
+          Icon(Icons.add_circle, color: themeColors.accentPrimary, size: 36),
         ],
       ),
     );

@@ -1,6 +1,5 @@
 
 
-import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dio/dio.dart';
@@ -278,6 +277,11 @@ Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) asyn
     return ResponseData("An unexpected error occurred", ResponseStatus.FAILED);
   }
 }
+
+  Future<ResponseData> guardianLogin({
+    required String email,
+    required String password,
+  }) => loginGuardian(email: email, password: password);
 
   Future<ResponseData> loginGuardian({
     required String email,

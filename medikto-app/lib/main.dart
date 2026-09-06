@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:medikto/firebase_options.dart';
+import 'package:medikto/core/constants/app_themes.dart';
+import 'package:medikto/core/theme/theme_provider.dart';
 import 'package:medikto/core/network/notification_manager.dart';
 import 'package:medikto/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  // Ensure system overlays are set before the app runs
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
@@ -22,72 +22,41 @@ void main() async {
     debugPrint("Firebase SDK init failed: $e");
   }
 
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness:
-          Brightness.light, // White icons for dark background
-      systemNavigationBarColor: Color(0xFF121212), // Match your darkBg
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
-
-  runApp(ProviderScope(child: const MyApp()));
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-
-
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Shared dark color constant
-    const Color darkBg = Color(0xFF121212);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeNotifierProvider);
+    final isDark = themeMode == ThemeMode.dark;
+
+    // Dynamically update System Chrome Overlay Style based on active theme
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor:
+            isDark ? const Color(0xFF121212) : const Color(0xFFFFFFFF),
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+      ),
+    );
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Medikto',
       navigatorKey: navigatorKey,
 
-      // 🔥 DARK THEME CONFIGURATION
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark, // Prevents the white flash globally
-        fontFamily: 'Poppins',
-        scaffoldBackgroundColor: darkBg,
-        canvasColor: darkBg, // Fixes white flash in bottom sheets & menus
-        
-        // Ensure TextTheme remains legible
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(
-            fontWeight: FontWeight.w400,
-            color: Colors.white,
-          ),
-          bodyMedium: TextStyle(
-            fontWeight: FontWeight.w400,
-            color: Colors.white70,
-          ),
-          titleLarge: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-          titleMedium: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: Colors.white70,
-          ),
-        ),
+      // Centralized Dark & Light Theme Configurations
+      theme: AppThemes.lightTheme,
+      darkTheme: AppThemes.darkTheme,
+      themeMode: themeMode,
 
-        // Optional: Smooth out page transitions
-        pageTransitionsTheme: PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: ZoomPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          },
-        ),
-      ),
-
-      home: SplashScreen(),
+      home: const SplashScreen(),
     );
   }
 }

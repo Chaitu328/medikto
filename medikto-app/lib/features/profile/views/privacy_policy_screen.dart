@@ -1,28 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/constants/legal_content.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: AppBar(
-        backgroundColor: darkBg,
+        backgroundColor: themeColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new, color: themeColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Privacy Policy",
           style: TextStyle(
-            color: Colors.white,
+            color: themeColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -38,19 +36,19 @@ class PrivacyPolicyScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: surfaceColor,
+                color: themeColors.surface,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: themeColors.border),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.privacy_tip_outlined, color: accentCyan, size: 16),
+                  Icon(Icons.privacy_tip_outlined, color: themeColors.accentMedium, size: 16),
                   const SizedBox(width: 8),
                   Text(
                     "Version ${LegalContent.privacyPolicyVersion} • Updated ${LegalContent.privacyPolicyLastUpdated}",
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: themeColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -61,8 +59,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               LegalContent.privacyPolicy,
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: themeColors.textSecondary,
                 fontSize: 14,
                 height: 1.6,
               ),

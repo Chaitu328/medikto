@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/onboarding/views/onboarding_screens.dart';
 import 'package:medikto/features/onboarding/views/welcome_screen.dart';
@@ -12,21 +13,20 @@ class OverrallFeaturesScreen extends StatefulWidget {
 }
 
 class _OverrallFeaturesScreenState extends State<OverrallFeaturesScreen> {
-  // Theme Colors
-  static const Color darkBg = Color(0xFF121212);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent, // Immersive look
-        statusBarIconBrightness: Brightness.light, // White icons for Dark Mode
-        systemNavigationBarColor: darkBg,
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: colors.bg,
       ),
       child: Scaffold(
-        backgroundColor: darkBg, // Updated for Dark Mode
+        backgroundColor: colors.bg,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -50,10 +50,10 @@ class _OverrallFeaturesScreenState extends State<OverrallFeaturesScreen> {
                               ),
                               (route) => false,
                             ),
-                            child: const Icon(
-                              Icons.arrow_back_ios_new, // Modern variant
+                            child: Icon(
+                              Icons.arrow_back_ios_new,
                               size: 22,
-                              color: Colors.white, // Visible on dark background
+                              color: colors.textPrimary,
                             ),
                           ),
                         ),
@@ -70,12 +70,12 @@ class _OverrallFeaturesScreenState extends State<OverrallFeaturesScreen> {
 
                         SizedBox(height: size.height * 0.04),
 
-                        const Text(
+                        Text(
                           "Secure · Store · Share",
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white, // High contrast
+                            color: colors.textPrimary,
                           ),
                         ),
 
@@ -89,11 +89,11 @@ class _OverrallFeaturesScreenState extends State<OverrallFeaturesScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _featureItem("Secure Storage"),
-                                _featureItem("Medicine Reminders"),
-                                _featureItem("Organized Records"),
-                                _featureItem("Trusted Privacy"),
-                                _featureItem("Doctor Sharing"),
+                                _featureItem("Secure Storage", colors),
+                                _featureItem("Medicine Reminders", colors),
+                                _featureItem("Organized Records", colors),
+                                _featureItem("Trusted Privacy", colors),
+                                _featureItem("Doctor Sharing", colors),
                               ],
                             ),
                           ),
@@ -111,11 +111,11 @@ class _OverrallFeaturesScreenState extends State<OverrallFeaturesScreen> {
                   child: CustomButton(
                     height: 54,
                     buttonText: "Get Started",
-                    buttonColor: accentCyan, // Brand primary for Dark Mode
-                    textStyle: const TextStyle(
+                    buttonColor: colors.accentPrimary,
+                    textStyle: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black, // High contrast on Cyan
+                      color: colors.onAccentPrimary,
                     ),
                     onPressed: () {
                       Navigator.push(
@@ -135,7 +135,7 @@ class _OverrallFeaturesScreenState extends State<OverrallFeaturesScreen> {
     );
   }
 
-  Widget _featureItem(String text) {
+  Widget _featureItem(String text, AppThemeColors colors) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -144,12 +144,12 @@ class _OverrallFeaturesScreenState extends State<OverrallFeaturesScreen> {
           Container(
             height: 8,
             width: 8,
-            decoration: const BoxDecoration(
-              color: accentCyan, // Changed bullet color to Cyan
+            decoration: BoxDecoration(
+              color: colors.accentPrimary,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.cyanAccent,
+                  color: colors.accentPrimary.withOpacity(0.4),
                   blurRadius: 4,
                   spreadRadius: 0,
                 ),
@@ -159,9 +159,9 @@ class _OverrallFeaturesScreenState extends State<OverrallFeaturesScreen> {
           const SizedBox(width: 14),
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: Colors.white70, // Softer white for list items
+              color: colors.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/notification_manager.dart';
 import 'package:medikto/features/home/home_view/home_screen.dart';
 import 'package:medikto/features/profile/views/profile_screen.dart';
@@ -20,7 +21,7 @@ class _BaseBottomNavigationPageState extends State<BaseBottomNavigationPage> {
   final List<Widget> _tabs = const [
     HomeScreen(),
     MedicationsScreen(),
-    AddReportsScreen(), // Renamed from Vitals
+    AddReportsScreen(),
     ProfileScreen(),
   ];
 
@@ -40,93 +41,69 @@ class _BaseBottomNavigationPageState extends State<BaseBottomNavigationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+    final selectedColor = colors.navActive;
+    final unselectedColor = colors.navInactive;
+
+    Widget buildNavItem(int index, String activeAsset, String inactiveAsset, String label) {
+      final isSelected = _currentIndex == index;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              isSelected ? activeAsset : inactiveAsset,
+              width: 22,
+              height: 22,
+              color: isSelected ? selectedColor : unselectedColor,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: colors.bg,
       body: IndexedStack(index: _currentIndex, children: _tabs),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.only(top: 5), // Space below the bar
-        decoration: const BoxDecoration(
-          color: Color(0xFF121212),
-          // Adding a very slight top border or shadow can help define the bar if needed
-          border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
+        padding: const EdgeInsets.only(top: 6, bottom: 6),
+        decoration: BoxDecoration(
+          color: colors.navBackground,
+          border: Border(top: BorderSide(color: colors.border, width: 0.5)),
         ),
         child: Theme(
-        
-          data: Theme.of(
-            context,
-          ).copyWith(splashFactory: NoSplash.splashFactory),
+          data: Theme.of(context).copyWith(splashFactory: NoSplash.splashFactory),
           child: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: _onItemTapped,
             type: BottomNavigationBarType.fixed,
-
             elevation: 0,
-            backgroundColor: const Color(0xFF121212),
-            selectedItemColor: const Color(0xFF76eafd),
-            unselectedItemColor: const Color(0xFF445767),
+            backgroundColor: colors.navBackground,
+            selectedItemColor: selectedColor,
+            unselectedItemColor: unselectedColor,
             showSelectedLabels: true,
             showUnselectedLabels: true,
-            // 🔹 1. Reduce font size to give labels more room
-            selectedFontSize: 10,
-            unselectedFontSize: 10,
-            // 🔹 2. Ensure items are spread across the full width
+            selectedFontSize: 11,
+            unselectedFontSize: 11,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
             landscapeLayout: BottomNavigationBarLandscapeLayout.linear,
             items: [
               BottomNavigationBarItem(
-                icon: Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: 5,
-                  ), // Space between icon and text
-                  child: Image.asset(
-                    _currentIndex == 0
-                        ? "assets/images/item1_selected.png"
-                        : "assets/images/item1.png",
-                    width:
-                        22, // Slightly larger icons often look better with smaller text
-                    color: _currentIndex == 0 ? const Color(0xFF5ce5f9) : null,
-                  ),
-                ),
+                icon: buildNavItem(0, "assets/images/item1_selected.png", "assets/images/item1.png", "Home"),
                 label: "Home",
               ),
               BottomNavigationBarItem(
-                icon: Padding(
-                  padding: const EdgeInsets.only(bottom: 5),
-                  child: Image.asset(
-                    "assets/images/item2-bg.png",
-                    width: 22,
-                    color: _currentIndex == 1
-                        ? const Color(0xFF5ce5f9)
-                        : const Color(0xFF445767),
-                  ),
-                ),
+                icon: buildNavItem(1, "assets/images/item2-bg.png", "assets/images/item2-bg.png", "Medications"),
                 label: "Medications",
               ),
               BottomNavigationBarItem(
-                icon: Padding(
-                  padding: const EdgeInsets.only(bottom: 5),
-                  child: Image.asset(
-                    _currentIndex == 2
-                        ? "assets/images/item3_selected.png"
-                        : "assets/images/item3.png",
-                    width: 22,
-                    color: _currentIndex == 2
-                        ? const Color(0xFF5ce5f9)
-                        : const Color(0xFF445767),
-                  ),
-                ),
+                icon: buildNavItem(2, "assets/images/item3_selected.png", "assets/images/item3.png", "Add Reports"),
                 label: "Add Reports",
               ),
               BottomNavigationBarItem(
-                icon: Padding(
-                  padding: const EdgeInsets.only(bottom: 5),
-                  child: Image.asset(
-                    "assets/images/item4.png",
-                    width: 22,
-                    color: _currentIndex == 3
-                        ? const Color(0xFF5ce5f9)
-                        : const Color(0xFF445767),
-                  ),
-                ),
+                icon: buildNavItem(3, "assets/images/item4.png", "assets/images/item4.png", "Profile"),
                 label: "Profile",
               ),
             ],
@@ -136,6 +113,3 @@ class _BaseBottomNavigationPageState extends State<BaseBottomNavigationPage> {
     );
   }
 }
-
-
-

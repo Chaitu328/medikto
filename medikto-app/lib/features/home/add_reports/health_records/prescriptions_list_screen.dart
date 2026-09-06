@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:medikto/core/network/base_response.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
@@ -12,23 +12,20 @@ import 'package:medikto/features/profile/models/profile_model.dart';
 class PrescriptionsListScreen extends ConsumerWidget {
   const PrescriptionsListScreen({super.key});
 
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = context.themeColors;
     final prescriptionsAsync = ref.watch(getPrescriptionsProvider);
     final profileAsync = ref.watch(getProfileProvider);
     final isGuardian = profileAsync.value?.data is ProfileModel && (profileAsync.value!.data as ProfileModel).role == 'guardian';
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
         title: "Prescriptions",
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: themeColors.bg,
+        titleStyle: TextStyle(
+          color: themeColors.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 18,
         ),
@@ -37,8 +34,8 @@ class PrescriptionsListScreen extends ConsumerWidget {
       floatingActionButton: isGuardian
           ? null
           : FloatingActionButton(
-              backgroundColor: accentCyan,
-              foregroundColor: Colors.black,
+              backgroundColor: themeColors.accentPrimary,
+              foregroundColor: themeColors.onAccentPrimary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               onPressed: () {
                 Navigator.push(
@@ -51,8 +48,8 @@ class PrescriptionsListScreen extends ConsumerWidget {
               child: const Icon(Icons.add, size: 28),
             ),
       body: RefreshIndicator(
-        color: accentCyan,
-        backgroundColor: surfaceColor,
+        color: themeColors.accentPrimary,
+        backgroundColor: themeColors.surface,
         onRefresh: () async {
           ref.invalidate(getPrescriptionsProvider);
         },
@@ -73,29 +70,29 @@ class PrescriptionsListScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: surfaceColor,
+                            color: themeColors.surface,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.receipt_long_outlined,
                             size: 64,
-                            color: Colors.white24,
+                            color: themeColors.textMuted,
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text(
+                        Text(
                           "No Prescriptions Found",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: themeColors.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const Text(
+                        Text(
                           "Tap the '+' button to add a prescription.",
                           style: TextStyle(
-                            color: Colors.white30,
+                            color: themeColors.textMuted,
                             fontSize: 14,
                           ),
                         ),
@@ -116,8 +113,8 @@ class PrescriptionsListScreen extends ConsumerWidget {
               },
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: accentCyan),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: themeColors.accentPrimary),
           ),
           error: (error, stack) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -126,16 +123,16 @@ class PrescriptionsListScreen extends ConsumerWidget {
               Center(
                 child: Column(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                    const Icon(Icons.error_outline, color: AppColors.missedRed, size: 48),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       "Failed to load prescriptions",
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: themeColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       "Please pull to refresh and try again.",
-                      style: TextStyle(color: Colors.white30, fontSize: 13),
+                      style: TextStyle(color: themeColors.textMuted, fontSize: 13),
                     ),
                   ],
                 ),
@@ -148,15 +145,16 @@ class PrescriptionsListScreen extends ConsumerWidget {
   }
 
   Widget _buildPrescriptionCard(BuildContext context, PrescriptionModel prescription) {
+    final themeColors = context.themeColors;
     final activeReminders = prescription.reminders.where((r) => r.enabled).toList();
     final timesStr = activeReminders.map((r) => r.time).join(", ");
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: themeColors.border),
       ),
       child: Material(
         color: Colors.transparent,
@@ -179,12 +177,12 @@ class PrescriptionsListScreen extends ConsumerWidget {
                   height: 48,
                   width: 48,
                   decoration: BoxDecoration(
-                    color: accentCyan.withOpacity(0.1),
+                    color: themeColors.accentSubtle,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.medication_outlined,
-                    color: accentCyan,
+                    color: themeColors.accentMedium,
                     size: 24,
                   ),
                 ),
@@ -195,8 +193,8 @@ class PrescriptionsListScreen extends ConsumerWidget {
                     children: [
                       Text(
                         prescription.medicineName,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: themeColors.textPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -206,8 +204,8 @@ class PrescriptionsListScreen extends ConsumerWidget {
                       const SizedBox(height: 6),
                       Text(
                         prescription.dosageInstructions ?? "No instructions provided",
-                        style: const TextStyle(
-                          color: Colors.white54,
+                        style: TextStyle(
+                          color: themeColors.textSecondary,
                           fontSize: 12,
                         ),
                         maxLines: 1,
@@ -217,13 +215,13 @@ class PrescriptionsListScreen extends ConsumerWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(Icons.alarm, color: Colors.white24, size: 12),
+                            Icon(Icons.alarm, color: themeColors.textMuted, size: 12),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 timesStr,
-                                style: const TextStyle(
-                                  color: accentCyan,
+                                style: TextStyle(
+                                  color: themeColors.accentMedium,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -238,11 +236,11 @@ class PrescriptionsListScreen extends ConsumerWidget {
                   ),
                 ),
                 if (prescription.fileUrl != null && prescription.fileUrl!.isNotEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8.0),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
                     child: Icon(
                       Icons.attach_file,
-                      color: Colors.white24,
+                      color: themeColors.textMuted,
                       size: 20,
                     ),
                   ),

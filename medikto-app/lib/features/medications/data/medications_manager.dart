@@ -123,11 +123,14 @@ class MedicationManager {
     }
   }
 
-  Future<ResponseData> getTodaySchedule() async {
+  Future<ResponseData> getTodaySchedule({String? date}) async {
     try {
-      final response = await dioClient.ref!.get(ApiUrls.todaySchedule);
+      final url = date != null && date.isNotEmpty
+          ? "${ApiUrls.todaySchedule}?date=$date"
+          : ApiUrls.todaySchedule;
+      final response = await dioClient.ref!.get(url);
 
-      print("TODAY SCHEDULE RESPONSE => ${response.data}");
+      print("TODAY SCHEDULE RESPONSE ($date) => ${response.data}");
 
       if (response.statusCode == 200) {
         // Backend returns { success, schedules: [...] } — extract the list safely

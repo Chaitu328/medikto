@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
@@ -30,12 +31,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  // Brand Colors modified for Dark Mode visibility
-  static const Color primaryBlue = Color(0xFF4D6AFF); // Brightened for dark bg
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   String selectedPeriod = "Morning"; // Default selection
 
   List<dynamic> monitoredPatients = [];
@@ -114,14 +109,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       if (dateTime == null) return false;
 
-      // ❌ Skip already taken medicines
-      final status = (medication.status ?? "").toLowerCase();
+      // ❌ Skip already taken, missed, or cancelled medicines
+      final status = (medication.status ?? "pending").toLowerCase();
 
-      if (status == "taken") {
+      if (status == "taken" || status == "missed" || status == "cancelled") {
         return false;
       }
 
-      // ✅ Only future medicines
+      // ✅ Only future pending medicines
       return dateTime.isAfter(now);
     }).toList();
 
@@ -271,7 +266,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final todayDate = DateFormat('EEEE, MMM d').format(DateTime.now());
 
     final adherenceAsync = ref.watch(getAdherenceProvider);
-
     final adherence = adherenceAsync.value?.data is AdherenceModel
         ? adherenceAsync.value!.data as AdherenceModel
         : null;
@@ -279,13 +273,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final notificationsAsync = ref.watch(getNotificationsProvider);
     final notifications = (notificationsAsync.value?.data as List?)?.cast<AppNotificationModel>() ?? [];
     final hasUnread = notifications.any((n) => !n.isRead);
+    final colors = context.themeColors;
 
     return Scaffold(
-      backgroundColor: darkBg,
-      appBar: _buildAppBar(size, profile, hasUnread),
+      backgroundColor: colors.bg,
+      appBar: _buildAppBar(size, profile, hasUnread, colors),
       body: RefreshIndicator(
-        color: const Color(0xFF81DEEA),
-        backgroundColor: darkBg,
+        color: colors.accent,
+        backgroundColor: colors.surface,
         onRefresh: _onRefresh,
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -294,42 +289,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  const Text(
+                  Text(
                     "DASHBOARD",
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
-                      color: Colors.white54,
+                      color: colors.accentMedium,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     "${_getGreeting()}, \n${profile?.firstName ?? "User"}",
                     style: TextStyle(
-                      fontSize: 26,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 20),
 
                   if (profile?.role == "guardian") ...[
-                    _buildPatientSelectorCard(),
+                    _buildPatientSelectorCard(colors),
                     const SizedBox(height: 20),
                   ],
 
-                  /// 1. ADHERENCE SCORE CARD (Dark Themed)
-                  _buildAdherenceCard(adherence),
+                  /// 1. ADHERENCE SCORE CARD
+                  _buildAdherenceCard(adherence, colors),
 
                   const SizedBox(height: 20),
 
                   /// 2. NEXT DOSE QUICK ACTION
-                  // _buildNextDoseCard(),
-                  _buildNextDoseCard(nextDose),
+                  _buildNextDoseCard(nextDose, colors),
 
-                  // const SizedBox(height: 16),
-
-                  // _buildPremiumCard(),
                   const SizedBox(height: 16),
 
                   /// 🔹 3. TODAY'S SCHEDULE HEADER
@@ -344,16 +336,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: colors.textPrimary,
                             ),
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            todayDate,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white38,
-                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today_outlined, size: 14, color: colors.textSecondary),
+                              const SizedBox(width: 6),
+                              Text(
+                                todayDate,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: colors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -363,14 +362,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) =>
-                                  BaseBottomNavigationPage(index: 1),
+                                  const BaseBottomNavigationPage(index: 1),
                             ),
                           );
                         },
-                        child: const Text(
+                        child: Text(
                           "VIEW ALL",
                           style: TextStyle(
-                            color: Color(0xFF81DEEA),
+                            color: colors.accentMedium,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
@@ -384,20 +383,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(14),
+                      color: colors.card,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: colors.borderSubtle),
                     ),
                     child: Row(
                       children: [
-                        _buildPeriodTab("Morning"),
-                        _buildPeriodTab("Afternoon"),
-                        _buildPeriodTab("Evening"),
+                        _buildPeriodTab("Morning", colors),
+                        _buildPeriodTab("Afternoon", colors),
+                        _buildPeriodTab("Evening", colors),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  /// 🔹 4. FILTERED SCHEDULE LIST
                   /// 🔹 4. FILTERED SCHEDULE LIST
                   if (filteredList.isEmpty)
                     Padding(
@@ -407,20 +406,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           margin: const EdgeInsets.only(top: 20),
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.05),
+                            color: colors.card,
                             borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: colors.borderSubtle),
                           ),
-                          child: const Column(
+                          child: Column(
                             children: [
                               Icon(
                                 Icons.hourglass_empty,
-                                color: Colors.white30,
+                                color: colors.textMuted,
                                 size: 40,
                               ),
-                              SizedBox(height: 10),
+                              const SizedBox(height: 10),
                               Text(
                                 "No medicines scheduled",
-                                style: TextStyle(color: Colors.white54),
+                                style: TextStyle(color: colors.textSecondary),
                               ),
                             ],
                           ),
@@ -438,17 +438,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         desc: medication.dosage ?? "",
                         status: status,
                         color: _getStatusColor(status),
+                        colors: colors,
                       );
                     }).toList(),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   const SizedBox(height: 10),
 
-                  const Text(
+                  Text(
                     "Quick Health Look",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -456,7 +457,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-            /// 5. VITALS GRID (Dark Cards)
+            /// 5. VITALS GRID
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverGrid(
@@ -473,6 +474,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     "BPM",
                     Icons.favorite,
                     Colors.redAccent,
+                    colors,
                   ),
 
                   _buildSmallVitalCard(
@@ -482,6 +484,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     "°F",
                     Icons.thermostat,
                     Colors.orange,
+                    colors,
                   ),
 
                   _buildSmallVitalCard(
@@ -492,6 +495,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     "mmHg",
                     Icons.bloodtype,
                     Colors.blueAccent,
+                    colors,
                   ),
 
                   _buildSmallVitalCard(
@@ -500,6 +504,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     "mg/dl",
                     Icons.local_drink,
                     Colors.greenAccent,
+                    colors,
                   ),
                 ]),
               ),
@@ -511,8 +516,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildPeriodTab(String period) {
+  Widget _buildPeriodTab(String period, AppThemeColors colors) {
     bool isSelected = selectedPeriod == period;
+    IconData icon;
+    switch (period) {
+      case "Morning":
+        icon = Icons.wb_sunny_outlined;
+        break;
+      case "Afternoon":
+        icon = Icons.wb_sunny_outlined;
+        break;
+      case "Evening":
+      default:
+        icon = Icons.nightlight_round;
+        break;
+    }
+
+    final iconColor = isSelected ? colors.scheduleActiveText : colors.scheduleInactiveText;
+    final textColor = isSelected ? colors.scheduleActiveText : colors.scheduleInactiveText;
+
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => selectedPeriod = period),
@@ -520,65 +542,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF81DEEA) : Colors.transparent,
+            color: isSelected ? colors.scheduleActiveBg : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Center(
-            child: Text(
-              period,
-              style: TextStyle(
-                color: isSelected ? Colors.black : Colors.white54,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 13,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: iconColor),
+              const SizedBox(width: 6),
+              Text(
+                period,
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 13,
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAdherenceCard(AdherenceModel? adherence) {
+  Widget _buildAdherenceCard(AdherenceModel? adherence, AppThemeColors colors) {
     final percentage = adherence?.weeklyAdherence ?? 0;
-
     final progressValue = percentage / 100;
-
     final status = adherence?.weeklyStatus ?? "No Data";
 
     Color statusColor;
+    Color statusBg;
 
     switch (status.toLowerCase()) {
       case "excellent":
-        statusColor = Colors.greenAccent;
-        break;
-
       case "good":
-        statusColor = const Color(0xFF81DEEA);
+        statusColor = colors.statusSuccessFg;
+        statusBg = colors.statusSuccessBg;
         break;
 
       case "average":
-        statusColor = Colors.orangeAccent;
+        statusColor = colors.statusWarningFg;
+        statusBg = colors.statusWarningBg;
         break;
 
       case "poor":
-        statusColor = Colors.redAccent;
+        statusColor = colors.statusPoorFg;
+        statusBg = colors.statusPoorBg;
         break;
 
       default:
-        statusColor = Colors.white54;
+        statusColor = colors.textSecondary;
+        statusBg = colors.cardSecondary;
     }
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        // Subtle gradient to match the modern dark UI
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [surfaceColor, surfaceColor.withOpacity(0.8)],
-        ),
+        color: colors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -588,28 +610,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Medications",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const Text(
-                  "record",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Text(
-                  "${adherence?.period ?? "-"} performance",
-                  style: TextStyle(fontSize: 11, color: Colors.white54),
+                  "Medication\nCompliance",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                    height: 1.25,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 6),
+                Text(
+                  "${adherence?.period ?? "Last 7 Days"} performance",
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 14),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
@@ -617,19 +632,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Text(
                       "$percentage%",
                       style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF81DEEA), // Bright Cyan
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: colors.accentMetric,
                       ),
                     ),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Text(
                       "ADHERENCE",
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                        color: Color(0xFF81DEEA), // Darker Cyan/Teal
+                        letterSpacing: 0.8,
+                        color: colors.accentMedium,
                       ),
                     ),
                   ],
@@ -640,27 +655,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
-                    vertical: 8,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
+                    color: statusBg,
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: statusColor.withOpacity(0.4)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.favorite, size: 14, color: statusColor),
-
                       const SizedBox(width: 6),
-
                       Text(
                         status,
                         style: TextStyle(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                          letterSpacing: 0.5,
+                          fontSize: 12,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ],
@@ -675,28 +687,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             alignment: Alignment.center,
             children: [
               SizedBox(
-                height: 90,
-                width: 90,
+                height: 96,
+                width: 96,
                 child: CircularProgressIndicator(
                   value: progressValue,
                   strokeWidth: 8,
-                  backgroundColor: Colors.white.withOpacity(0.1),
-                  color: const Color(0xFF81DEEA),
+                  backgroundColor: colors.ringTrack,
+                  color: colors.ringProgress,
                   strokeCap: StrokeCap.round,
                 ),
               ),
               // Center Badge Icon
               Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.transparent,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: colors.accentSubtle,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons
-                      .verified, // Using verified icon to match the "badge" look
-                  color: Color(0xFF81DEEA),
-                  size: 30,
+                child: Icon(
+                  Icons.verified,
+                  color: colors.accentMedium,
+                  size: 28,
                 ),
               ),
             ],
@@ -706,106 +717,79 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildNextDoseCard(TodayScheduleModel? nextDose) {
+  Widget _buildNextDoseCard(TodayScheduleModel? nextDose, AppThemeColors colors) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => BaseBottomNavigationPage(index: 1)),
+          MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage(index: 1)),
         );
       },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1b2028),
+          color: colors.card,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: context.isDarkMode ? colors.borderSubtle : const Color(0xFFE2EDF8),
+            width: 1.2,
+          ),
         ),
-        child: Column(
+        child: Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF25353e),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.medication, color: Color(0xFF81DEEA)),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "NEXT DOSE",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      Text(
-                        (nextDose == null)
-                            ? "No upcoming medicines"
-                            : "${nextDose.name ?? ''} (${nextDose.dosage ?? ''})",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-
-                      if (nextDose != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            nextDose.time ?? "",
-                            style: const TextStyle(
-                              color: Color(0xFF81DEEA),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.nextDoseBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.medication, color: colors.nextDoseIcon, size: 24),
             ),
-            // const SizedBox(height: 24),
-            // ElevatedButton(
-            //   style: ElevatedButton.styleFrom(
-            //     minimumSize: const Size(double.infinity, 45),
-            //     backgroundColor: const Color(0xFF81DEEA),
-            //     foregroundColor: Colors.black,
-            //     shape: RoundedRectangleBorder(
-            //       borderRadius: BorderRadius.circular(12),
-            //     ),
-            //   ),
-            //   onPressed: () {
-            //     Navigator.push(
-            //       context,
-            //       MaterialPageRoute(
-            //         builder: (_) => MedicationVerificationScreen(
-            //           medicineName: "Metformin 500mg",
-            //         ),
-            //       ),
-            //     );
-            //   },
-            //   child: Row(
-            //     mainAxisAlignment: MainAxisAlignment.center,
-            //     children: [
-            //       const Icon(Icons.check_circle_outline, size: 20),
-            //       const SizedBox(width: 8),
-            //       const Text(
-            //         "Mark as Taken",
-            //         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            //       ),
-            //     ],
-            //   ),
-            // ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "NEXT DOSE",
+                    style: TextStyle(
+                      color: colors.nextDoseTag,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    (nextDose == null)
+                        ? "No upcoming medicines"
+                        : "${nextDose.name ?? ''} (${nextDose.dosage ?? ''})",
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (nextDose != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        nextDose.time ?? "",
+                        style: TextStyle(
+                          color: colors.accent,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.calendar_month_outlined,
+              color: colors.accentMedium,
+              size: 26,
+            ),
           ],
         ),
       ),
@@ -819,12 +803,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required String status,
     String? subStatus,
     required Color color,
+    required AppThemeColors colors,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        // 🔹 Tinted Background: surfaceColor mixed with a hint of status color
-        color: Color.alphaBlend(color.withAlpha(30), const Color(0xFF1E1E1E)),
+        color: Color.alphaBlend(color.withAlpha(25), colors.card),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: color.withAlpha(60), // Subtle border glow
@@ -873,17 +857,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         children: [
                           Text(
                             name,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            textAlign: TextAlign.start,
+                            style: TextStyle(
+                              color: colors.textPrimary,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             desc,
-                            style: const TextStyle(
-                              color: Colors.white38,
+                            style: TextStyle(
+                              color: colors.textSecondary,
                               fontSize: 13,
                             ),
                           ),
@@ -919,8 +903,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const SizedBox(height: 4),
                           Text(
                             subStatus,
-                            style: const TextStyle(
-                              color: Colors.white24,
+                            style: TextStyle(
+                              color: colors.textMuted,
                               fontSize: 9,
                             ),
                           ),
@@ -943,13 +927,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String unit,
     IconData icon,
     Color color,
+    AppThemeColors colors,
   ) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: colors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -959,9 +944,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: Colors.white54,
+              color: colors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -972,16 +957,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               text: TextSpan(
                 children: [
                   TextSpan(
-                    text: value + " ",
-                    style: const TextStyle(
+                    text: "$value ",
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: colors.textPrimary,
                     ),
                   ),
                   TextSpan(
                     text: " $unit",
-                    style: const TextStyle(fontSize: 12, color: Colors.white38),
+                    style: TextStyle(fontSize: 12, color: colors.textMuted),
                   ),
                 ],
               ),
@@ -992,23 +977,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildPatientSelectorCard() {
+  Widget _buildPatientSelectorCard(AppThemeColors colors) {
     if (monitoredPatients.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: surfaceColor,
+          color: colors.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: colors.borderSubtle),
         ),
         child: Row(
           children: [
-            const Icon(Icons.info_outline, color: accentCyan, size: 24),
+            Icon(Icons.info_outline, color: colors.accent, size: 24),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text(
                 "No patients linked to your account yet.",
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                style: TextStyle(color: colors.textSecondary, fontSize: 14),
               ),
             ),
           ],
@@ -1027,17 +1012,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accentCyan.withOpacity(0.15)),
+        border: Border.all(color: colors.accent.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "MONITORED PATIENT",
             style: TextStyle(
-              color: Colors.white38,
+              color: colors.accent,
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.0,
@@ -1050,10 +1035,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: accentCyan.withOpacity(0.1),
+                  color: colors.accentSubtle,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.person_pin_rounded, color: accentCyan, size: 22),
+                child: Icon(Icons.person_pin_rounded, color: colors.accent, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1062,16 +1047,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   children: [
                     Text(
                       activeName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: colors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       activePhone,
-                      style: const TextStyle(
-                        color: Colors.white54,
+                      style: TextStyle(
+                        color: colors.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -1081,12 +1066,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(width: 8),
               Theme(
                 data: Theme.of(context).copyWith(
-                  canvasColor: surfaceColor,
+                  canvasColor: colors.surface,
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: selectedPatientId,
-                    icon: Icon(Icons.swap_horiz_rounded, color: accentCyan, size: 22),
+                    icon: Icon(Icons.swap_horiz_rounded, color: colors.accent, size: 22),
                     onChanged: (val) {
                       if (val != null && val != selectedPatientId) {
                         setState(() {
@@ -1102,7 +1087,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         value: patient['_id'],
                         child: Text(
                           name,
-                          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                          style: TextStyle(color: colors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                       );
                     }).toList(),
@@ -1116,19 +1101,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(Size size, ProfileModel? profile, bool hasUnread) {
-    final isGuardian = profile?.role == "guardian";
-
+  PreferredSizeWidget _buildAppBar(Size size, ProfileModel? profile, bool hasUnread, AppThemeColors colors) {
     return AppBar(
       toolbarHeight: 80,
       elevation: 0,
-      backgroundColor: darkBg,
+      backgroundColor: colors.bg,
       automaticallyImplyLeading: false,
       title: Row(
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor: Colors.white10,
+            backgroundColor: colors.accentSubtle,
 
             backgroundImage:
                 profile?.profilePic != null && profile!.profilePic!.isNotEmpty
@@ -1138,7 +1121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 : null,
 
             child: profile?.profilePic == null || profile!.profilePic!.isEmpty
-                ? const Icon(Icons.person, color: Colors.white)
+                ? Icon(Icons.person, color: colors.accentMedium)
                 : null,
           ),
           const SizedBox(width: 12),
@@ -1152,15 +1135,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   "Hello ${profile?.firstName ?? "User"}!",
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: colors.textPrimary,
                   ),
                 ),
                 Text(
                   profile?.role == "guardian" ? "Guardian Portal" : "Ready for your checkup?",
-                  style: const TextStyle(fontSize: 11, color: Colors.white54),
+                  style: TextStyle(fontSize: 11, color: colors.textSecondary),
                 ),
               ],
             ),
@@ -1178,7 +1161,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           },
           icon: Badge(
             isLabelVisible: hasUnread,
-            child: const Icon(Icons.notifications, color: Color(0xFF81DEEA)),
+            backgroundColor: AppColors.missedRed,
+            child: Icon(Icons.notifications_outlined, color: colors.accentMedium, size: 26),
           ),
         ),
 
@@ -1574,19 +1558,19 @@ class NextDoseFloatingReminder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(
-            0xFF1A1C1E,
-          ).withAlpha(450), // Dark themed like image
+          color: colors.card,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF5ce5f9).withAlpha(100),
+              color: colors.shadowColor,
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -1600,12 +1584,12 @@ class NextDoseFloatingReminder extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: colors.accentSubtle,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.alarm,
-                    color: Color(0xFF81DEEA),
+                    color: colors.accentPrimary,
                     size: 24,
                   ),
                 ),
@@ -1630,10 +1614,10 @@ class NextDoseFloatingReminder extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     "NEXT DOSE IN",
                     style: TextStyle(
-                      color: Color(0xFF81DEEA),
+                      color: colors.nextDoseTag,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -1641,8 +1625,8 @@ class NextDoseFloatingReminder extends StatelessWidget {
                   ),
                   Text(
                     countdown,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: colors.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1657,7 +1641,7 @@ class NextDoseFloatingReminder extends StatelessWidget {
               children: [
                 Text(
                   medicineName.toUpperCase(),
-                  style: const TextStyle(color: Colors.white70, fontSize: 10),
+                  style: TextStyle(color: colors.textSecondary, fontSize: 10),
                 ),
                 Text(
                   timeSlot,
@@ -1707,6 +1691,8 @@ class _AnimatedPremiumCardState extends State<_AnimatedPremiumCard>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return RepaintBoundary(
       child: AnimatedBuilder(
         animation: _controller,
@@ -1716,10 +1702,10 @@ class _AnimatedPremiumCardState extends State<_AnimatedPremiumCard>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               gradient: SweepGradient(
-                colors: const [
-                  Color(0xFF81DEEA),
-                  Color(0xFF4D6AFF),
-                  Color(0xFF81DEEA),
+                colors: [
+                  colors.accentPrimary,
+                  const Color(0xFF4D6AFF),
+                  colors.accentPrimary,
                 ],
                 stops: const [0.0, 0.5, 1.0],
                 transform: GradientRotation(_controller.value * 6.28),
@@ -1729,7 +1715,7 @@ class _AnimatedPremiumCardState extends State<_AnimatedPremiumCard>
               margin: const EdgeInsets.all(1.5), // border thickness
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                color: colors.card,
                 borderRadius: BorderRadius.circular(18),
               ),
               child: InkWell(
@@ -1742,11 +1728,11 @@ class _AnimatedPremiumCardState extends State<_AnimatedPremiumCard>
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFF81DEEA).withAlpha(50),
+                        color: colors.accentSubtle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.workspace_premium,
-                        color: Color(0xFF81DEEA),
+                        color: colors.accentPrimary,
                         size: 26,
                       ),
                     ),
@@ -1757,20 +1743,20 @@ class _AnimatedPremiumCardState extends State<_AnimatedPremiumCard>
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
                             "Go Premium",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: colors.textPrimary,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             "Unlock insights, smart alerts & reports",
                             style: TextStyle(
-                              color: Colors.white54,
+                              color: colors.textSecondary,
                               fontSize: 12,
                             ),
                           ),

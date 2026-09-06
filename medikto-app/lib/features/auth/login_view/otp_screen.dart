@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
@@ -31,11 +31,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     _activeVerificationId = widget.verificationId;
   }
 
-  // Dark Mode Palette
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   void dispose() {
     _pinController.dispose();
@@ -61,8 +56,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (!mounted) return;
 
     if (response.status == ResponseStatus.SUCCESS) {
-      print("TOKEN SAVED SUCCESSFULLY");
-
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),
@@ -75,155 +68,148 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
     final size = MediaQuery.sizeOf(context);
 
-    // ✅ Dark Mode Pin Theme
     final defaultPinTheme = PinTheme(
       width: size.width * 0.12,
       height: 56,
-      textStyle: const TextStyle(
+      textStyle: TextStyle(
         fontSize: 24,
-        color: Colors.white, // White text for visibility
+        color: colors.textPrimary,
         fontWeight: FontWeight.bold,
       ),
       decoration: BoxDecoration(
-        color: surfaceColor, // Darker input boxes
+        color: colors.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: colors.border),
       ),
     );
 
-    // Highlight the active box with Cyan
     final focusedPinTheme = defaultPinTheme.copyWith(
       decoration: defaultPinTheme.decoration!.copyWith(
-        border: Border.all(color: accentCyan, width: 1.5),
+        border: Border.all(color: colors.accentPrimary, width: 1.5),
       ),
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // White icons for dark mode
-      ),
-      child: Scaffold(
-        backgroundColor: darkBg,
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: size.height * 0.06),
+    return Scaffold(
+      backgroundColor: colors.bg,
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: size.height * 0.06),
 
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new, // Modern icon variant
-                    size: 22,
-                    color: Colors.white,
-                  ),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 22,
+                  color: colors.iconColor,
                 ),
+              ),
 
-                SizedBox(height: size.height * 0.02),
+              SizedBox(height: size.height * 0.02),
 
-                const Text(
-                  "6-digit code",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+              Text(
+                "6-digit code",
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: colors.textPrimary,
                 ),
+              ),
 
-                const SizedBox(height: 8),
+              const SizedBox(height: 8),
 
-                Text(
-                  "Code sent to ${widget.phoneNumber}. Please enter it below to verify.",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white54, // Muted secondary text
-                  ),
+              Text(
+                "Code sent to ${widget.phoneNumber}. Please enter it below to verify.",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: colors.textSecondary,
                 ),
+              ),
 
-                SizedBox(height: size.height * 0.04),
+              SizedBox(height: size.height * 0.04),
 
-                ///🔹 OTP FIELD
-                SizedBox(
-                  width: double.infinity,
-                  child: Pinput(
-                    length: 6,
-                    controller: _pinController,
-                    focusNode: _focusNode,
-                    keyboardType: TextInputType.number,
-                    defaultPinTheme: defaultPinTheme,
-                    focusedPinTheme: focusedPinTheme,
-                    submittedPinTheme: defaultPinTheme,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    separatorBuilder: (index) => const SizedBox(width: 8),
-                    onCompleted: (pin) => _verifyOtp(),
-                    autofocus: true,
-                    cursor: Container(width: 2, height: 24, color: accentCyan),
-                  ),
+              ///🔹 OTP FIELD
+              SizedBox(
+                width: double.infinity,
+                child: Pinput(
+                  length: 6,
+                  controller: _pinController,
+                  focusNode: _focusNode,
+                  keyboardType: TextInputType.number,
+                  defaultPinTheme: defaultPinTheme,
+                  focusedPinTheme: focusedPinTheme,
+                  submittedPinTheme: defaultPinTheme,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  separatorBuilder: (index) => const SizedBox(width: 8),
+                  onCompleted: (pin) => _verifyOtp(),
+                  autofocus: true,
+                  cursor: Container(width: 2, height: 24, color: colors.accentPrimary),
                 ),
+              ),
 
-                SizedBox(height: size.height * 0.03),
+              SizedBox(height: size.height * 0.03),
 
-                Row(
-                  children: [
-                    const Text(
-                      "No code received? ",
-                      style: TextStyle(color: Colors.white38, fontSize: 14),
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        if (_loading) return;
-                        _pinController.clear();
-                        setState(() => _loading = true);
-                        try {
-                          await ref.read(authProvider).sendFirebaseOTP(
-                            phone: widget.phoneNumber ?? "",
-                            onCodeSent: (newVerificationId, _) {
-                              _pinController.clear();
-                              setState(() {
-                                _loading = false;
-                                _activeVerificationId = newVerificationId;
-                              });
-                              AppToasts.showSuccess(context, "OTP code resent successfully via Firebase");
-                            },
-                            onVerificationFailed: (FirebaseAuthException e) {
-                              setState(() => _loading = false);
-                              AppToasts.showError(context, e.message ?? "Resend failed");
-                            },
-                          );
-                        } catch (e) {
-                          setState(() => _loading = false);
-                          AppToasts.showError(context, "Failed to resend code: $e");
-                        }
-                      },
-                      child: const Text(
-                        "Resend Code",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: accentCyan,
-                        ),
+              Row(
+                children: [
+                  Text(
+                    "No code received? ",
+                    style: TextStyle(color: colors.textMuted, fontSize: 14),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      if (_loading) return;
+                      _pinController.clear();
+                      setState(() => _loading = true);
+                      try {
+                        await ref.read(authProvider).sendFirebaseOTP(
+                          phone: widget.phoneNumber ?? "",
+                          onCodeSent: (newVerificationId, _) {
+                            _pinController.clear();
+                            setState(() {
+                              _loading = false;
+                              _activeVerificationId = newVerificationId;
+                            });
+                            AppToasts.showSuccess(context, "OTP code resent successfully");
+                          },
+                          onVerificationFailed: (FirebaseAuthException e) {
+                            setState(() => _loading = false);
+                            AppToasts.showError(context, e.message ?? "Resend failed");
+                          },
+                        );
+                      } catch (e) {
+                        setState(() => _loading = false);
+                        AppToasts.showError(context, "Failed to resend code: $e");
+                      }
+                    },
+                    child: Text(
+                      "Resend Code",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: colors.accentMedium,
                       ),
                     ),
-                  ],
-                ),
-
-                if (_loading) ...[
-                  SizedBox(height: size.height * 0.05),
-                  const Center(
-                    child: CircularProgressIndicator(color: accentCyan),
                   ),
                 ],
+              ),
 
-                SizedBox(height: size.height * 0.14),
+              if (_loading) ...[
+                SizedBox(height: size.height * 0.05),
+                Center(
+                  child: CircularProgressIndicator(color: colors.accentPrimary),
+                ),
               ],
-            ),
+
+              SizedBox(height: size.height * 0.14),
+            ],
           ),
         ),
       ),

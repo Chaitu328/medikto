@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/home/add_reports/widgets/form_field_widget.dart';
@@ -15,11 +16,6 @@ class AddVaccinationMedicationsScreen extends StatefulWidget {
 
 class _AddVaccinationMedicationsScreenState
     extends State<AddVaccinationMedicationsScreen> {
-  // Theme Palette
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   final List<FormFieldModel> vrFields = [
     FormFieldModel(
       title: "Vaccine Name",
@@ -35,8 +31,9 @@ class _AddVaccinationMedicationsScreenState
   ];
 
   void _showBottomSheet(BuildContext context) {
+    final themeColors = context.themeColors;
     showModalBottomSheet(
-      backgroundColor: surfaceColor,
+      backgroundColor: themeColors.surface,
       constraints: const BoxConstraints(maxWidth: double.infinity),
       context: context,
       shape: const RoundedRectangleBorder(
@@ -54,17 +51,20 @@ class _AddVaccinationMedicationsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     final size = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
         title: "Vaccination Reports",
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: themeColors.bg,
+        titleStyle: TextStyle(
+          color: themeColors.textPrimary,
           fontWeight: FontWeight.bold,
+          fontSize: 18,
         ),
+        onBack: () => Navigator.pop(context),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -78,7 +78,7 @@ class _AddVaccinationMedicationsScreenState
                   children: [
                     SizedBox(height: size.height * 0.02),
 
-                    /// 🔹 FORM FIELDS (Automatically use dark theme logic)
+                    /// 🔹 FORM FIELDS
                     DynamicFormSection(fields: vrFields),
 
                     /// 🔹 INTERACTIVE UPLOAD AREA
@@ -91,10 +91,10 @@ class _AddVaccinationMedicationsScreenState
                           horizontal: 20,
                         ),
                         decoration: BoxDecoration(
-                          color: surfaceColor,
+                          color: themeColors.surface,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: accentCyan.withOpacity(0.2),
+                            color: themeColors.accentPrimary.withOpacity(0.2),
                             width: 1.5,
                           ),
                         ),
@@ -104,27 +104,27 @@ class _AddVaccinationMedicationsScreenState
                               height: 50,
                               width: 50,
                               decoration: BoxDecoration(
-                                color: accentCyan.withOpacity(0.1),
+                                color: themeColors.accentSubtle,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.cloud_upload_outlined,
-                                color: accentCyan,
+                                color: themeColors.accentPrimary,
                                 size: 28,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               "Upload Vaccination Certificate",
                               style: TextStyle(
-                                color: Colors.white,
+                                color: themeColors.textPrimary,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Text(
+                            Text(
                               "PDF or Image (Max 5MB)",
                               style: TextStyle(
-                                color: Colors.white38,
+                                color: themeColors.textMuted,
                                 fontSize: 12,
                               ),
                             ),
@@ -153,12 +153,12 @@ class _AddVaccinationMedicationsScreenState
                 ),
                 (route) => false,
               ),
-              buttonColor: accentCyan,
+              buttonColor: themeColors.accentPrimary,
               buttonText: "Add Report",
-              textStyle: const TextStyle(
+              textStyle: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: themeColors.onAccentPrimary,
               ),
             ),
 
@@ -170,12 +170,13 @@ class _AddVaccinationMedicationsScreenState
   }
 
   Widget _buildAddVaccinationCard() {
+    final themeColors = context.themeColors;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: themeColors.border),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -187,23 +188,23 @@ class _AddVaccinationMedicationsScreenState
                 height: 40,
                 width: 40,
                 decoration: BoxDecoration(
-                  color: accentCyan.withOpacity(0.1),
+                  color: themeColors.accentSubtle,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.vaccines_outlined, color: accentCyan),
+                child: Icon(Icons.vaccines_outlined, color: themeColors.accentPrimary),
               ),
               const SizedBox(width: 15),
-              const Text(
+              Text(
                 "Add Dose Info",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: themeColors.textPrimary,
                 ),
               ),
             ],
           ),
-          const Icon(Icons.add_circle, color: accentCyan, size: 36),
+          Icon(Icons.add_circle, color: themeColors.accentPrimary, size: 36),
         ],
       ),
     );

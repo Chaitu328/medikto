@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/features/onboarding/views/welcome_screen.dart';
 import 'package:medikto/features/onboarding/widgets/onboarding_page.dart';
@@ -15,10 +16,6 @@ class OnboardingScreens extends StatefulWidget {
 class _OnboardingScreensState extends State<OnboardingScreens> {
   final PageController _controller = PageController();
   final ValueNotifier<int> currentIndex = ValueNotifier(0);
-
-  // Theme Colors consistent with your design
-  static const Color darkBg = Color(0xFF121212);
-  static const Color accentCyan = Color(0xFF81DEEA);
 
   final List<Map<String, String>> data = const [
     {
@@ -87,14 +84,17 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: darkBg,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: colors.bg,
       ),
       child: Scaffold(
-        backgroundColor: darkBg,
+        backgroundColor: colors.bg,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -132,7 +132,7 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
                           height: 8,
                           width: current == i ? 26 : 8,
                           decoration: BoxDecoration(
-                            color: current == i ? accentCyan : Colors.white38,
+                            color: current == i ? colors.accent : colors.borderSubtle,
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
@@ -143,7 +143,7 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
 
                 SizedBox(height: size.height * 0.04),
 
-                _buildBottomControls(size),
+                _buildBottomControls(size, colors),
 
                 const SizedBox(height: 10),
               ],
@@ -154,7 +154,7 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
     );
   }
 
-  Widget _buildBottomControls(Size size) {
+  Widget _buildBottomControls(Size size, AppThemeColors colors) {
     return ValueListenableBuilder<int>(
       valueListenable: currentIndex,
       builder: (_, current, __) {
@@ -170,13 +170,13 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _skip,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                     child: Text(
                       "Skip",
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.white38,
+                        color: colors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -196,11 +196,11 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
                     horizontal: isLastPage ? 28 : 24,
                   ),
                   decoration: BoxDecoration(
-                    color: accentCyan,
+                    color: colors.accent,
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                        color: accentCyan.withOpacity(0.25),
+                        color: colors.accent.withOpacity(0.25),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -208,10 +208,10 @@ class _OnboardingScreensState extends State<OnboardingScreens> {
                   ),
                   child: Text(
                     isLastPage ? "Get Started" : "Next",
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: colors.onAccent,
                     ),
                   ),
                 ),

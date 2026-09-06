@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
 import 'package:medikto/features/auth/register_view/register_screen.dart';
@@ -10,19 +11,17 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-
-    // Theme Colors
-    const Color darkBg = Color(0xFF121212);
-    const Color accentCyan = Color(0xFF81DEEA);
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent, // Immersive look
-        statusBarIconBrightness: Brightness.light, // White icons for Dark Mode
-        systemNavigationBarColor: darkBg,
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: colors.bg,
       ),
       child: Scaffold(
-        backgroundColor: darkBg,
+        backgroundColor: colors.bg,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -34,34 +33,33 @@ class WelcomeScreen extends StatelessWidget {
                     children: [
                       SizedBox(height: size.height * 0.16),
 
-                      const Text(
+                      Text(
                         "Welcome to Medikto",
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: colors.textPrimary,
                           letterSpacing: 0.5,
                         ),
                       ),
 
                       const SizedBox(height: 8),
 
-                      const Text(
+                      Text(
                         "Stay healthy. Stay secure.",
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w400,
-                          color:
-                              Colors.white54, // Muted white for secondary text
+                          color: colors.textSecondary,
                         ),
                       ),
 
                       SizedBox(height: size.height * 0.04),
 
-                      /// 🔥 Responsive Image (Opacity adjusted for Dark Mode)
+                      /// Responsive Image
                       Flexible(
                         child: Opacity(
-                          opacity: 0.9,
+                          opacity: isDark ? 0.9 : 1.0,
                           child: Image.asset(
                             'assets/images/health-guard.png',
                             width: size.width * 0.75,
@@ -78,16 +76,16 @@ class WelcomeScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 30, top: 10),
                   child: Column(
                     children: [
-                      // Login Button - Outlined Style for Dark Mode
+                      // Login Button
                       CustomButton(
                         buttonColor: Colors.transparent,
-                        border: Border.all(color: accentCyan, width: 1.5),
+                        border: Border.all(color: colors.accent, width: 1.5),
                         height: 54,
                         buttonText: "Login",
-                        textStyle: const TextStyle(
+                        textStyle: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: accentCyan,
+                          color: colors.accent,
                         ),
                         onPressed: () {
                           Navigator.push(
@@ -101,15 +99,15 @@ class WelcomeScreen extends StatelessWidget {
 
                       const SizedBox(height: 16),
 
-                      // Register Button - Solid Style
+                      // Register Button
                       CustomButton(
-                        buttonColor: accentCyan,
+                        buttonColor: colors.accent,
                         height: 54,
                         buttonText: "Register",
-                        textStyle: const TextStyle(
+                        textStyle: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black, // Dark text on Cyan background
+                          color: colors.onAccent,
                         ),
                         onPressed: () {
                           Navigator.push(

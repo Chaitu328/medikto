@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/profile/data/profile_manager.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
@@ -13,21 +14,14 @@ class PremiumPlansScreen extends ConsumerStatefulWidget {
 }
 
 class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
-  // Dark Mode Palette
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-  static const Color textPrimary = Colors.white;
-  static const Color textSecondary = Colors.white70;
-
   final ValueNotifier<int> _selectedPlanIndex = ValueNotifier<int>(0);
 
-  final List<Map<String, dynamic>> plans = [
+  List<Map<String, dynamic>> _getPlans(AppThemeColors colors) => [
     {
       "title": "Basic plan",
       "price": "₹499",
       "icon": Icons.favorite,
-      "iconBg": const Color(0xFF2D1F21), // Darker muted pink
+      "iconBg": const Color(0xFF2D1F21),
       "iconColor": const Color(0xFFF28F8F),
       "badge": "assets/images/basic-plan.png",
       "features": [
@@ -43,8 +37,8 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
       "title": "Premium Plan",
       "price": "₹2000",
       "icon": Icons.diamond_outlined,
-      "iconBg": const Color(0xFF2D2A1F), // Darker muted gold
-      "iconColor": accentCyan, // Switched to app accent
+      "iconBg": const Color(0xFF2D2A1F),
+      "iconColor": colors.accentPrimary,
       "badge": "assets/images/premium-plan.png",
       "features": [
         "🧾 Store up to 250 health reports",
@@ -65,9 +59,12 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+    final plans = _getPlans(colors);
+
     return Scaffold(
-      backgroundColor: darkBg,
-      appBar: _buildAppBar(),
+      backgroundColor: colors.bg,
+      appBar: _buildAppBar(colors),
       body: Stack(
         children: [
           ValueListenableBuilder(
@@ -86,8 +83,8 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
                           child: _PlanCard(
                             plan: plans[index],
                             isSelected: selectedIndex == index,
-                            accentColor: accentCyan,
-                            surfaceColor: surfaceColor,
+                            accentColor: colors.accentPrimary,
+                            surfaceColor: colors.card,
                             onTap: () => _selectedPlanIndex.value = index,
                           ),
                         );
@@ -99,43 +96,43 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
               );
             },
           ),
-          _buildBottomButton(),
+          _buildBottomButton(colors, plans),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(AppThemeColors colors) {
     return AppBar(
-      backgroundColor: darkBg,
+      backgroundColor: colors.bg,
       elevation: 0,
       scrolledUnderElevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new, color: textPrimary, size: 20),
+        icon: Icon(Icons.arrow_back_ios_new, color: colors.textPrimary, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
-      title: const Text(
+      title: Text(
         "Our Plans",
-        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textPrimary),
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textPrimary),
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.help_outline, color: textSecondary),
+          icon: Icon(Icons.help_outline, color: colors.textSecondary),
           onPressed: () {},
         ),
       ],
     );
   }
 
-  Widget _buildBottomButton() {
+  Widget _buildBottomButton(AppThemeColors colors, List<Map<String, dynamic>> plans) {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
         decoration: BoxDecoration(
-          color: darkBg,
+          color: colors.bg,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 15, offset: const Offset(0, -5)),
+            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, -5)),
           ],
         ),
         child: ValueListenableBuilder(
@@ -148,8 +145,8 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (_) => const Center(
-                    child: CircularProgressIndicator(color: accentCyan),
+                  builder: (_) => Center(
+                    child: CircularProgressIndicator(color: colors.accentPrimary),
                   ),
                 );
 
@@ -167,7 +164,7 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
                     context: context,
                     barrierDismissible: false,
                     builder: (context) =>
-                        const _SuccessDialog(surfaceColor: surfaceColor),
+                        _SuccessDialog(surfaceColor: colors.card),
                   );
 
                   Future.delayed(const Duration(seconds: 2), () {
@@ -191,7 +188,7 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: accentCyan,
+                backgroundColor: colors.accentPrimary,
                 minimumSize: const Size(double.infinity, 54),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -200,15 +197,15 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
               ),
               child: Text(
                 "Activate ${plans[selectedIndex]['title']}",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: colors.onAccentPrimary,
                 ),
               ),
             );
           },
-),
+        ),
       ),
     );
   }
@@ -231,6 +228,8 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -240,7 +239,7 @@ class _PlanCard extends StatelessWidget {
           color: surfaceColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? accentColor : Colors.white10,
+            color: isSelected ? accentColor : colors.borderSubtle,
             width: 2,
           ),
           boxShadow: [
@@ -268,14 +267,14 @@ class _PlanCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     plan['title'],
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textPrimary),
                   ),
                   const Spacer(),
-                  _buildRadioIcon(),
+                  _buildRadioIcon(colors),
                 ],
               ),
             ),
-            const Divider(height: 1, thickness: 1, color: Colors.white10),
+            Divider(height: 1, thickness: 1, color: colors.borderSubtle),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -289,17 +288,17 @@ class _PlanCard extends StatelessWidget {
                   RichText(
                     text: TextSpan(
                       text: "${plan['price']}/ ",
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-                      children: const [
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                      children: [
                         TextSpan(
                           text: "per month",
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: Colors.white54),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: colors.textSecondary),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ...plan['features'].map<Widget>((feature) => _buildFeatureItem(feature)).toList(),
+                  ...plan['features'].map<Widget>((feature) => _buildFeatureItem(feature, colors)).toList(),
                 ],
               ),
             ),
@@ -309,13 +308,13 @@ class _PlanCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRadioIcon() {
+  Widget _buildRadioIcon(AppThemeColors colors) {
     return Container(
       height: 24,
       width: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: isSelected ? accentColor : Colors.white24, width: 2),
+        border: Border.all(color: isSelected ? accentColor : colors.border, width: 2),
       ),
       child: isSelected
           ? Center(child: Icon(Icons.check_circle, size: 20, color: accentColor))
@@ -323,12 +322,12 @@ class _PlanCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureItem(String text) {
+  Widget _buildFeatureItem(String text, AppThemeColors colors) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.white70),
+        style: TextStyle(fontSize: 14, height: 1.5, color: colors.textSecondary),
       ),
     );
   }
@@ -340,6 +339,8 @@ class _SuccessDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return Dialog(
       backgroundColor: surfaceColor,
       surfaceTintColor: Colors.transparent,
@@ -351,16 +352,16 @@ class _SuccessDialog extends StatelessWidget {
           children: [
             Image.asset("assets/images/account-create-success.png", width: 120),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               "Plan Request Received",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textPrimary),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "Our team will get back to you soon.",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.white54),
+              style: TextStyle(fontSize: 14, color: colors.textSecondary),
             ),
           ],
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 
 class OnboardingPage extends StatelessWidget {
   final int index;
@@ -20,6 +21,8 @@ class OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return Column(
       children: [
         // Top navigation bar area (consistent height across all slides)
@@ -38,12 +41,12 @@ class OnboardingPage extends StatelessWidget {
                         );
                       }
                     },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                       child: Icon(
                         Icons.arrow_back_ios_new,
                         size: 22,
-                        color: Colors.white,
+                        color: colors.textPrimary,
                       ),
                     ),
                   ),
@@ -74,10 +77,10 @@ class OnboardingPage extends StatelessWidget {
               Text(
                 data["title"] ?? "",
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: colors.textPrimary,
                   letterSpacing: 0.3,
                 ),
               ),
@@ -87,10 +90,10 @@ class OnboardingPage extends StatelessWidget {
                 child: Text(
                   data["desc"] ?? "",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white70,
+                    color: colors.textSecondary,
                     height: 1.45,
                   ),
                 ),

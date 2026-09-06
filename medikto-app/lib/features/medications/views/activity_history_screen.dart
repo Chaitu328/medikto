@@ -1,36 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
-
-// import your provider file
-// import 'package:your_project/providers/medication_provider.dart';
 
 class ActivityHistoryScreen extends ConsumerWidget {
   const ActivityHistoryScreen({super.key});
 
-  // Colors consistent with your App Theme
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF00E5FF);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = context.themeColors;
     final historyAsync = ref.watch(getTodayScheduleProvider);
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: theme.bg,
       appBar: AppBar(
         titleSpacing: 0,
-        backgroundColor: darkBg,
+        backgroundColor: theme.bg,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: theme.iconColor),
         ),
-        title: const Text(
+        title: Text(
           "Activity History",
           style: TextStyle(
-            color: Colors.white,
+            color: theme.textPrimary,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -43,7 +37,7 @@ class ActivityHistoryScreen extends ConsumerWidget {
         error: (error, stack) => Center(
           child: Text(
             error.toString(),
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: theme.textSecondary),
           ),
         ),
 
@@ -51,10 +45,10 @@ class ActivityHistoryScreen extends ConsumerWidget {
           final List<dynamic> historyData = response.data ?? [];
 
           if (historyData.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
                 "No History Found",
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: theme.textSecondary),
               ),
             );
           }
@@ -62,12 +56,10 @@ class ActivityHistoryScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
-
               Expanded(
                 child: RefreshIndicator(
-                  color: accentCyan,
-                  backgroundColor: surfaceColor,
+                  color: theme.accentPrimary,
+                  backgroundColor: theme.card,
 
                   onRefresh: () async {
                     ref.invalidate(getTodayScheduleProvider);
@@ -88,16 +80,14 @@ class ActivityHistoryScreen extends ConsumerWidget {
                           (item.status ?? "").toLowerCase() == "taken";
 
                       final Color statusColor = isTaken
-                          ? Colors.teal
-                          : Colors.redAccent;
+                          ? AppColors.takenGreen
+                          : AppColors.missedRed;
                   
                       return _buildActivityTile(
+                        context,
                         item.name ?? "No Name",
-
                         "${item.time ?? ""} • ${item.verified == true ? "Verified" : "Not Verified"}",
-
                         (item.status ?? "").toUpperCase(),
-
                         statusColor,
                       );
                     },
@@ -111,24 +101,26 @@ class ActivityHistoryScreen extends ConsumerWidget {
     );
   }
 
-  // Same UI unchanged
   Widget _buildActivityTile(
+    BuildContext context,
     String name,
     String desc,
     String status,
     Color statusColor,
   ) {
+    final theme = context.themeColors;
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: theme.card,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.borderSubtle),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: statusColor.withOpacity(0.1),
+            backgroundColor: statusColor.withOpacity(0.12),
             child: Icon(
               name == "Omega-3" ? Icons.link : Icons.history,
               color: statusColor,
@@ -144,8 +136,8 @@ class ActivityHistoryScreen extends ConsumerWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: theme.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -153,7 +145,7 @@ class ActivityHistoryScreen extends ConsumerWidget {
 
                 Text(
                   desc,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: theme.textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -162,9 +154,9 @@ class ActivityHistoryScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.2),
+              color: statusColor.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: statusColor.withOpacity(0.5)),
+              border: Border.all(color: statusColor.withOpacity(0.4)),
             ),
             child: Row(
               children: [

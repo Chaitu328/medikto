@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/constants/legal_content.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,9 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 class ContactSupportScreen extends StatelessWidget {
   const ContactSupportScreen({super.key});
 
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
 
   Future<void> _launchEmail(BuildContext context) async {
     final Uri emailUri = Uri(
@@ -53,19 +51,20 @@ class ContactSupportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: AppBar(
-        backgroundColor: darkBg,
+        backgroundColor: themeColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new, color: themeColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Contact Support",
           style: TextStyle(
-            color: Colors.white,
+            color: themeColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -77,19 +76,19 @@ class ContactSupportScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "How can we help you?",
               style: TextStyle(
-                color: Colors.white,
+                color: themeColors.textPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "Our dedicated support team is available to assist you with any questions or technical assistance.",
               style: TextStyle(
-                color: Colors.white54,
+                color: themeColors.textSecondary,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -128,18 +127,18 @@ class ContactSupportScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: surfaceColor,
+                color: themeColors.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: themeColors.border),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.access_time_rounded, color: accentCyan, size: 20),
-                  SizedBox(width: 12),
+                  Icon(Icons.access_time_rounded, color: themeColors.accentMedium, size: 20),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       "Operating Hours: Monday – Saturday, 9:00 AM – 6:00 PM IST",
-                      style: TextStyle(color: Colors.white60, fontSize: 12, height: 1.4),
+                      style: TextStyle(color: themeColors.textSecondary, fontSize: 12, height: 1.4),
                     ),
                   ),
                 ],
@@ -162,15 +161,16 @@ class ContactSupportScreen extends StatelessWidget {
     required String actionLabel,
     required VoidCallback onTap,
   }) {
+    final themeColors = context.themeColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: surfaceColor,
+          color: themeColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          border: Border.all(color: themeColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,10 +180,10 @@ class ContactSupportScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: accentCyan.withOpacity(0.12),
+                    color: themeColors.accentSubtle,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: accentCyan, size: 22),
+                  child: Icon(icon, color: themeColors.accentMedium, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -191,8 +191,8 @@ class ContactSupportScreen extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: themeColors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -200,8 +200,8 @@ class ContactSupportScreen extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: accentCyan,
+                      style: TextStyle(
+                        color: themeColors.accentMedium,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -209,14 +209,14 @@ class ContactSupportScreen extends StatelessWidget {
                   ],
                 ),
                 const Spacer(),
-                const Icon(Icons.arrow_forward_ios, color: Colors.white38, size: 16),
+                Icon(Icons.arrow_forward_ios, color: themeColors.textMuted, size: 16),
               ],
             ),
             const SizedBox(height: 12),
             Text(
               description,
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: themeColors.textSecondary,
                 fontSize: 12,
                 height: 1.4,
               ),

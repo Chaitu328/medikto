@@ -4,7 +4,8 @@ const { sendPushNotification } = require("../utils/notificationHelper");
 
 const parseTimeToMinutes = (timeString) => {
   if (!timeString) return null;
-  const cleanTime = timeString.trim();
+  // Normalize whitespace, remove non-breaking spaces
+  const cleanTime = timeString.replace(/\u202F|\u00A0/g, " ").trim();
   const isPM = cleanTime.toUpperCase().endsWith("PM");
   const isAM = cleanTime.toUpperCase().endsWith("AM");
   const timeDigits = cleanTime.replace(/[a-zA-Z\s]/g, "");
@@ -12,9 +13,36 @@ const parseTimeToMinutes = (timeString) => {
   if (!hStr || !mStr) return null;
   let hour = parseInt(hStr, 10);
   const minute = parseInt(mStr, 10);
+  if (isNaN(hour) || isNaN(minute)) return null;
   if (isPM && hour < 12) hour += 12;
   if (isAM && hour === 12) hour = 0;
   return hour * 60 + minute;
+};
+
+const getLocalTimeDetails = (dateObj, timezone = "Asia/Kolkata") => {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    });
+    const parts = formatter.formatToParts(dateObj);
+    const year = parts.find((p) => p.type === "year")?.value;
+    const month = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    const hour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
+    const minute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
+    const localDate = `${year}-${month}-${day}`;
+    const totalMinutes = hour * 60 + minute;
+    return { localDate, hour, minute, totalMinutes };
+  } catch (err) {
+    const fallbackDate = dateObj.toISOString().split("T")[0];
+    return { localDate: fallbackDate, hour: dateObj.getUTCHours(), minute: dateObj.getUTCMinutes(), totalMinutes: dateObj.getUTCHours() * 60 + dateObj.getUTCMinutes() };
+  }
 };
 
 // ==========================================
@@ -58,38 +86,16 @@ cron.schedule("* * * * *", async () => {
       }
 
       const tz = dose.user.timezone || "Asia/Kolkata";
+      const { localDate: userLocalDate, totalMinutes: currentMinutes, hour: currH, minute: currM } = getLocalTimeDetails(now, tz);
+      const scheduledMinutes = parseTimeToMinutes(dose.time);
 
-      let localStr;
-      try {
-        localStr = now.toLocaleString("en-US", {
-          timeZone: tz,
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', hour12: true
-        });
-      } catch (tzErr) {
-        localStr = now.toLocaleString("en-US", {
-          timeZone: "Asia/Kolkata",
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', hour12: true
-        });
+      if (scheduledMinutes === null) {
+        continue;
       }
 
-      // Parse output e.g. "07/01/2026, 02:30 PM"
-      const parts = localStr.split(", ");
-      if (parts.length < 2) continue;
-
-      const dateParts = parts[0].split("/");
-      if (dateParts.length < 3) continue;
-
-      const userLocalDate = `${dateParts[2]}-${dateParts[0]}-${dateParts[1]}`; // YYYY-MM-DD
-      const timeStr = parts[1].replace(/^0/, ""); // "2:30 PM"
-      const timeStrWithZero = parts[1]; // "02:30 PM"
-
       // 1. Regular on-time reminder
-      if (dose.date === userLocalDate && 
-          (dose.time === timeStr || dose.time === timeStrWithZero)) {
-        
-        console.log(`[Reminder] Timezone triggered: User ${dose.user._id} (${tz}) matches scheduled time ${dose.time} at user local date ${userLocalDate}`);
+      if (dose.date === userLocalDate && currentMinutes === scheduledMinutes) {
+        console.log(`[Reminder:Scheduled] Dose=${dose._id} User=${dose.user._id} (${tz}) Time=${dose.time} CurrentIST=${userLocalDate} ${currH}:${currM}`);
         
         const userName = dose.user.firstName || dose.user.phone || "User";
         const title = "💊 Medication Reminder";
@@ -102,39 +108,36 @@ cron.schedule("* * * * *", async () => {
           time: dose.time || "",
         };
 
-        await sendPushNotification(dose.user._id.toString(), title, body, data);
+        const dispatchResult = await sendPushNotification(dose.user._id.toString(), title, body, data);
+        console.log(`[Reminder:Scheduled:Result] Dose=${dose._id} Success=${dispatchResult?.success} Reason=${dispatchResult?.reason || dispatchResult?.error || "OK"}`);
       }
 
       // 2. Missed dose check (1 hour / 60 minutes after scheduled time)
-      const scheduledMinutes = parseTimeToMinutes(dose.time);
-      const currentMinutes = parseTimeToMinutes(parts[1]);
+      const isPastDate = dose.date < userLocalDate;
+      const isPastOneHourToday = (dose.date === userLocalDate && currentMinutes >= scheduledMinutes + 60);
 
-      if (scheduledMinutes !== null && currentMinutes !== null) {
-        const isPastDate = dose.date < userLocalDate;
-        const isPastOneHourToday = (dose.date === userLocalDate && currentMinutes >= scheduledMinutes + 60);
+      if (isPastDate || isPastOneHourToday) {
+        console.log(`[Reminder:Missed] Dose=${dose._id} (${dose.name}) marked MISSED. Scheduled=${dose.date} ${dose.time}, Current=${userLocalDate} ${currH}:${currM}`);
+        dose.status = "missed";
 
-        if (isPastDate || isPastOneHourToday) {
-          console.log(`[Reminder] Dose ${dose._id} (${dose.name}) is missed. Scheduled: ${dose.date} ${dose.time}, Current: ${userLocalDate} ${parts[1]}`);
-          dose.status = "missed";
+        if (!dose.missedReminderSent) {
+          dose.missedReminderSent = true;
+          const userName = dose.user.firstName || dose.user.phone || "User";
+          const title = "⚠️ Missed Medication Reminder";
+          const body = `Hi ${userName}, you missed your dose of ${dose.name} (${dose.dosage}) scheduled for ${dose.time}.`;
+          const data = {
+            type: "missed_medicine",
+            doseId: dose._id.toString(),
+            medicineName: dose.name || "",
+            dosage: dose.dosage || "",
+            time: dose.time || "",
+          };
 
-          if (!dose.missedReminderSent) {
-            dose.missedReminderSent = true;
-            const userName = dose.user.firstName || dose.user.phone || "User";
-            const title = "⚠️ Missed Medication Reminder";
-            const body = `Hi ${userName}, you missed your dose of ${dose.name} (${dose.dosage}) scheduled for ${dose.time}.`;
-            const data = {
-              type: "missed_medicine",
-              doseId: dose._id.toString(),
-              medicineName: dose.name || "",
-              dosage: dose.dosage || "",
-              time: dose.time || "",
-            };
-
-            await sendPushNotification(dose.user._id.toString(), title, body, data);
-          }
-
-          await dose.save();
+          const missedResult = await sendPushNotification(dose.user._id.toString(), title, body, data);
+          console.log(`[Reminder:Missed:Result] Dose=${dose._id} Success=${missedResult?.success} Reason=${missedResult?.reason || missedResult?.error || "OK"}`);
         }
+
+        await dose.save();
       }
     }
 

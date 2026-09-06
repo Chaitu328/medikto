@@ -38,6 +38,21 @@ const getTodayDate = (timezone = "Asia/Kolkata") => {
     return new Date().toISOString().split("T")[0];
   }
 };
+const parseTimeToMinutes = (timeString) => {
+  if (!timeString) return null;
+  const cleanTime = timeString.replace(/\u202F|\u00A0/g, " ").trim();
+  const isPM = cleanTime.toUpperCase().endsWith("PM");
+  const isAM = cleanTime.toUpperCase().endsWith("AM");
+  const timeDigits = cleanTime.replace(/[a-zA-Z\s]/g, "");
+  const [hStr, mStr] = timeDigits.split(":");
+  if (!hStr || !mStr) return null;
+  let hour = parseInt(hStr, 10);
+  const minute = parseInt(mStr, 10);
+  if (isNaN(hour) || isNaN(minute)) return null;
+  if (isPM && hour < 12) hour += 12;
+  if (isAM && hour === 12) hour = 0;
+  return hour * 60 + minute;
+};
 
 const isDoseInFuture = (doseDate, doseTime, timezone = "Asia/Kolkata") => {
   if (!doseDate || !doseTime) return false;
@@ -51,23 +66,15 @@ const isDoseInFuture = (doseDate, doseTime, timezone = "Asia/Kolkata") => {
       timeZone: timezone,
       hour: "2-digit",
       minute: "2-digit",
-      hour12: false
+      hourCycle: "h23"
     });
-    const parts = formatter.format(now).split(":");
-    const currHour = parseInt(parts[0], 10);
-    const currMinute = parseInt(parts[1], 10);
+    const parts = formatter.formatToParts(now);
+    const currHour = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
+    const currMinute = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
     const currTotalMinutes = currHour * 60 + currMinute;
 
-    const cleanTime = doseTime.trim();
-    const isPM = cleanTime.toUpperCase().endsWith("PM");
-    const isAM = cleanTime.toUpperCase().endsWith("AM");
-    const timeDigits = cleanTime.replace(/[a-zA-Z\s]/g, "");
-    const [hStr, mStr] = timeDigits.split(":");
-    let doseHour = parseInt(hStr, 10);
-    const doseMinute = parseInt(mStr, 10);
-    if (isPM && doseHour < 12) doseHour += 12;
-    if (isAM && doseHour === 12) doseHour = 0;
-    const doseTotalMinutes = doseHour * 60 + doseMinute;
+    const doseTotalMinutes = parseTimeToMinutes(doseTime);
+    if (doseTotalMinutes === null) return false;
 
     return currTotalMinutes < doseTotalMinutes;
   } catch (err) {
@@ -330,6 +337,12 @@ exports.markAsTaken = async (req, res) => {
       });
     }
 
+    if (dose.status === "taken") {
+      return res.status(400).json({
+        message: "Dose is already marked as taken"
+      });
+    }
+
     const tz = (dose.user && dose.user.timezone) || "Asia/Kolkata";
     if (isDoseInFuture(dose.date, dose.time, tz)) {
       return res.status(400).json({
@@ -381,6 +394,12 @@ exports.verifyWithSelfie = async (req, res) => {
     if (Object.keys(filter).length > 0 && !filter.user) {
       return res.status(403).json({
         message: "Access denied"
+      });
+    }
+
+    if (dose.status === "taken") {
+      return res.status(400).json({
+        message: "Dose is already marked as taken"
       });
     }
 

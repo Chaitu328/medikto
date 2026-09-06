@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
@@ -131,9 +132,10 @@ Future<void> _captureProofImage() async {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     return Scaffold(
-      backgroundColor: darkBg,
-      appBar: _buildAppBar(),
+      backgroundColor: theme.bg,
+      appBar: _buildAppBar(context),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Padding(
@@ -141,20 +143,20 @@ Future<void> _captureProofImage() async {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "VERIFICATION PROTOCOL",
                 style: TextStyle(
-                  color: accentCyan,
+                  color: theme.accentMedium,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
                 ),
               ),
               const SizedBox(height: 5),
-              const Text(
+              Text(
                 "Today's Schedule",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: theme.textPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
@@ -162,15 +164,15 @@ Future<void> _captureProofImage() async {
               const SizedBox(height: 25),
 
               /// 1. CAMERA SCANNER FRAME
-              _buildCameraFrame(),
+              _buildCameraFrame(context),
 
               const SizedBox(height: 30),
 
               /// 2. VERIFY BUTTON
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: accentCyan,
-                  foregroundColor: Colors.black,
+                  backgroundColor: theme.accentPrimary,
+                  foregroundColor: theme.onAccentPrimary,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -183,7 +185,7 @@ Future<void> _captureProofImage() async {
                         width: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white54,
+                          color: Colors.black54,
                         ),
                       )
                     : const Icon(Icons.camera_alt),
@@ -201,17 +203,17 @@ Future<void> _captureProofImage() async {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline,
-                    color: Colors.white38,
+                    color: theme.textMuted,
                     size: 14,
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       "AUTOMATIC DATE, TIME, AND LOCATION LOGGING ENABLED",
                       style: TextStyle(
-                        color: Colors.white38,
+                        color: theme.textMuted,
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
@@ -219,21 +221,21 @@ Future<void> _captureProofImage() async {
                   ),
                 ],
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
 
               /// 📝 2. MEDICATION FORM FIELDS
               AppTextFormFieldTitled(
                 controller: medicationNameController,
                 readOnly: true,
-                titleTextStyle: const TextStyle(
-                  color: Colors.white54,
+                titleTextStyle: TextStyle(
+                  color: theme.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
                 title: "MEDICATION NAME",
                 hintText: "e.g. Lisinopril",
-                fillColor: surfaceColor,
-                borderColor: Colors.white10,
+                fillColor: theme.cardSecondary,
+                borderColor: theme.borderSubtle,
               ),
               const SizedBox(height: 15),
 
@@ -243,25 +245,23 @@ Future<void> _captureProofImage() async {
                     child: AppTextFormFieldTitled(
                       controller: dosageController,
                       readOnly: true,
-                      titleTextStyle: const TextStyle(
-                        color: Colors.white54,
+                      titleTextStyle: TextStyle(
+                        color: theme.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                       title: "DOSAGE",
                       hintText: "50",
-                      fillColor: surfaceColor,
-                      borderColor: Colors.white10,
+                      fillColor: theme.cardSecondary,
+                      borderColor: theme.borderSubtle,
                     ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: _buildDropdownField("UNIT", widget.unit ?? ""),
+                    child: _buildDropdownField(context, "UNIT", widget.unit ?? ""),
                   ),
                 ],
               ),
-              // const SizedBox(height: 20),
-              /// /// 📅 3. FREQUENCY & DOSAGE ROW
               const SizedBox(height: 20),
             ],
           ),
@@ -270,14 +270,15 @@ Future<void> _captureProofImage() async {
     );
   }
 
-  Widget _buildDropdownField(String title, String value) {
+  Widget _buildDropdownField(BuildContext context, String title, String value) {
+    final theme = context.themeColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.white54,
+          style: TextStyle(
+            color: theme.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -287,17 +288,18 @@ Future<void> _captureProofImage() async {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           height: 54,
           decoration: BoxDecoration(
-            color: surfaceColor,
+            color: theme.cardSecondary,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: theme.borderSubtle),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 value,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: TextStyle(color: theme.textPrimary, fontSize: 16),
               ),
-              const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
+              Icon(Icons.keyboard_arrow_down, color: theme.textSecondary),
             ],
           ),
         ),
@@ -305,48 +307,43 @@ Future<void> _captureProofImage() async {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final theme = context.themeColors;
     return AppBar(
-      backgroundColor: darkBg,
+      backgroundColor: theme.bg,
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: theme.iconColor),
       ),
-      // title: Text(
-      //   "Medikto",
-      //   style: TextStyle(
-      //     color: accentCyan,
-      //     fontWeight: FontWeight.bold,
-      //     fontSize: 18,
-      //   ),
-      // ),
       actions: [
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.notifications_none, color: Colors.white),
+          icon: Icon(Icons.notifications_none, color: theme.iconColor),
         ),
       ],
     );
   }
 
-  Widget _buildCameraFrame() {
+  Widget _buildCameraFrame(BuildContext context) {
+    final theme = context.themeColors;
     return Container(
       height: 280,
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.borderSubtle),
         image: capturedImage != null
             ? DecorationImage(
                 image: FileImage(capturedImage!),
                 fit: BoxFit.cover,
               )
             : null,
-        color: surfaceColor,
+        color: theme.cardSecondary,
       ),
       child: Stack(
         children: [
-          /// 🌫 Dark overlay for better contrast
+          /// Overlay for contrast
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
@@ -368,47 +365,18 @@ Future<void> _captureProofImage() async {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.camera_alt, color: Colors.white54, size: 55),
+                  Icon(Icons.camera_alt, color: Colors.white70, size: 55),
                   SizedBox(height: 10),
                   Text(
                     "Tap to capture proof",
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: Colors.white70,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
             ),
-
-          // /// 📌 BOTTOM INSTRUCTION
-          // Positioned(
-          //   bottom: 18,
-          //   left: 18,
-          //   right: 18,
-          //   child: Container(
-          //     padding: const EdgeInsets.symmetric(
-          //       horizontal: 16,
-          //       vertical: 10,
-          //     ),
-          //     decoration: BoxDecoration(
-          //       color: Colors.black.withOpacity(0.6),
-          //       borderRadius: BorderRadius.circular(16),
-          //       border: Border.all(
-          //         color: const Color(0xFF00E5FF).withOpacity(0.4),
-          //       ),
-          //     ),
-          //     child: const Text(
-          //       "Tap to capture proof of medication",
-          //       textAlign: TextAlign.center,
-          //       style: TextStyle(
-          //         color: Color(0xFF00E5FF),
-          //         fontSize: 12,
-          //         fontWeight: FontWeight.w600,
-          //       ),
-          //     ),
-          //   ),
-          // ),
         ],
       ),
     );
@@ -421,6 +389,7 @@ Future<void> _captureProofImage() async {
     double? right,
     required double angle,
   }) {
+    final theme = context.themeColors;
     return Positioned(
       top: top,
       bottom: bottom,
@@ -431,10 +400,10 @@ Future<void> _captureProofImage() async {
         child: Container(
           height: 30,
           width: 30,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              top: BorderSide(color: accentCyan, width: 3),
-              left: BorderSide(color: accentCyan, width: 3),
+              top: BorderSide(color: theme.accentMedium, width: 3),
+              left: BorderSide(color: theme.accentMedium, width: 3),
             ),
           ),
         ),

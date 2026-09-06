@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 
 class VitalsTrackDetailsScreen extends StatefulWidget {
@@ -13,11 +14,6 @@ class VitalsTrackDetailsScreen extends StatefulWidget {
 
 class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
   int _selectedTab = 0; // 0: Today, 1: Weekly, 2: Monthly
-
-  // Dark Mode Palette
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
 
   final List<Map<String, dynamic>> reportsList = const [
     {
@@ -48,15 +44,16 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     final size = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: theme.bg,
       appBar: CustomAppBar(
         showBackButton: true,
         title: "Vitals",
-        backgroundColor: darkBg,
-        titleStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        backgroundColor: theme.bg,
+        titleStyle: TextStyle(color: theme.textPrimary, fontWeight: FontWeight.bold),
       ),
       body: CustomScrollView(
         controller: _controller,
@@ -64,7 +61,7 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
         slivers: [
           SliverToBoxAdapter(child: SizedBox(height: size.height * 0.016)),
 
-          /// 🔹 Graph Card (Dark Mode)
+          /// 🔹 Graph Card
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             sliver: SliverToBoxAdapter(
@@ -73,32 +70,32 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: surfaceColor,
+                      color: theme.card,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      border: Border.all(color: theme.borderSubtle),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           "Body Temperature",
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: theme.textPrimary,
                           ),
                         ),
-                        const Text(
+                        Text(
                           "°F",
-                          style: TextStyle(color: Colors.white54),
+                          style: TextStyle(color: theme.textSecondary),
                         ),
                         const SizedBox(height: 25),
-                        SizedBox(height: 200, child: _buildHeartRateChart()),
+                        SizedBox(height: 200, child: _buildHeartRateChart(context)),
                       ],
                     ),
                   ),
                   
-                  // 🔥 STAMP (Adjusted for Dark Mode visibility)
+                  // 🔥 STAMP
                   Positioned(
                     top: 15,
                     right: 15,
@@ -124,14 +121,15 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
               child: Container(
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(20),
+                  color: theme.cardSecondary,
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: theme.borderSubtle),
                 ),
                 child: Row(
                   children: [
-                    _buildTabItem("Today", 0),
-                    _buildTabItem("Weekly", 1),
-                    _buildTabItem("Monthly", 2),
+                    _buildTabItem(context, "Today", 0),
+                    _buildTabItem(context, "Weekly", 1),
+                    _buildTabItem(context, "Monthly", 2),
                   ],
                 ),
               ),
@@ -144,12 +142,12 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             sliver: SliverToBoxAdapter(
-              child: const Text(
+              child: Text(
                 "Reports Data",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: theme.textPrimary,
                 ),
               ),
             ),
@@ -165,8 +163,9 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
                 return Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: surfaceColor,
+                    color: theme.card,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.borderSubtle),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
@@ -176,7 +175,7 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
                         height: 32,
                         width: 32,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
+                          color: theme.cardSecondary,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -193,15 +192,13 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            /// ✅ Responsive Report Title
                             Text(
                               item["title"],
-                              // maxLines: 1,
                               overflow: TextOverflow.clip,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.white54,
+                                color: theme.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -209,10 +206,10 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
                               alignment: Alignment.center,
                               child: Text(
                                 item["count"].toString(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: theme.textPrimary,
                                 ),
                               ),
                             ),
@@ -227,7 +224,7 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.8, // Responsive height based on width
+                childAspectRatio: 1.8,
               ),
             ),
           ),
@@ -237,7 +234,8 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
     );
   }
 
-  Widget _buildTabItem(String title, int index) {
+  Widget _buildTabItem(BuildContext context, String title, int index) {
+    final theme = context.themeColors;
     bool isSelected = _selectedTab == index;
     return Expanded(
       child: GestureDetector(
@@ -246,9 +244,8 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
           padding: const EdgeInsets.only(top: 6, bottom: 6, left: 6, right: 6),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            // margin: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: isSelected ? accentCyan : Colors.transparent,
+              color: isSelected ? theme.accentPrimary : Colors.transparent,
               borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
@@ -257,7 +254,7 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.black : Colors.white60,
+                color: isSelected ? theme.onAccentPrimary : theme.textSecondary,
               ),
             ),
           ),
@@ -266,14 +263,15 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
     );
   }
 
-  Widget _buildHeartRateChart() {
+  Widget _buildHeartRateChart(BuildContext context) {
+    final theme = context.themeColors;
     return LineChart(
       LineChartData(
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
           getDrawingHorizontalLine: (value) =>
-              FlLine(color: Colors.white.withOpacity(0.05), strokeWidth: 1),
+              FlLine(color: theme.chartGrid, strokeWidth: 1),
         ),
         titlesData: FlTitlesData(
           rightTitles: const AxisTitles(
@@ -292,7 +290,7 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
               reservedSize: 30,
               getTitlesWidget: (value, meta) => Text(
                 value.toInt().toString(),
-                style: const TextStyle(color: Colors.white38, fontSize: 10),
+                style: TextStyle(color: theme.textMuted, fontSize: 10),
               ),
             ),
           ),
@@ -309,7 +307,7 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
               FlSpot(10, 75),
             ],
             isCurved: true,
-            color: accentCyan,
+            color: theme.accentPrimary,
             barWidth: 4,
             isStrokeCapRound: true,
             dotData: const FlDotData(show: false),
@@ -317,8 +315,8 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
               show: true,
               gradient: LinearGradient(
                 colors: [
-                  accentCyan.withOpacity(0.2),
-                  accentCyan.withOpacity(0.0),
+                  theme.accentPrimary.withOpacity(0.2),
+                  theme.accentPrimary.withOpacity(0.0),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -328,13 +326,13 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
         ],
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (touchedSpot) => surfaceColor,
+            getTooltipColor: (touchedSpot) => theme.surface,
             getTooltipItems: (spots) => spots
                 .map(
                   (s) => LineTooltipItem(
                     '${s.y.toInt()}°F',
-                    const TextStyle(
-                      color: accentCyan,
+                    TextStyle(
+                      color: theme.accentPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -353,6 +351,7 @@ class MediktoDigitalStamp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     final now = dateTime ?? DateTime.now();
     return Container(
       width: 85,
@@ -360,7 +359,7 @@ class MediktoDigitalStamp extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: const Color(0xFF81DEEA).withOpacity(0.3),
+          color: theme.accentPrimary.withOpacity(0.3),
           width: 1.5,
         ),
       ),
@@ -373,15 +372,15 @@ class MediktoDigitalStamp extends StatelessWidget {
             children: [
               Text(
                 "${now.hour % 12 == 0 ? 12 : now.hour % 12}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: theme.textPrimary,
                 ),
               ),
               Text(
                 "${now.day} ${_getMonth(now.month)} ${now.year}",
-                style: const TextStyle(fontSize: 7, color: Colors.white38),
+                style: TextStyle(fontSize: 7, color: theme.textMuted),
               ),
             ],
           ),
@@ -412,6 +411,7 @@ class _CircularBranding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     String fullCircleText = text * 6;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -426,10 +426,10 @@ class _CircularBranding extends StatelessWidget {
                 ..rotateZ(angle + (math.pi / 2)),
               child: Text(
                 fullCircleText[index],
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 6,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF81DEEA),
+                  color: theme.accentPrimary,
                   fontFamily: 'Courier',
                 ),
               ),

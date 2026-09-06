@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 
 class ReportActionsSheet extends StatelessWidget {
   final List<Map<String, dynamic>> actions;
 
   const ReportActionsSheet({super.key, required this.actions});
 
-  // Dark Mode Palette constants
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     return Container(
-      // Ensure the container itself matches the dark theme
-      decoration: const BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -24,19 +21,19 @@ class ReportActionsSheet extends StatelessWidget {
           children: [
             const SizedBox(height: 12),
 
-            // 🔹 Top Handle (Updated for visibility in dark mode)
+            // 🔹 Top Handle
             Container(
               height: 5,
               width: 50,
               decoration: BoxDecoration(
-                color: Colors.white24, // Subtle contrast
+                color: theme.textMuted.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(100),
               ),
             ),
 
             const SizedBox(height: 25),
 
-            /// 🔥 Dynamic List (Dark Mode Optimized)
+            /// 🔥 Dynamic List
             ...List.generate(actions.length, (index) {
               final item = actions[index];
 
@@ -47,30 +44,30 @@ class ReportActionsSheet extends StatelessWidget {
                 minLeadingWidth: 0,
                 horizontalTitleGap: 16,
                 
-                // 🔹 Leading Icon in Cyan
+                // 🔹 Leading Icon in Brand Accent
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: accentCyan.withOpacity(0.1),
+                    color: theme.accentSubtle,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(item["icon"], color: accentCyan, size: 22),
+                  child: Icon(item["icon"], color: theme.accent, size: 22),
                 ),
 
-                // 🔹 Title in White
+                // 🔹 Title
                 title: Text(
                   item["title"],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white, // Legible white text
+                    color: theme.textPrimary,
                   ),
                 ),
                 
-                // 🔹 Trailing Arrow (Standard UX pattern)
-                trailing: const Icon(
+                // 🔹 Trailing Arrow
+                trailing: Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.white10,
+                  color: theme.textMuted,
                   size: 14,
                 ),
 

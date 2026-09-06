@@ -1,10 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/home/notifications/notification_screen.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
-import 'package:medikto/features/medications/models/medication_model.dart';
 import 'package:medikto/features/medications/models/today_scheduled_model.dart';
 import 'package:medikto/features/medications/views/medical_records_screen.dart';
 import 'package:medikto/features/medications/views/medication_verification_screen.dart';
@@ -13,12 +13,15 @@ import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
 
 class TimelineMedicine {
-  String doseId; // 🔥 ADD THIS
-  String time;
-  String title;
-  String sub;
-  IconData icon;
-  bool isTaken;
+  final String doseId;
+  final String time;
+  final String title;
+  final String sub;
+  final IconData icon;
+  final String status;
+  final bool isTaken;
+  final bool isMissed;
+  final bool isFuture;
 
   TimelineMedicine({
     required this.doseId,
@@ -26,7 +29,10 @@ class TimelineMedicine {
     required this.title,
     required this.sub,
     required this.icon,
+    this.status = "pending",
     this.isTaken = false,
+    this.isMissed = false,
+    this.isFuture = false,
   });
 }
 
@@ -38,135 +44,17 @@ class MedicationsScreen extends ConsumerStatefulWidget {
 }
 
 class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
-  // Brand Dark Colors consistent with design
-  static const Color darkBg = Color(0xFF121212); // Deep Charcoal
-  static const Color surfaceColor = Color(0xFF1E1E1E); // Elevated Grey
-  static const Color accentCyan = Color(0xFF81DEEA); // Branding Cyan
-  static const Color dangerRed = Color(0xFFE57373); // Critical Alerts
+  static const Color dangerRed = AppColors.missedRed;
   DateTime selectedDate = DateTime.now();
   Map<String, bool> takenMap = {};
   Set<String> loadingDoseIds = {};
 
-  List<MedicationModel> _getMedicationsForSelectedDate(
-    List<MedicationModel> medications,
-    List<TodayScheduleModel> todayList,
-  ) {
-    final selDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-
-    final filtered = medications.where((medication) {
-      // Check status
-      final status = medication.status?.toLowerCase() ?? "active";
-      if (status != "active") {
-        return false;
-      }
-
-      final start = medication.startDate ?? medication.createdAt;
-      if (start == null) return true;
-
-      final startDay = DateTime(start.year, start.month, start.day);
-      if (selDay.isBefore(startDay)) return false;
-
-      if (medication.isContinue == true) {
-        return true;
-      }
-
-      if (medication.endDate != null) {
-        final endDay = DateTime(
-          medication.endDate!.year,
-          medication.endDate!.month,
-          medication.endDate!.day,
-        );
-        if (selDay.isAfter(endDay)) return false;
-      } else if (medication.duration != null && medication.duration! > 0) {
-        final endDay = startDay.add(Duration(days: medication.duration! - 1));
-        if (selDay.isAfter(endDay)) return false;
-      }
-
-      // Check weekly frequency if applicable
-      if (medication.frequency?.toLowerCase() == "weekly") {
-        if (start.weekday != selectedDate.weekday) {
-          return false;
-        }
-      }
-
-      return true;
-    }).toList();
-
-    filtered.sort((a, b) {
-      final aTime = a.timings?.isNotEmpty == true ? a.timings!.first : "";
-
-      final bTime = b.timings?.isNotEmpty == true ? b.timings!.first : "";
-
-      final aSchedule = todayList.firstWhere(
-        (e) => e.name == a.name && e.time == aTime,
-        orElse: () => TodayScheduleModel(),
-      );
-
-      final bSchedule = todayList.firstWhere(
-        (e) => e.name == b.name && e.time == bTime,
-        orElse: () => TodayScheduleModel(),
-      );
-
-      final aTaken = aSchedule.status?.toLowerCase() == "taken";
-      final bTaken = bSchedule.status?.toLowerCase() == "taken";
-
-      /// 🔥 Pending medicines always on TOP
-      if (aTaken != bTaken) {
-        return aTaken ? 1 : -1;
-      }
-
-      // /// Then sort by time
-      // final aTime = a.timings?.isNotEmpty == true ? a.timings!.first : "";
-
-      // final bTime = b.timings?.isNotEmpty == true ? b.timings!.first : "";
-
-      return aTime.compareTo(bTime);
-    });
-
-    return filtered;
+  String _formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  Future<void> selectDate() async {
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: darkBg,
-            colorScheme: const ColorScheme.dark(
-              primary: accentCyan,
-              surface: Color(0xFF1E1E1E),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
-            ),
-            datePickerTheme: const DatePickerThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
-              headerBackgroundColor: accentCyan,
-              headerForegroundColor: Colors.black,
-              dayForegroundColor: WidgetStatePropertyAll(Colors.white),
-              todayForegroundColor: WidgetStatePropertyAll(Colors.white),
-              yearForegroundColor: WidgetStatePropertyAll(Colors.white),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (pickedDate != null) {
-      setState(() {
-        selectedDate = pickedDate;
-      });
-    }
-  }
-
-  bool _isDoseInFuture(String? dateStr, String? timeStr) {
-    if (timeStr == null || timeStr.trim().isEmpty) return false;
+  DateTime? _parseDoseDateTime(String? dateStr, String? timeStr) {
+    if (timeStr == null || timeStr.trim().isEmpty) return null;
     try {
       final now = DateTime.now();
       int year = now.year;
@@ -182,83 +70,46 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
         }
       }
 
-      final cleanTime = timeStr.trim();
+      final cleanTime = timeStr.replaceAll(RegExp(r'\u202F|\u00A0'), ' ').trim();
       final isPM = cleanTime.toUpperCase().endsWith("PM");
       final isAM = cleanTime.toUpperCase().endsWith("AM");
-      final timePart = cleanTime.replaceAll(RegExp(r'[a-zA-Z\s]'), '');
-      final timeParts = timePart.split(":");
-      if (timeParts.length < 2) return false;
+      final timeDigits = cleanTime.replaceAll(RegExp(r'[a-zA-Z\s]'), '');
+      final parts = timeDigits.split(":");
+      if (parts.length < 2) return null;
 
-      int hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
+      int hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
 
       if (isPM && hour < 12) hour += 12;
       if (isAM && hour == 12) hour = 0;
 
-      final scheduled = DateTime(year, month, day, hour, minute);
-      return scheduled.isAfter(now);
-    } catch (e) {
-      debugPrint("Error checking dose future status: $e");
+      return DateTime(year, month, day, hour, minute);
+    } catch (_) {
+      return null;
     }
-    return false;
+  }
+
+  bool _isDoseInFuture(String? dateStr, String? timeStr) {
+    final scheduled = _parseDoseDateTime(dateStr, timeStr);
+    if (scheduled == null) return false;
+    return scheduled.isAfter(DateTime.now());
   }
 
   bool _isDoseEarly(TodayScheduleModel schedule) {
-    if (schedule.date == null || schedule.time == null) return false;
-    try {
-      final now = DateTime.now();
-
-      final dateParts = schedule.date!.split("-");
-      if (dateParts.length < 3) return false;
-      final year = int.parse(dateParts[0]);
-      final month = int.parse(dateParts[1]);
-      final day = int.parse(dateParts[2]);
-
-      final cleanTime = schedule.time!.trim();
-      final isPM = cleanTime.toUpperCase().endsWith("PM");
-      final isAM = cleanTime.toUpperCase().endsWith("AM");
-      final timePart = cleanTime.replaceAll(RegExp(r'[a-zA-Z\s]'), '');
-      final timeParts = timePart.split(":");
-      if (timeParts.length < 2) return false;
-      
-      int hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-
-      if (isPM && hour < 12) hour += 12;
-      if (isAM && hour == 12) hour = 0;
-
-      final scheduled = DateTime(year, month, day, hour, minute);
-
-      final diff = scheduled.difference(now);
-      if (diff.inMinutes > 10) {
-        return true;
-      }
-    } catch (e) {
-      debugPrint("Error checking early dose: $e");
-    }
-    return false;
+    final scheduled = _parseDoseDateTime(schedule.date, schedule.time);
+    if (scheduled == null) return false;
+    final now = DateTime.now();
+    final diff = scheduled.difference(now);
+    return diff.inMinutes > 10;
   }
 
   Future<bool> _showEarlyWarningDialog(BuildContext context, TodayScheduleModel schedule) async {
+    final colors = context.themeColors;
     int minutesEarly = 0;
-    try {
-      final now = DateTime.now();
-      final dateParts = schedule.date!.split("-");
-      final year = int.parse(dateParts[0]);
-      final month = int.parse(dateParts[1]);
-      final day = int.parse(dateParts[2]);
-      final cleanTime = schedule.time!.trim();
-      final isPM = cleanTime.toUpperCase().endsWith("PM");
-      final isAM = cleanTime.toUpperCase().endsWith("AM");
-      final timePart = cleanTime.replaceAll(RegExp(r'[a-zA-Z\s]'), '');
-      final timeParts = timePart.split(":");
-      int hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1]);
-      if (isPM && hour < 12) hour += 12;
-      if (isAM && hour == 12) hour = 0;
-      final scheduled = DateTime(year, month, day, hour, minute);
-      minutesEarly = scheduled.difference(now).inMinutes;
-    } catch (_) {}
+    final scheduled = _parseDoseDateTime(schedule.date, schedule.time);
+    if (scheduled != null) {
+      minutesEarly = scheduled.difference(DateTime.now()).inMinutes;
+    }
 
     String timeLabel = minutesEarly >= 60 
         ? "${(minutesEarly / 60).floor()} hour(s) and ${minutesEarly % 60} minute(s)"
@@ -267,25 +118,25 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
-          children: const [
-            Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 28),
-            SizedBox(width: 10),
-            Text("Early Dose Alert", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 28),
+            const SizedBox(width: 10),
+            Text("Early Dose Alert", style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
           "This dose of ${schedule.name} is scheduled for ${schedule.time}.\n\n"
           "You are marking it as taken $timeLabel early.\n\n"
           "Taking medications too early can be unsafe. Are you sure you want to log this dose now?",
-          style: const TextStyle(color: Colors.white70, height: 1.4),
+          style: TextStyle(color: colors.textSecondary, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel", style: TextStyle(color: Colors.white30)),
+            child: Text("Cancel", style: TextStyle(color: colors.textMuted)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -301,17 +152,58 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     return result ?? false;
   }
 
+  Future<void> selectDate() async {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+            scaffoldBackgroundColor: colors.bg,
+            colorScheme: isDark
+                ? ColorScheme.dark(
+                    primary: colors.accentPrimary,
+                    surface: colors.surface,
+                    onSurface: colors.textPrimary,
+                  )
+                : ColorScheme.light(
+                    primary: colors.accentPrimary,
+                    surface: colors.surface,
+                    onSurface: colors.textPrimary,
+                  ),
+            dialogTheme: DialogThemeData(
+              backgroundColor: colors.surface,
+            ),
+            datePickerTheme: DatePickerThemeData(
+              backgroundColor: colors.surface,
+              headerBackgroundColor: colors.accentPrimary,
+              headerForegroundColor: colors.onAccentPrimary,
+              dayForegroundColor: WidgetStatePropertyAll(colors.textPrimary),
+              todayForegroundColor: WidgetStatePropertyAll(colors.accentPrimary),
+              yearForegroundColor: WidgetStatePropertyAll(colors.textPrimary),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        selectedDate = pickedDate;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final medicationsAsync = ref.watch(getMedicationsProvider);
-    final todayScheduleAsync = ref.watch(getTodayScheduleProvider);
-    final todayList = todayScheduleAsync.value?.data is List<TodayScheduleModel>
-        ? todayScheduleAsync.value!.data as List<TodayScheduleModel>
-        : <TodayScheduleModel>[];
-
-    final medications = medicationsAsync.value?.data is List<MedicationModel>
-        ? medicationsAsync.value!.data as List<MedicationModel>
-        : <MedicationModel>[];
+    final colors = context.themeColors;
+    final formattedDate = _formatDate(selectedDate);
+    final scheduleAsync = ref.watch(getScheduleForDateProvider(formattedDate));
 
     final profileAsync = ref.watch(getProfileProvider);
     final profile = profileAsync.value?.data is ProfileModel
@@ -320,14 +212,15 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     final isGuardian = profile?.role == 'guardian';
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: colors.bg,
       appBar: _buildAppBar(profile),
       body: SafeArea(
         child: RefreshIndicator(
-          color: accentCyan,
-          backgroundColor: surfaceColor,
+          color: colors.accentPrimary,
+          backgroundColor: colors.surface,
           onRefresh: () async {
-            await ref.refresh(getMedicationsProvider.future);
+            await ref.refresh(getScheduleForDateProvider(formattedDate).future);
+            await ref.refresh(getTodayScheduleProvider.future);
           },
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
@@ -364,16 +257,16 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                       Container(
                         height: 8,
                         width: 8,
-                        decoration: const BoxDecoration(
-                          color: accentCyan,
+                        decoration: BoxDecoration(
+                          color: colors.accentPrimary,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const Text(
+                      Text(
                         "DAILY TIMELINE",
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: colors.textSecondary,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.1,
@@ -386,23 +279,36 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
 
               const SliverToBoxAdapter(child: SizedBox(height: 15)),
 
-              /// FILTERED MEDICATIONS
-              Builder(
-                builder: (context) {
-                  final filteredMedications = _getMedicationsForSelectedDate(
-                    medications,
-                    todayList,
-                  );
+              /// FILTERED DOSES FOR SELECTED DATE
+              scheduleAsync.when(
+                loading: () => const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                ),
+                error: (err, _) => SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                    child: Center(
+                      child: Text(
+                        "Failed to load schedule",
+                        style: TextStyle(color: colors.textSecondary),
+                      ),
+                    ),
+                  ),
+                ),
+                data: (response) {
+                  final rawList = response.data is List<TodayScheduleModel>
+                      ? response.data as List<TodayScheduleModel>
+                      : <TodayScheduleModel>[];
 
-                  final isTodaySelected = DateUtils.isSameDay(
-                    selectedDate,
-                    DateTime.now(),
-                  );
-
-                  if (filteredMedications.isEmpty) {
+                  if (rawList.isEmpty) {
                     return SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 40,
                         ),
@@ -411,20 +317,21 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                             margin: const EdgeInsets.only(top: 10),
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(20),
+                              color: colors.card,
                               borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: colors.borderSubtle),
                             ),
-                            child: const Column(
+                            child: Column(
                               children: [
                                 Icon(
                                   Icons.hourglass_empty,
-                                  color: Colors.white30,
+                                  color: colors.textMuted,
                                   size: 40,
                                 ),
-                                SizedBox(height: 10),
+                                const SizedBox(height: 10),
                                 Text(
                                   "No medications for this date",
-                                  style: TextStyle(color: Colors.white54),
+                                  style: TextStyle(color: colors.textSecondary),
                                 ),
                               ],
                             ),
@@ -434,63 +341,54 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                     );
                   }
 
+                  // Sort doses: Pending first, then chronologically by scheduled time
+                  final sortedDoses = List<TodayScheduleModel>.from(rawList);
+                  sortedDoses.sort((a, b) {
+                    final aTaken = a.status?.toLowerCase() == "taken" || takenMap[a.id] == true;
+                    final bTaken = b.status?.toLowerCase() == "taken" || takenMap[b.id] == true;
+                    if (aTaken != bTaken) {
+                      return aTaken ? 1 : -1;
+                    }
+                    final aDt = _parseDoseDateTime(a.date, a.time);
+                    final bDt = _parseDoseDateTime(b.date, b.time);
+                    if (aDt != null && bDt != null) {
+                      return aDt.compareTo(bDt);
+                    }
+                    return (a.time ?? "").compareTo(b.time ?? "");
+                  });
+
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final medication = filteredMedications[index];
-
-                          final time = medication.timings?.isNotEmpty == true
-                              ? medication.timings!.first
-                              : "--";
-
-                          final currentTime =
-                              medication.timings?.isNotEmpty == true
-                              ? medication.timings!.first
-                              : "";
-
-                          final schedule = isTodaySelected
-                              ? todayList.firstWhere(
-                                  (e) =>
-                                      e.name == medication.name &&
-                                      e.time == currentTime,
-                                  orElse: () => TodayScheduleModel(),
-                                )
-                              : TodayScheduleModel(status: "taken");
-
+                          final schedule = sortedDoses[index];
                           final scheduleId = schedule.id ?? "";
+                          final rawStatus = (schedule.status ?? "pending").toLowerCase();
 
-                          final isTaken =
-                              schedule.status?.toLowerCase() == "taken" ||
-                              takenMap[scheduleId] == true;
-
-                          final isFuture = _isDoseInFuture(
-                            schedule.date,
-                            schedule.time ?? time,
-                          );
-
-                          final isCurrent = isTodaySelected && !isTaken;
+                          // Exact State Machine Evaluation:
+                          final isTaken = rawStatus == "taken" || takenMap[scheduleId] == true;
+                          final isMissed = rawStatus == "missed" && !isTaken;
+                          final isCancelled = rawStatus == "cancelled" && !isTaken;
+                          final isFuture = !isTaken && !isMissed && !isCancelled && _isDoseInFuture(schedule.date, schedule.time);
 
                           return RepaintBoundary(
                             child: _buildAdvancedTimelineItem(
                               item: TimelineMedicine(
-                                // doseId: medication.id ?? "",
-                                doseId: scheduleId ?? "",
-                                time: time,
-
-                                title: medication.name ?? "Medicine",
-                                sub:
-                                    "${medication.dosage ?? ""}${medication.unit ?? ""}",
+                                doseId: scheduleId,
+                                time: schedule.time ?? "--",
+                                title: schedule.name ?? "Medicine",
+                                sub: schedule.dosage ?? "",
                                 icon: Icons.medication,
+                                status: isTaken ? "taken" : (isMissed ? "missed" : (isCancelled ? "cancelled" : "pending")),
                                 isTaken: isTaken,
+                                isMissed: isMissed,
+                                isFuture: isFuture,
                               ),
-                              isLast: index == filteredMedications.length - 1,
-                              isCurrent: isCurrent,
-                              isFuture: isFuture,
+                              isLast: index == sortedDoses.length - 1,
                               isGuardian: isGuardian,
                               onMarkTaken: () async {
-                                final doseId = scheduleId;
+                                if (scheduleId.isEmpty) return;
 
                                 if (_isDoseEarly(schedule)) {
                                   final proceed = await _showEarlyWarningDialog(context, schedule);
@@ -498,27 +396,29 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                                 }
 
                                 setState(() {
-                                  loadingDoseIds.add(doseId);
+                                  loadingDoseIds.add(scheduleId);
                                 });
 
                                 final result = await ref.read(
-                                  markDoseTakenProvider(doseId).future,
+                                  markDoseTakenProvider(scheduleId).future,
                                 );
 
                                 setState(() {
-                                  loadingDoseIds.remove(doseId);
+                                  loadingDoseIds.remove(scheduleId);
                                 });
 
                                 if (result.status == ResponseStatus.SUCCESS) {
                                   setState(() {
-                                    takenMap[doseId] = true;
+                                    takenMap[scheduleId] = true;
                                   });
 
+                                  ref.invalidate(getScheduleForDateProvider(formattedDate));
                                   ref.invalidate(getTodayScheduleProvider);
+                                  ref.invalidate(getAdherenceProvider);
                                 }
                               },
                               onVerifyWithSelfie: () async {
-                                final doseId = scheduleId;
+                                if (scheduleId.isEmpty) return;
 
                                 if (_isDoseEarly(schedule)) {
                                   final proceed = await _showEarlyWarningDialog(context, schedule);
@@ -530,29 +430,28 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                                   MaterialPageRoute(
                                     builder: (_) =>
                                         SelfieVerficationMedicineScreen(
-                                          doseId: doseId,
-                                          medicineName: medication.name ?? "",
-                                          dosage: "${medication.dosage ?? ""}",
-                                          unit: medication.unit ?? "mg",
+                                          doseId: scheduleId,
+                                          medicineName: schedule.name ?? "",
+                                          dosage: schedule.dosage ?? "",
+                                          unit: "",
                                         ),
                                   ),
                                 );
 
                                 if (result != null) {
                                   setState(() {
-                                    takenMap[doseId] = true;
+                                    takenMap[scheduleId] = true;
                                   });
 
-                                  await ref.refresh(
-                                    getTodayScheduleProvider.future,
-                                  );
-                                  // await ref.refresh(getMedicationsProvider.future);
+                                  ref.invalidate(getScheduleForDateProvider(formattedDate));
+                                  ref.invalidate(getTodayScheduleProvider);
+                                  ref.invalidate(getAdherenceProvider);
                                 }
                               },
                             ),
                           );
                         },
-                        childCount: filteredMedications.length,
+                        childCount: sortedDoses.length,
                         addAutomaticKeepAlives: false,
                         addRepaintBoundaries: true,
                         addSemanticIndexes: false,
@@ -572,20 +471,16 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             ],
           ),
         ),
-      ), // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {},
-      //   backgroundColor: accentCyan,
-      //   child: const Icon(Icons.add, color: Colors.black, size: 28),
-      // ),
+      ),
     );
   }
 
   /// 🔹 CALENDAR SECTION
   Widget _buildCalendarSection(BuildContext context) {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
     final screenWidth = MediaQuery.sizeOf(context).width;
 
-    // Logic: Calculate item width based on screen size so 5.5 items are visible
-    // This gives a visual hint that the list is scrollable
     final itemWidth = screenWidth / 5.5;
 
     final List<DateTime> dates = List.generate(15, (index) {
@@ -604,8 +499,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
               children: [
                 Text(
                   "${_getMonthName(selectedDate.month)} ${selectedDate.year}",
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -616,30 +511,30 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: surfaceColor,
+                      color: colors.card,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: accentCyan.withOpacity(0.2)),
+                      border: Border.all(color: colors.borderSubtle),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.calendar_month_outlined,
-                      color: accentCyan,
+                      color: colors.accentPrimary,
                       size: 20,
                     ),
                   ),
                 ),
               ],
             ),
-),
+          ),
           const SizedBox(height: 15),
 
           // Scrollable area
           SizedBox(
-            height: 90, // Fixed height for the horizontal bar
+            height: 90,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: dates.length,
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.only(left: 20), // Start padding
+              padding: const EdgeInsets.only(left: 20),
               itemBuilder: (context, index) {
                 final date = dates[index];
                 bool isSelected = DateUtils.isSameDay(date, selectedDate);
@@ -653,14 +548,23 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                     margin: const EdgeInsets.only(right: 12),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFF81DEEA)
-                          : const Color(0xFF1E1E1E),
+                          ? colors.accentPrimary
+                          : colors.card,
                       borderRadius: BorderRadius.circular(16),
                       border: isToday && !isSelected
                           ? Border.all(
-                              color: const Color(0xFF81DEEA).withOpacity(0.5),
+                              color: colors.accentBorder,
                             )
-                          : Border.all(color: Colors.transparent),
+                          : Border.all(color: isSelected ? Colors.transparent : colors.borderSubtle),
+                      boxShadow: !isDark && !isSelected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -668,7 +572,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                         Text(
                           _getWeekdayName(date.weekday),
                           style: TextStyle(
-                            color: isSelected ? Colors.black : Colors.white38,
+                            color: isSelected ? colors.onAccentPrimary : colors.textMuted,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -677,7 +581,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                         Text(
                           date.day.toString(),
                           style: TextStyle(
-                            color: isSelected ? Colors.black : Colors.white,
+                            color: isSelected ? colors.onAccentPrimary : colors.textPrimary,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -694,7 +598,6 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     );
   }
 
-  // Helper helpers for dynamic names without needing external packages
   String _getWeekdayName(int weekday) {
     return ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"][weekday - 1];
   }
@@ -716,140 +619,38 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     ][month - 1];
   }
 
-  /// 🔹 TIMELINE ITEM (Vertical list items)
-  Widget _buildTimelineItem({
-    required String time,
-    required String title,
-    required String sub,
-    required IconData icon,
-    bool isTaken = false,
-    bool isUpcoming = false,
-    bool isLast = false,
-  }) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Vertical Indicator
-          Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                height: 24,
-                width: 24,
-                decoration: BoxDecoration(
-                  color: isTaken
-                      ? accentCyan
-                      : isUpcoming
-                      ? accentCyan.withOpacity(0.1)
-                      : Colors.transparent,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isTaken ? accentCyan : accentCyan.withOpacity(0.4),
-                    width: isTaken ? 0 : 1.5,
-                  ),
-                ),
-                child: isTaken
-                    ? const Icon(Icons.check, size: 16, color: Colors.black)
-                    : null,
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    decoration: BoxDecoration(
-                      color: Colors.white10,
-                      borderRadius: BorderRadius.circular(1),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 20),
-          // Content Card
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(16),
-                border: isUpcoming
-                    ? Border.all(color: accentCyan.withOpacity(0.2))
-                    : null,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: accentCyan.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, color: accentCyan, size: 22),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            Text(
-                              time,
-                              style: TextStyle(
-                                color: isTaken
-                                    ? accentCyan
-                                    : isUpcoming
-                                    ? accentCyan.withOpacity(0.7)
-                                    : Colors.white38,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          sub,
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildAdvancedTimelineItem({
     required TimelineMedicine item,
     required bool isLast,
-    required bool isCurrent,
-    bool isFuture = false,
     required VoidCallback onMarkTaken,
     required VoidCallback onVerifyWithSelfie,
     bool isGuardian = false,
   }) {
-    bool isTaken = item.isTaken;
-
-    // final markState = ref.watch(markDoseTakenProvider(item.doseId));
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+    final isTaken = item.isTaken;
+    final isMissed = item.isMissed;
+    final isFuture = item.isFuture;
+    final isActionable = !isTaken && !isMissed && !isFuture && !isGuardian;
     final isLoading = loadingDoseIds.contains(item.doseId);
+
+    // Dynamic timeline indicator styles
+    Color indicatorBg = Colors.transparent;
+    Color indicatorBorder = colors.borderSubtle;
+    Widget? indicatorIcon;
+
+    if (isTaken) {
+      indicatorBg = colors.accentPrimary;
+      indicatorBorder = colors.accentPrimary;
+      indicatorIcon = Icon(Icons.check, size: 16, color: colors.onAccentPrimary);
+    } else if (isMissed) {
+      indicatorBg = dangerRed.withOpacity(0.15);
+      indicatorBorder = dangerRed;
+      indicatorIcon = const Icon(Icons.close, size: 14, color: dangerRed);
+    } else if (isActionable) {
+      indicatorBg = colors.accentSubtle;
+      indicatorBorder = colors.accentBorder;
+    }
 
     return IntrinsicHeight(
       child: Row(
@@ -863,20 +664,17 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                 height: 24,
                 width: 24,
                 decoration: BoxDecoration(
-                  color: isTaken
-                      ? accentCyan
-                      : isCurrent
-                      ? accentCyan.withOpacity(0.1)
-                      : Colors.transparent,
+                  color: indicatorBg,
                   shape: BoxShape.circle,
-                  border: Border.all(color: accentCyan.withOpacity(0.5)),
+                  border: Border.all(
+                    color: indicatorBorder,
+                    width: 1.5,
+                  ),
                 ),
-                child: isTaken
-                    ? const Icon(Icons.check, size: 16, color: Colors.black)
-                    : null,
+                child: indicatorIcon,
               ),
               if (!isLast)
-                Expanded(child: Container(width: 2, color: Colors.white10)),
+                Expanded(child: Container(width: 2, color: colors.borderSubtle)),
             ],
           ),
 
@@ -888,10 +686,21 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: surfaceColor,
+                color: colors.card,
                 borderRadius: BorderRadius.circular(16),
-                border: isCurrent
-                    ? Border.all(color: accentCyan.withOpacity(0.3))
+                border: isActionable
+                    ? Border.all(color: colors.accentBorder, width: 1.5)
+                    : isMissed
+                    ? Border.all(color: dangerRed.withOpacity(0.4), width: 1.2)
+                    : Border.all(color: colors.borderSubtle),
+                boxShadow: !isDark
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        )
+                      ]
                     : null,
               ),
               child: Column(
@@ -903,20 +712,23 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                     children: [
                       Text(
                         item.title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: colors.textPrimary,
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
                         item.time,
                         style: TextStyle(
                           color: isTaken
-                              ? accentCyan
-                              : isCurrent
-                              ? accentCyan.withOpacity(0.7)
-                              : Colors.white38,
-                          fontSize: 10,
+                              ? colors.accentMedium
+                              : isMissed
+                              ? dangerRed
+                              : isActionable
+                              ? colors.accentMedium
+                              : colors.textMuted,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -927,13 +739,13 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
 
                   Text(
                     item.sub,
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    style: TextStyle(color: colors.textSecondary, fontSize: 11),
                   ),
 
                   const SizedBox(height: 12),
 
-                  /// 🔥 ACTION BUTTONS (Available at or after scheduled dose time)
-                  if (!isTaken && isCurrent && !isFuture && !isGuardian) ...[
+                  /// 🔥 ACTION BUTTONS (Available at or after scheduled dose time for pending doses)
+                  if (isActionable) ...[
                     SizedBox(
                       width: double.infinity,
                       height: 42,
@@ -944,15 +756,16 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                                 height: 16,
                                 width: 16,
                                 child: CircularProgressIndicator(
-                                  color: Colors.white54,
+                                  color: Colors.black54,
                                   strokeWidth: 2,
                                 ),
                               )
                             : const Icon(Icons.check_circle_outline, size: 18),
                         label: const Text("Mark as Taken"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: accentCyan,
-                          foregroundColor: Colors.black,
+                          backgroundColor: colors.accentPrimary,
+                          foregroundColor: colors.onAccentPrimary,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -966,15 +779,20 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                       height: 42,
                       child: OutlinedButton.icon(
                         onPressed: isLoading ? null : onVerifyWithSelfie,
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.camera_alt_outlined,
                           size: 18,
-                          color: accentCyan,
+                          color: colors.accentPrimary,
                         ),
-                        label: const Text("Verify with Selfie"),
+                        label: Text(
+                          "Verify with Selfie",
+                          style: TextStyle(
+                            color: colors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.white24),
-                          foregroundColor: Colors.white70,
+                          side: BorderSide(color: colors.border),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -984,7 +802,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                   ],
 
                   /// ⏳ UPCOMING BADGE (Scheduled in the future)
-                  if (!isTaken && isFuture)
+                  if (isFuture)
                     Container(
                       margin: const EdgeInsets.only(top: 8),
                       padding: const EdgeInsets.symmetric(
@@ -992,22 +810,57 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white10,
+                        color: colors.cardSecondary,
                         borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: colors.borderSubtle),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.schedule,
-                            color: accentCyan.withOpacity(0.8),
+                            color: colors.accentMedium,
                             size: 12,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             "Upcoming (Scheduled ${item.time})",
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  /// ⚠️ MISSED STATUS BADGE
+                  if (isMissed)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: dangerRed.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: dangerRed.withOpacity(0.3)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: dangerRed,
+                            size: 12,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            "Missed Dose",
+                            style: TextStyle(
+                              color: dangerRed,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1025,18 +878,23 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: accentCyan.withOpacity(0.15),
+                        color: colors.accentSubtle,
                         borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: colors.accentBorder),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.check_circle, color: accentCyan, size: 12),
-                          SizedBox(width: 6),
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: colors.accentMedium,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 6),
                           Text(
                             "Medicine Taken",
                             style: TextStyle(
-                              color: accentCyan,
+                              color: colors.accentMedium,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1053,104 +911,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     );
   }
 
-  /// 🔹 REFILL CARD
-  // Widget _buildRefillCard() {
-  //   return Container(
-  //     padding: const EdgeInsets.all(16),
-  //     decoration: BoxDecoration(
-  //       color: surfaceColor,
-  //       borderRadius: BorderRadius.circular(16),
-  //     ),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         const Text(
-  //           "REFILL STATUS",
-  //           style: TextStyle(
-  //             color: Colors.white38,
-  //             fontSize: 10,
-  //             fontWeight: FontWeight.bold,
-  //           ),
-  //         ),
-  //         // const Spacer(),
-  //         SizedBox(height: 16),
-  //         const Text(
-  //           "12 days left",
-  //           style: TextStyle(
-  //             color: Colors.white,
-  //             fontSize: 22,
-  //             fontWeight: FontWeight.bold,
-  //           ),
-  //         ),
-  //         const SizedBox(height: 10),
-  //         ClipRRect(
-  //           borderRadius: BorderRadius.circular(10),
-  //           child: const LinearProgressIndicator(
-  //             value: 0.7,
-  //             minHeight: 8,
-  //             backgroundColor: Colors.white10,
-  //             valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  // /// 🔹 DOCTOR NOTE CARD
-  // Widget _buildDoctorNoteCard() {
-  //   return Container(
-  //     padding: const EdgeInsets.all(16),
-  //     decoration: BoxDecoration(
-  //       color: surfaceColor,
-  //       borderRadius: BorderRadius.circular(16),
-  //     ),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         const Text(
-  //           "DOCTOR NOTE",
-  //           style: TextStyle(
-  //             color: Colors.white38,
-  //             fontSize: 10,
-  //             fontWeight: FontWeight.bold,
-  //           ),
-  //         ),
-  //         // const Spacer(),
-  //         SizedBox(height: 16),
-  //         Text(
-  //           "“Monitor blood pressure levels after morning...",
-  //           overflow: TextOverflow.ellipsis,
-  //           maxLines: 2,
-  //           style: TextStyle(color: Colors.white70, fontSize: 12),
-  //         ),
-  //         // const Spacer(),
-  //         SizedBox(height: 16),
-  //         InkWell(
-  //           onTap: () {},
-  //           child: Row(
-  //             children: const [
-  //               Icon(Icons.open_in_new, color: accentCyan, size: 14),
-  //               SizedBox(width: 5),
-  //               Text(
-  //                 "View Dr. Aris",
-  //                 style: TextStyle(
-  //                   color: accentCyan,
-  //                   fontSize: 12,
-  //                   fontWeight: FontWeight.w600,
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  /// 🔹 Helper: Weekly Compliance Card
-
   Widget _buildMedicalComplianceButton() {
+    final colors = context.themeColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: SizedBox(
@@ -1164,8 +926,9 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             );
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: accentCyan,
-            foregroundColor: Colors.black,
+            backgroundColor: colors.accentPrimary,
+            foregroundColor: colors.onAccentPrimary,
+            elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -1174,7 +937,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             "assets/images/item2.png",
             width: 20,
             height: 20,
-            color: Colors.black,
+            color: colors.onAccentPrimary,
           ),
           label: const Text(
             "Medications record",
@@ -1186,12 +949,24 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
   }
 
   Widget _buildAddMedicationCard() {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E), // surfaceColor
+        color: colors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: !isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1205,13 +980,13 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF81DEEA).withOpacity(0.1),
+                  color: colors.accentSubtle,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
+                child: Text(
                   "QUICK ACTION",
                   style: TextStyle(
-                    color: Color(0xFF81DEEA),
+                    color: colors.accentMedium,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.1,
@@ -1220,24 +995,24 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
               ),
               Icon(
                 Icons.add_moderator_outlined,
-                color: Colors.white.withOpacity(0.2),
+                color: colors.textMuted,
                 size: 20,
               ),
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             "Add Medication",
             style: TextStyle(
-              color: Colors.white,
+              color: colors.textPrimary,
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             "Keep track of your health by adding your daily prescriptions.",
-            style: TextStyle(color: Colors.white54, fontSize: 14, height: 1.4),
+            style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -1245,8 +1020,6 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             height: 52,
             child: ElevatedButton(
               onPressed: () async {
-                // Navigate to your medication adding logic
-
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -1258,13 +1031,14 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                 if (result == true) {
                   await ref.refresh(getMedicationsProvider.future);
                   await ref.refresh(getTodayScheduleProvider.future);
-
+                  final formattedDate = _formatDate(selectedDate);
+                  await ref.refresh(getScheduleForDateProvider(formattedDate).future);
                   setState(() {});
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF81DEEA),
-                foregroundColor: Colors.black,
+                backgroundColor: colors.accentPrimary,
+                foregroundColor: colors.onAccentPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -1289,33 +1063,31 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(ProfileModel? profile) {
+    final colors = context.themeColors;
+
     return AppBar(
-      backgroundColor: darkBg,
+      backgroundColor: colors.bg,
       elevation: 0,
       title: Row(
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: surfaceColor,
-
+            backgroundColor: colors.cardSecondary,
             backgroundImage:
                 profile?.profilePic != null && profile!.profilePic!.isNotEmpty
                 ? CachedNetworkImageProvider(
                     "${profile.profilePic!}?t=${DateTime.now().millisecondsSinceEpoch}",
                   )
                 : null,
-
             child: profile?.profilePic == null || profile!.profilePic!.isEmpty
-                ? const Icon(Icons.person, color: Colors.white, size: 18)
+                ? Icon(Icons.person, color: colors.iconColor, size: 18)
                 : null,
           ),
-
           const SizedBox(width: 12),
-
-          const Text(
+          Text(
             "My Medications",
             style: TextStyle(
-              color: Colors.white,
+              color: colors.textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 20,
             ),
@@ -1328,9 +1100,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             context,
             MaterialPageRoute(builder: (_) => const NotificationScreen()),
           ),
-          icon: const Icon(Icons.notifications, color: accentCyan),
+          icon: Icon(Icons.notifications, color: colors.iconColor),
         ),
-
         const SizedBox(width: 10),
       ],
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/constants/legal_content.dart';
 import 'package:medikto/features/profile/views/privacy_policy_screen.dart';
 import 'package:medikto/features/profile/views/terms_and_conditions_screen.dart';
@@ -6,25 +7,23 @@ import 'package:medikto/features/profile/views/terms_and_conditions_screen.dart'
 class PoliciesAndTermsScreen extends StatelessWidget {
   const PoliciesAndTermsScreen({super.key});
 
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: AppBar(
-        backgroundColor: darkBg,
+        backgroundColor: themeColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new, color: themeColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Policies & Terms",
           style: TextStyle(
-            color: Colors.white,
+            color: themeColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -36,19 +35,19 @@ class PoliciesAndTermsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Legal & Compliance",
               style: TextStyle(
-                color: Colors.white,
+                color: themeColors.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "Read our terms of service and data protection policies.",
               style: TextStyle(
-                color: Colors.white54,
+                color: themeColors.textSecondary,
                 fontSize: 14,
               ),
             ),
@@ -96,25 +95,26 @@ class PoliciesAndTermsScreen extends StatelessWidget {
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final themeColors = context.themeColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: surfaceColor,
+          color: themeColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          border: Border.all(color: themeColors.border),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: accentCyan.withOpacity(0.12),
+                color: themeColors.accentSubtle,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: accentCyan, size: 24),
+              child: Icon(icon, color: themeColors.accentMedium, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -123,8 +123,8 @@ class PoliciesAndTermsScreen extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: themeColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -132,17 +132,17 @@ class PoliciesAndTermsScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: Colors.white54,
+                    style: TextStyle(
+                      color: themeColors.textSecondary,
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
-              color: Colors.white38,
+              color: themeColors.textMuted,
               size: 16,
             ),
           ],

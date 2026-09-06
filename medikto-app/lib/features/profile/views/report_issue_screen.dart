@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:medikto/core/constants/api_urls.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/dio_client.dart';
 import 'package:medikto/core/network/toast_utils.dart';
+import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 
 class ReportIssueScreen extends StatefulWidget {
@@ -13,10 +15,6 @@ class ReportIssueScreen extends StatefulWidget {
 }
 
 class _ReportIssueScreenState extends State<ReportIssueScreen> {
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedCategory = "Bug / App Issue";
   bool _isSubmitting = false;
@@ -92,24 +90,12 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return Scaffold(
-      backgroundColor: darkBg,
-      appBar: AppBar(
-        backgroundColor: darkBg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Report an Issue",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
+      backgroundColor: colors.bg,
+      appBar: const CustomAppBar(
+        title: "Report an Issue",
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -117,19 +103,19 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Tell us what went wrong",
               style: TextStyle(
-                color: Colors.white,
+                color: colors.textPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "Your feedback helps us resolve issues quickly. Our support team will receive this report directly.",
               style: TextStyle(
-                color: Colors.white54,
+                color: colors.textSecondary,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -137,10 +123,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             const SizedBox(height: 24),
 
             // Category Selection
-            const Text(
+            Text(
               "Issue Category",
               style: TextStyle(
-                color: Colors.white70,
+                color: colors.textSecondary,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -149,23 +135,23 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: surfaceColor,
+                color: colors.card,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: colors.border),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _selectedCategory,
-                  dropdownColor: surfaceColor,
+                  dropdownColor: colors.card,
                   isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down, color: accentCyan),
+                  icon: Icon(Icons.keyboard_arrow_down, color: colors.accentMedium),
                   items: _categories.map((category) {
                     return DropdownMenuItem<String>(
                       value: category,
                       child: Text(
                         category,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: colors.textPrimary,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -186,10 +172,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             const SizedBox(height: 20),
 
             // Description Input
-            const Text(
+            Text(
               "Description",
               style: TextStyle(
-                color: Colors.white70,
+                color: colors.textSecondary,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -197,19 +183,19 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
-                color: surfaceColor,
+                color: colors.card,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                border: Border.all(color: colors.border),
               ),
               child: TextField(
                 controller: _descriptionController,
-                cursorColor: accentCyan,
+                cursorColor: colors.accentPrimary,
                 maxLines: 6,
-                style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
-                decoration: const InputDecoration(
+                style: TextStyle(color: colors.textPrimary, fontSize: 14, height: 1.5),
+                decoration: InputDecoration(
                   hintText: "Please describe the issue in detail (e.g. what happened, what you expected)...",
-                  hintStyle: TextStyle(color: Colors.white30, fontSize: 13),
-                  contentPadding: EdgeInsets.all(16),
+                  hintStyle: TextStyle(color: colors.textMuted, fontSize: 13),
+                  contentPadding: const EdgeInsets.all(16),
                   border: InputBorder.none,
                 ),
               ),
@@ -221,18 +207,18 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: accentCyan.withOpacity(0.08),
+                color: colors.accentSubtle,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accentCyan.withOpacity(0.2)),
+                border: Border.all(color: colors.accentBorder),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: accentCyan, size: 18),
-                  SizedBox(width: 10),
+                  Icon(Icons.info_outline, color: colors.accentMedium, size: 18),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       "Your account information will be attached automatically to help us diagnose the problem.",
-                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                      style: TextStyle(color: colors.textSecondary, fontSize: 12, height: 1.4),
                     ),
                   ),
                 ],
@@ -243,15 +229,15 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
             // Submit Button
             _isSubmitting
-                ? const Center(
-                    child: CircularProgressIndicator(color: accentCyan),
+                ? Center(
+                    child: CircularProgressIndicator(color: colors.accentPrimary),
                   )
                 : CustomButton(
                     onPressed: _submitIssue,
                     buttonText: "Submit Issue",
-                    buttonColor: accentCyan,
-                    textStyle: const TextStyle(
-                      color: Colors.black,
+                    buttonColor: colors.accentPrimary,
+                    textStyle: TextStyle(
+                      color: colors.onAccentPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),

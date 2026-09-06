@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 
 class FormFieldModel {
@@ -34,16 +35,10 @@ class DynamicFormSection extends StatelessWidget {
     this.onDateTap,
   });
 
-  // Dark Mode Palette constants
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-  static const Color borderColor = Colors.white10;
-
-
-  
-
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
+
     return Column(
       children: [
         const SizedBox(height: 10),
@@ -54,36 +49,34 @@ class DynamicFormSection extends StatelessWidget {
           /// 🔥 Special case (Row → Date & Time)
           if (field.isRow) {
             return Padding(
-              padding: EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
                   Expanded(
                     child: AppTextFormFieldTitled(
                       readOnly: true,
                       onTap: onDateTap,
-                      // controller: controllers?[index],
                       controller: controllers?[2],
-                      
                       isRequired: field.isRequired,
-                      borderColor: borderColor,
-                      focusColor: accentCyan,
-                      fillColor: surfaceColor,
-                      color: Colors.white,
-                      hintStyle: const TextStyle(
+                      borderColor: theme.borderSubtle,
+                      focusColor: theme.accentPrimary,
+                      fillColor: theme.cardSecondary,
+                      color: theme.textPrimary,
+                      hintStyle: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                        color: Colors.white24,
+                        color: theme.textMuted,
                       ),
-                      titleTextStyle: const TextStyle(
+                      titleTextStyle: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white70,
+                        color: theme.textSecondary,
                       ),
                       hintText: "DD.MM.YY",
                       title: "Date",
-                      suffix: const Icon(
+                      suffix: Icon(
                         Icons.calendar_month_outlined,
-                        color: accentCyan,
+                        color: theme.accentMedium,
                         size: 20,
                       ),
                     ),
@@ -91,34 +84,33 @@ class DynamicFormSection extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: AppTextFormFieldTitled(
-                      // controller: controllers?[index + 1],
                       controller: controllers?[3],
                       onTap: onTimeTap,
                       readOnly: true,
                       isRequired: field.isRequired,
-                      borderColor: borderColor,
-                      focusColor: accentCyan,
-                      fillColor: surfaceColor,
-                      color: Colors.white,
-                      hintStyle: const TextStyle(
+                      borderColor: theme.borderSubtle,
+                      focusColor: theme.accentPrimary,
+                      fillColor: theme.cardSecondary,
+                      color: theme.textPrimary,
+                      hintStyle: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white24,
+                        color: theme.textMuted,
                       ),
-                      titleTextStyle: const TextStyle(
+                      titleTextStyle: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white70,
+                        color: theme.textSecondary,
                       ),
                       hintText: "00:00",
                       title: "Time",
-                      suffix: const Icon(
+                      suffix: Icon(
                         Icons.access_time_rounded,
-                        color: accentCyan,
+                        color: theme.accentMedium,
                         size: 20,
                       ),
                     ),
-),
+                  ),
                 ],
               ),
             );
@@ -155,19 +147,19 @@ class DynamicFormSection extends StatelessWidget {
             child: AppTextFormFieldTitled(
               controller: controller,
               isRequired: field.isRequired,
-              borderColor: borderColor,
-              focusColor: accentCyan,
-              fillColor: surfaceColor,
-              color: Colors.white,
-              hintStyle: const TextStyle(
+              borderColor: theme.borderSubtle,
+              focusColor: theme.accentPrimary,
+              fillColor: theme.cardSecondary,
+              color: theme.textPrimary,
+              hintStyle: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
-                color: Colors.white24,
+                color: theme.textMuted,
               ),
-              titleTextStyle: const TextStyle(
+              titleTextStyle: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Colors.white70,
+                color: theme.textSecondary,
               ),
               title: field.title,
               hintText: field.hint,

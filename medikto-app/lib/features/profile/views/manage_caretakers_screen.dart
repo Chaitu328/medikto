@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
@@ -14,10 +15,6 @@ class ManageCaretakersScreen extends ConsumerStatefulWidget {
 }
 
 class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen> {
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   List<dynamic> caretakers = [];
   List<dynamic> pendingInvites = [];
   bool isLoading = true;
@@ -46,11 +43,12 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
   }
 
   Future<void> _handleDelete(String id, bool isInvite) async {
+    final themeColors = context.themeColors;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: accentCyan),
+      builder: (context) => Center(
+        child: CircularProgressIndicator(color: themeColors.accentPrimary),
       ),
     );
 
@@ -79,6 +77,7 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
   }
 
   void _showInviteBottomSheet() {
+    final themeColors = context.themeColors;
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
@@ -89,7 +88,7 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: surfaceColor,
+      backgroundColor: themeColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -109,12 +108,12 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       "Invite Caretaker",
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: themeColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white54),
+                      icon: Icon(Icons.close, color: themeColors.textSecondary),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -124,20 +123,20 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                   title: "Caretaker Name",
                   hintText: "Enter full name",
                   controller: nameController,
-                  focusColor: accentCyan,
-                  fillColor: darkBg,
-                  color: Colors.white,
-                  borderColor: Colors.white.withOpacity(0.1),
+                  focusColor: themeColors.accentPrimary,
+                  fillColor: themeColors.bg,
+                  color: themeColors.textPrimary,
+                  borderColor: themeColors.border,
                 ),
                 const SizedBox(height: 16),
                 AppTextFormFieldTitled(
                   title: "Caretaker Email",
                   hintText: "email@example.com",
                   controller: emailController,
-                  focusColor: accentCyan,
-                  fillColor: darkBg,
-                  color: Colors.white,
-                  borderColor: Colors.white.withOpacity(0.1),
+                  focusColor: themeColors.accentPrimary,
+                  fillColor: themeColors.bg,
+                  color: themeColors.textPrimary,
+                  borderColor: themeColors.border,
                   textInputType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
@@ -145,10 +144,10 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                   title: "Caretaker Phone",
                   hintText: "Enter mobile number",
                   controller: phoneController,
-                  focusColor: accentCyan,
-                  fillColor: darkBg,
-                  color: Colors.white,
-                  borderColor: Colors.white.withOpacity(0.1),
+                  focusColor: themeColors.accentPrimary,
+                  fillColor: themeColors.bg,
+                  color: themeColors.textPrimary,
+                  borderColor: themeColors.border,
                   textInputType: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),
@@ -156,32 +155,32 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                   title: "Caretaker Password",
                   hintText: "Enter password",
                   controller: passwordController,
-                  focusColor: accentCyan,
-                  fillColor: darkBg,
-                  color: Colors.white,
-                  borderColor: Colors.white.withOpacity(0.1),
+                  focusColor: themeColors.accentPrimary,
+                  fillColor: themeColors.bg,
+                  color: themeColors.textPrimary,
+                  borderColor: themeColors.border,
                   obscureText: true,
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   "Relation",
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: themeColors.textSecondary),
                 ),
                 const SizedBox(height: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: darkBg,
+                    color: themeColors.bg,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    border: Border.all(color: themeColors.border),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: selectedRelation,
-                      dropdownColor: surfaceColor,
+                      dropdownColor: themeColors.surface,
                       isExpanded: true,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      icon: const Icon(Icons.arrow_drop_down, color: accentCyan),
+                      style: TextStyle(color: themeColors.textPrimary, fontSize: 16),
+                      icon: Icon(Icons.arrow_drop_down, color: themeColors.accentPrimary),
                       onChanged: (val) {
                         if (val != null) {
                           setModalState(() {
@@ -196,8 +195,8 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                 const SizedBox(height: 24),
                 CustomButton(
                   buttonText: "Send Invitation",
-                  buttonColor: accentCyan,
-                  textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                  buttonColor: themeColors.accentPrimary,
+                  textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
                   onPressed: () async {
                     final name = nameController.text.trim();
                     final email = emailController.text.trim();
@@ -226,8 +225,8 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (context) => const Center(
-                        child: CircularProgressIndicator(color: accentCyan),
+                      builder: (context) => Center(
+                        child: CircularProgressIndicator(color: themeColors.accentPrimary),
                       ),
                     );
 
@@ -272,66 +271,67 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: AppBar(
         titleSpacing: 0,
-        backgroundColor: darkBg,
+        backgroundColor: themeColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new, color: themeColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Caretaker Access",
-          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(color: themeColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: accentCyan))
+          ? Center(child: CircularProgressIndicator(color: themeColors.accentPrimary))
           : Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: ListView(
                 physics: const BouncingScrollPhysics(),
                 children: [
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     "Connected Caretakers",
-                    style: TextStyle(color: accentCyan, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: themeColors.accentPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   if (caretakers.isEmpty)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: surfaceColor,
+                        color: themeColors.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withOpacity(0.05)),
+                        border: Border.all(color: themeColors.border),
                       ),
-                      child: const Text(
+                      child: Text(
                         "No connected caretakers. Invite one to let them monitor your health data.",
-                        style: TextStyle(color: Colors.white54, fontSize: 14),
+                        style: TextStyle(color: themeColors.textSecondary, fontSize: 14),
                       ),
                     )
                   else
                     ...caretakers.map((c) => _buildCaretakerTile(c, false)),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     "Pending Invitations",
-                    style: TextStyle(color: accentCyan, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: themeColors.accentPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   if (pendingInvites.isEmpty)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: surfaceColor,
+                        color: themeColors.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withOpacity(0.05)),
+                        border: Border.all(color: themeColors.border),
                       ),
-                      child: const Text(
+                      child: Text(
                         "No pending caretaker invitations.",
-                        style: TextStyle(color: Colors.white54, fontSize: 14),
+                        style: TextStyle(color: themeColors.textSecondary, fontSize: 14),
                       ),
                     )
                   else
@@ -339,8 +339,8 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                   const SizedBox(height: 40),
                   CustomButton(
                     buttonText: "Add / Invite Caretaker",
-                    buttonColor: accentCyan,
-                    textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    buttonColor: themeColors.accentPrimary,
+                    textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
                     onPressed: _showInviteBottomSheet,
                   ),
                   const SizedBox(height: 40),
@@ -351,6 +351,7 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
   }
 
   Widget _buildCaretakerTile(dynamic c, bool isInvite) {
+    final themeColors = context.themeColors;
     final name = isInvite ? (c['email'] ?? "") : (c['firstName'] ?? "Caretaker");
     final detail = isInvite ? "Pending Invitation (${c['relation'] ?? 'Guardian'})" : (c['phone'] ?? "No Phone");
     final id = c['_id'] as String;
@@ -359,15 +360,15 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: themeColors.border),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: accentCyan.withOpacity(0.1),
-            child: const Icon(Icons.person_outline, color: accentCyan),
+            backgroundColor: themeColors.accentSubtle,
+            child: Icon(Icons.person_outline, color: themeColors.accentPrimary),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -376,37 +377,40 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
               children: [
                 Text(
                   name,
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: themeColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   detail,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: themeColors.textSecondary, fontSize: 12),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            icon: const Icon(Icons.delete_outline, color: AppColors.missedRed),
             onPressed: () {
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  backgroundColor: surfaceColor,
-                  title: Text(isInvite ? "Cancel Invitation" : "Remove Caretaker"),
+                  backgroundColor: themeColors.surface,
+                  title: Text(
+                    isInvite ? "Cancel Invitation" : "Remove Caretaker",
+                    style: TextStyle(color: themeColors.textPrimary),
+                  ),
                   content: Text(
                     isInvite
                         ? "Are you sure you want to cancel the invitation for $name?"
                         : "Are you sure you want to revoke access for $name? They will no longer be able to view your data.",
-                    style: const TextStyle(color: Colors.white70),
+                    style: TextStyle(color: themeColors.textSecondary),
                   ),
                   actions: [
                     TextButton(
-                      child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+                      child: Text("Cancel", style: TextStyle(color: themeColors.textSecondary)),
                       onPressed: () => Navigator.pop(ctx),
                     ),
                     TextButton(
-                      child: const Text("Remove", style: TextStyle(color: Colors.redAccent)),
+                      child: const Text("Remove", style: TextStyle(color: AppColors.missedRed)),
                       onPressed: () {
                         Navigator.pop(ctx);
                         _handleDelete(id, isInvite);

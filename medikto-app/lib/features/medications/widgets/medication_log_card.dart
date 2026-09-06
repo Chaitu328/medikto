@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 
 class MedicationLog {
   final String imagePath;
@@ -21,15 +22,15 @@ class MedicationLogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     return RepaintBoundary(
       // 🔥 prevents unnecessary repaint
       child: Container(
-        padding: EdgeInsets.only(left: 12, right: 12, top: 6, bottom: 6),
-        // margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.only(left: 12, right: 12, top: 6, bottom: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
+          color: theme.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: theme.borderSubtle),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -53,8 +54,8 @@ class MedicationLogCard extends StatelessWidget {
                         log.medicineName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: theme.textPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
@@ -67,8 +68,8 @@ class MedicationLogCard extends StatelessWidget {
                         "${log.dateTime.day}/${log.dateTime.month}/${log.dateTime.year}",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white54,
+                        style: TextStyle(
+                          color: theme.textSecondary,
                           fontSize: 11,
                         ),
                       ),
@@ -76,8 +77,8 @@ class MedicationLogCard extends StatelessWidget {
                       /// Time
                       Text(
                         "${log.dateTime.hour}:${log.dateTime.minute.toString().padLeft(2, '0')}",
-                        style: const TextStyle(
-                          color: Color(0xFF81DEEA),
+                        style: TextStyle(
+                          color: theme.accent,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -93,18 +94,18 @@ class MedicationLogCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.teal.withOpacity(0.2),
+                color: AppColors.takenGreen.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.teal.withOpacity(0.5)),
+                border: Border.all(color: AppColors.takenGreen.withOpacity(0.4)),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  CircleAvatar(radius: 3, backgroundColor: Colors.teal),
-                  const SizedBox(width: 5),
+                  CircleAvatar(radius: 3, backgroundColor: AppColors.takenGreen),
+                  SizedBox(width: 5),
                   Text(
                     "TAKEN",
                     style: TextStyle(
-                      color: Colors.teal,
+                      color: AppColors.takenGreen,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -112,8 +113,6 @@ class MedicationLogCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // const SizedBox(width: 8),
           ],
         ),
       ),

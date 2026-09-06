@@ -5,4 +5,5 @@ class StorageKeys {
   static const String notificationsEnabled = "notifications_enabled";
 
   static const String onboardingDone = "onboarding_done";
+  static const String themeMode = "app_theme_mode";
 }

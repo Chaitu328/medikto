@@ -4,14 +4,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
-import 'package:medikto/features/home/add_reports/widgets/timings_widget.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
 
 class AddPrescriptionFileScreen extends ConsumerStatefulWidget {
@@ -24,48 +23,46 @@ class AddPrescriptionFileScreen extends ConsumerStatefulWidget {
 
 class _AddPrescriptionFileScreenState
     extends ConsumerState<AddPrescriptionFileScreen> {
-  // Theme Palette
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   final TextEditingController medicineNameController = TextEditingController();
-
   final TextEditingController dosageController = TextEditingController();
 
   File? selectedFile;
-
-  /// SAMPLE REMINDERS
-  /// Replace with your timings widget data if needed
   List<Map<String, dynamic>> reminders = [];
-
   bool isLoading = false;
   final ImagePicker _picker = ImagePicker();
 
   Future<void> addReminderTime() async {
+    final themeColors = context.themeColors;
+    final isDark = context.isDarkMode;
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
       initialEntryMode: TimePickerEntryMode.input,
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: darkBg,
-            colorScheme: const ColorScheme.dark(
-              primary: accentCyan,
-              surface: Color(0xFF1E1E1E),
-              onSurface: Colors.white,
+          data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+            scaffoldBackgroundColor: themeColors.bg,
+            colorScheme: ColorScheme(
+              brightness: isDark ? Brightness.dark : Brightness.light,
+              primary: themeColors.accentPrimary,
+              onPrimary: themeColors.onAccentPrimary,
+              secondary: themeColors.accentPrimary,
+              onSecondary: themeColors.onAccentPrimary,
+              error: AppColors.missedRed,
+              onError: Colors.white,
+              surface: themeColors.surface,
+              onSurface: themeColors.textPrimary,
             ),
-            timePickerTheme: const TimePickerThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
-              hourMinuteTextColor: Colors.white,
-              hourMinuteColor: Color(0xFF2A2A2A),
-              dialHandColor: accentCyan,
-              dialBackgroundColor: Color(0xFF2A2A2A),
-              entryModeIconColor: accentCyan,
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: themeColors.surface,
+              hourMinuteTextColor: themeColors.textPrimary,
+              hourMinuteColor: themeColors.cardSecondary,
+              dialHandColor: themeColors.accentPrimary,
+              dialBackgroundColor: themeColors.cardSecondary,
+              entryModeIconColor: themeColors.accentPrimary,
             ),
-            dialogTheme: const DialogThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
+            dialogTheme: DialogThemeData(
+              backgroundColor: themeColors.surface,
             ),
           ),
           child: child!,
@@ -132,8 +129,9 @@ class _AddPrescriptionFileScreenState
   }
 
   void _showBottomSheet(BuildContext context) {
+    final themeColors = context.themeColors;
     showModalBottomSheet(
-      backgroundColor: surfaceColor,
+      backgroundColor: themeColors.surface,
       constraints: const BoxConstraints(maxWidth: double.infinity),
       context: context,
       shape: const RoundedRectangleBorder(
@@ -205,17 +203,20 @@ class _AddPrescriptionFileScreenState
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     final size = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
         title: "Prescription File",
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: themeColors.bg,
+        titleStyle: TextStyle(
+          color: themeColors.textPrimary,
           fontWeight: FontWeight.bold,
+          fontSize: 18,
         ),
+        onBack: () => Navigator.pop(context),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -245,8 +246,6 @@ class _AddPrescriptionFileScreenState
                       maxLines: 4,
                     ),
 
-                    SizedBox(height: size.height * 0.02),
-
                     SizedBox(height: size.height * 0.03),
 
                     /// 🔹 INTERACTIVE UPLOAD AREA
@@ -259,10 +258,10 @@ class _AddPrescriptionFileScreenState
                           horizontal: 20,
                         ),
                         decoration: BoxDecoration(
-                          color: surfaceColor,
+                          color: themeColors.surface,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: accentCyan.withOpacity(0.2),
+                            color: themeColors.accentPrimary.withOpacity(0.2),
                             width: 1.5,
                           ),
                         ),
@@ -272,12 +271,12 @@ class _AddPrescriptionFileScreenState
                               height: 54,
                               width: 54,
                               decoration: BoxDecoration(
-                                color: accentCyan.withOpacity(0.1),
+                                color: themeColors.accentSubtle,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.upload_file_outlined,
-                                color: accentCyan,
+                                color: themeColors.accentPrimary,
                                 size: 30,
                               ),
                             ),
@@ -288,8 +287,8 @@ class _AddPrescriptionFileScreenState
                                   ? selectedFile!.path.split('/').last
                                   : "Upload Digital Prescription",
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: themeColors.textPrimary,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
@@ -297,10 +296,10 @@ class _AddPrescriptionFileScreenState
 
                             const SizedBox(height: 5),
 
-                            const Text(
+                            Text(
                               "JPG, PNG or PDF (Max 10MB)",
                               style: TextStyle(
-                                color: Colors.white38,
+                                color: themeColors.textMuted,
                                 fontSize: 11,
                               ),
                             ),
@@ -310,11 +309,6 @@ class _AddPrescriptionFileScreenState
                     ),
 
                     SizedBox(height: size.height * 0.04),
-
-                    /// 🔹 ADD MEDICATION CARD
-                    // _buildAddMedicationCard(),
-
-                    // SizedBox(height: size.height * 0.05),
                   ],
                 ),
               ),
@@ -323,12 +317,12 @@ class _AddPrescriptionFileScreenState
             /// 🔹 ACTION BUTTON
             CustomButton(
               onPressed: isLoading ? null : addPrescription,
-              buttonColor: accentCyan,
+              buttonColor: themeColors.accentPrimary,
               buttonText: isLoading ? "Saving..." : "Save Prescription",
-              textStyle: const TextStyle(
+              textStyle: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: themeColors.onAccentPrimary,
               ),
             ),
 
@@ -345,68 +339,25 @@ class _AddPrescriptionFileScreenState
     required String hint,
     int maxLines = 1,
   }) {
+    final themeColors = context.themeColors;
     return AppTextFormFieldTitled(
       controller: controller,
       title: title,
       hintText: hint,
       maxLines: maxLines,
-      borderColor: Colors.white10,
-      focusColor: accentCyan,
-      fillColor: surfaceColor,
-      color: Colors.white,
-      hintStyle: const TextStyle(
+      borderColor: themeColors.border,
+      focusColor: themeColors.accentPrimary,
+      fillColor: themeColors.surface,
+      color: themeColors.textPrimary,
+      hintStyle: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,
-        color: Colors.white24,
+        color: themeColors.textMuted,
       ),
-      titleTextStyle: const TextStyle(
+      titleTextStyle: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: Colors.white70,
-      ),
-    );
-  }
-
-  Widget _buildAddMedicationCard() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                height: 44,
-                width: 44,
-                decoration: BoxDecoration(
-                  color: accentCyan.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.medication_liquid_rounded,
-                  color: accentCyan,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 15),
-              const Text(
-                "Add Another Medicine",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          const Icon(Icons.add_circle, color: accentCyan, size: 36),
-        ],
+        color: themeColors.textSecondary,
       ),
     );
   }

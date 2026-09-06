@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 
 class HealthDataCard extends StatefulWidget {
   final String? title;
@@ -19,23 +20,22 @@ class HealthDataCard extends StatefulWidget {
 }
 
 class _HealthDataCardState extends State<HealthDataCard> {
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return GestureDetector(
       onTap: () => widget.onTap?.call(),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: surfaceColor,
+          color: colors.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: colors.borderSubtle),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center, 
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Icon
             Image.asset(widget.image ?? "", height: 24, width: 24),
@@ -51,14 +51,14 @@ class _HealthDataCardState extends State<HealthDataCard> {
                   Text(
                     widget.title ?? "",
                     overflow: TextOverflow.clip,
-                    style: const TextStyle(
-                      fontSize: 13, 
+                    style: TextStyle(
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  
+
                   // Responsive Add or Value Row
                   FittedBox(
                     fit: BoxFit.scaleDown,
@@ -66,27 +66,27 @@ class _HealthDataCardState extends State<HealthDataCard> {
                     child: widget.value != null && widget.value!.isNotEmpty
                         ? Text(
                             widget.value!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: accentCyan,
+                              color: colors.accent,
                             ),
                           )
                         : Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
                                 Icons.add_circle_outline,
-                                color: accentCyan,
+                                color: colors.accent,
                                 size: 18,
                               ),
-                              SizedBox(width: 6),
+                              const SizedBox(width: 6),
                               Text(
                                 "Add",
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  color: accentCyan,
+                                  color: colors.accent,
                                 ),
                               ),
                             ],

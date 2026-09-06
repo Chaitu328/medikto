@@ -1,67 +1,5 @@
 import 'package:flutter/material.dart';
-
-class _GenderOption extends StatelessWidget {
-  final String text;
-  final String value;
-  final String groupValue;
-  final ValueChanged<String> onChanged;
-
-  const _GenderOption({
-    required this.text,
-    required this.value,
-    required this.groupValue,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = value == groupValue;
-
-    return InkWell(
-      onTap: () => onChanged(value),
-      borderRadius: BorderRadius.circular(20),
-      child: Row(
-        children: [
-          /// 🔥 Custom Radio (same size)
-          Container(
-            height: 20,
-            width: 20,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                width: 2,
-                color: isSelected
-                    ? Color(0xFF81DEEA) // 🔵 selected border
-                    : const Color(0x8A555555),
-              ),
-            ),
-            child: isSelected
-                ? Center(
-                    child: Container(
-                      height: 10,
-                      width: 10,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF81DEEA), // 🔵 inner dot
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-
-          const SizedBox(width: 6),
-
-          /// 🔹 Text (same style)
-          Text(
-            text,
-            style: const TextStyle(fontSize: 16, color: Color(0x8A555555)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+import 'package:medikto/core/constants/app_themes.dart';
 
 class GenderSection extends StatelessWidget {
   final String selectedGender;
@@ -73,50 +11,48 @@ class GenderSection extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const Color accentCyan = Color(0xFF81DEEA);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Gender",
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white70,
+            color: colors.textSecondary,
           ),
         ),
-
         const SizedBox(height: 8),
-
         Row(
           children: [
-            _genderTile("male"),
+            _genderTile(context, "male"),
             const SizedBox(width: 10),
-            _genderTile("female"),
+            _genderTile(context, "female"),
           ],
         ),
       ],
     );
   }
 
-  Widget _genderTile(String gender) {
-    final bool isSelected = selectedGender == gender;
+  Widget _genderTile(BuildContext context, String gender) {
+    final colors = context.themeColors;
+    final bool isSelected = selectedGender.toLowerCase() == gender.toLowerCase();
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => onChanged(gender),
+        onTap: () => onChanged(gender[0].toUpperCase() + gender.substring(1)),
         child: Container(
           height: 52,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: surfaceColor,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? accentCyan : Colors.white10,
+              color: isSelected ? colors.accentPrimary : colors.border,
               width: isSelected ? 1.5 : 1,
             ),
           ),
@@ -128,19 +64,17 @@ class GenderSection extends StatelessWidget {
                 isSelected
                     ? Icons.radio_button_checked
                     : Icons.radio_button_off,
-                color: isSelected ? accentCyan : Colors.white38,
+                color: isSelected ? colors.accentPrimary : colors.textMuted,
                 size: 20,
               ),
-
               const SizedBox(width: 8),
-
               Flexible(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     gender[0].toUpperCase() + gender.substring(1),
                     style: TextStyle(
-                      color: isSelected ? accentCyan : Colors.white70,
+                      color: isSelected ? colors.accentPrimary : colors.textSecondary,
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
                     ),

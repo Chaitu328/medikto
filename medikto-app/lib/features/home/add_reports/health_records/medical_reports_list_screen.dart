@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:medikto/core/network/base_response.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
@@ -13,23 +13,20 @@ import 'package:medikto/features/profile/models/profile_model.dart';
 class MedicalReportsListScreen extends ConsumerWidget {
   const MedicalReportsListScreen({super.key});
 
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = context.themeColors;
     final reportsAsync = ref.watch(getReportsProvider);
     final profileAsync = ref.watch(getProfileProvider);
     final isGuardian = profileAsync.value?.data is ProfileModel && (profileAsync.value!.data as ProfileModel).role == 'guardian';
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
         title: "Medical Reports",
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: themeColors.bg,
+        titleStyle: TextStyle(
+          color: themeColors.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 18,
         ),
@@ -38,8 +35,8 @@ class MedicalReportsListScreen extends ConsumerWidget {
       floatingActionButton: isGuardian
           ? null
           : FloatingActionButton(
-              backgroundColor: accentCyan,
-              foregroundColor: Colors.black,
+              backgroundColor: themeColors.accentPrimary,
+              foregroundColor: themeColors.onAccentPrimary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               onPressed: () {
                 Navigator.push(
@@ -52,8 +49,8 @@ class MedicalReportsListScreen extends ConsumerWidget {
               child: const Icon(Icons.add, size: 28),
             ),
       body: RefreshIndicator(
-        color: accentCyan,
-        backgroundColor: surfaceColor,
+        color: themeColors.accentPrimary,
+        backgroundColor: themeColors.surface,
         onRefresh: () async {
           ref.invalidate(getReportsProvider);
         },
@@ -74,29 +71,29 @@ class MedicalReportsListScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: surfaceColor,
+                            color: themeColors.surface,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.assignment_outlined,
                             size: 64,
-                            color: Colors.white24,
+                            color: themeColors.textMuted,
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text(
+                        Text(
                           "No Reports Found",
                           style: TextStyle(
-                            color: Colors.white,
+                            color: themeColors.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const Text(
+                        Text(
                           "Tap the '+' button to upload a medical report.",
                           style: TextStyle(
-                            color: Colors.white30,
+                            color: themeColors.textMuted,
                             fontSize: 14,
                           ),
                         ),
@@ -117,8 +114,8 @@ class MedicalReportsListScreen extends ConsumerWidget {
               },
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: accentCyan),
+          loading: () => Center(
+            child: CircularProgressIndicator(color: themeColors.accentPrimary),
           ),
           error: (error, stack) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -127,16 +124,16 @@ class MedicalReportsListScreen extends ConsumerWidget {
               Center(
                 child: Column(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                    const Icon(Icons.error_outline, color: AppColors.missedRed, size: 48),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       "Failed to load reports",
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: themeColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       "Please pull to refresh and try again.",
-                      style: TextStyle(color: Colors.white30, fontSize: 13),
+                      style: TextStyle(color: themeColors.textMuted, fontSize: 13),
                     ),
                   ],
                 ),
@@ -149,16 +146,17 @@ class MedicalReportsListScreen extends ConsumerWidget {
   }
 
   Widget _buildReportCard(BuildContext context, MedicalReportModel report) {
+    final themeColors = context.themeColors;
     Color conditionColor;
     switch (report.condition.toLowerCase()) {
       case "critical":
-        conditionColor = Colors.redAccent;
+        conditionColor = AppColors.missedRed;
         break;
       case "moderate":
-        conditionColor = Colors.orangeAccent;
+        conditionColor = AppColors.pendingAmber;
         break;
       default:
-        conditionColor = Colors.greenAccent;
+        conditionColor = AppColors.takenGreen;
     }
 
     final dateStr = DateFormat("dd MMM yyyy").format(report.date.toLocal());
@@ -166,9 +164,9 @@ class MedicalReportsListScreen extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: themeColors.border),
       ),
       child: Material(
         color: Colors.transparent,
@@ -191,12 +189,12 @@ class MedicalReportsListScreen extends ConsumerWidget {
                   height: 48,
                   width: 48,
                   decoration: BoxDecoration(
-                    color: accentCyan.withOpacity(0.1),
+                    color: themeColors.accentSubtle,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.description_outlined,
-                    color: accentCyan,
+                    color: themeColors.accentMedium,
                     size: 24,
                   ),
                 ),
@@ -207,8 +205,8 @@ class MedicalReportsListScreen extends ConsumerWidget {
                     children: [
                       Text(
                         report.title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: themeColors.textPrimary,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -220,8 +218,8 @@ class MedicalReportsListScreen extends ConsumerWidget {
                         children: [
                           Text(
                             dateStr,
-                            style: const TextStyle(
-                              color: Colors.white38,
+                            style: TextStyle(
+                              color: themeColors.textMuted,
                               fontSize: 12,
                             ),
                           ),
@@ -229,16 +227,16 @@ class MedicalReportsListScreen extends ConsumerWidget {
                           Container(
                             width: 4,
                             height: 4,
-                            decoration: const BoxDecoration(
-                              color: Colors.white24,
+                            decoration: BoxDecoration(
+                              color: themeColors.textMuted,
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             report.type.toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: themeColors.textSecondary,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),

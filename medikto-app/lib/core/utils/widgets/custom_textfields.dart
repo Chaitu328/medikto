@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
+import 'package:medikto/core/constants/app_themes.dart';
 
 class AppTextFormFieldTitled extends StatelessWidget {
   final String? title;
@@ -24,8 +24,8 @@ class AppTextFormFieldTitled extends StatelessWidget {
   final EdgeInsets? inputDecorationPadding;
   final ImageIcon? imageIcon;
   final bool? readOnly;
-  final TextStyle? hintStyle; // Hint style for placeholder text
-  final TextStyle? textStyle; // Text style for entered/selected text
+  final TextStyle? hintStyle;
+  final TextStyle? textStyle;
   final double? width;
   final double? height;
   final Widget? suffix;
@@ -61,7 +61,7 @@ class AppTextFormFieldTitled extends StatelessWidget {
     this.readOnly,
     this.imageIcon,
     this.hintStyle,
-    this.textStyle, // Add textStyle parameter
+    this.textStyle,
     this.width,
     this.height,
     this.suffix,
@@ -74,6 +74,8 @@ class AppTextFormFieldTitled extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Align(
@@ -85,19 +87,19 @@ class AppTextFormFieldTitled extends StatelessWidget {
               RichText(
                 text: TextSpan(
                   text: title,
-                  style:
-                      titleTextStyle ??
+                  style: titleTextStyle ??
                       TextStyle(
-                        color: color ?? const Color(0xFF000000),
+                        color: color ?? colors.textPrimary,
                         fontWeight: FontWeight.w500,
-                        fontSize: 12,
+                        fontSize: 13,
+                        fontFamily: 'Poppins',
                       ),
                   children: [
                     if (isRequired)
                       const TextSpan(
                         text: " *",
                         style: TextStyle(
-                          color: Color(0xFFFF8A80), // 🔴 RED STAR
+                          color: Color(0xFFFF8A80),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -109,8 +111,6 @@ class AppTextFormFieldTitled extends StatelessWidget {
               width: width ?? MediaQuery.of(context).size.width,
               child: TextFormField(
                 onTap: onTap,
-                
-                // ✅ IMPORTANT PART
                 maxLines: expands == true ? null : (maxLines ?? 1),
                 minLines: expands == true ? null : minLines,
                 expands: expands ?? false,
@@ -124,27 +124,23 @@ class AppTextFormFieldTitled extends StatelessWidget {
                 enabled: enabled ?? true,
                 controller: controller,
                 validator: validator,
-                cursorColor: focusColor ?? Color(0xFFffffff),
-                style:
-                    textStyle ??
+                cursorColor: focusColor ?? AppColors.primaryAccent,
+                style: textStyle ??
                     TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFFffffff),
-                      // color: Color(0xFF000000),
-                    ), // Apply textStyle for the input text
+                      color: colors.textPrimary,
+                      fontFamily: 'Poppins',
+                    ),
                 decoration: InputDecoration(
-                  contentPadding:
-                      inputDecorationPadding ??
-                      EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  // ✅ USE WIDGET DIRECTLY
+                  contentPadding: inputDecorationPadding ??
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   prefixIcon: prefix != null
                       ? Padding(
                           padding: const EdgeInsets.all(12),
                           child: prefix,
                         )
                       : null,
-
                   suffixIcon: suffix != null
                       ? Padding(
                           padding: const EdgeInsets.all(12),
@@ -154,46 +150,52 @@ class AppTextFormFieldTitled extends StatelessWidget {
                           ),
                         )
                       : null,
-                  suffixIconColor: color ?? Color(0xFF000000),
-                  // ✅ IMPORTANT: Remove InputBorder.none
+                  suffixIconColor: color ?? colors.iconColor,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: borderColor ?? Colors.transparent,
+                      color: borderColor ?? colors.border,
                     ),
                   ),
-                  hintStyle:
-                      hintStyle ??
+                  hintStyle: hintStyle ??
                       TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                        color: Colors.grey,
-                      ), // Use dynamic hintStyle
+                        color: colors.textMuted,
+                        fontFamily: 'Poppins',
+                      ),
                   hintText: hintText ?? title,
                   filled: true,
-                  fillColor: fillColor ?? Colors.grey.shade100,
-
+                  fillColor: fillColor ?? colors.inputFill,
                   errorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.error,
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: AppColors.statusCritical,
                     ),
                   ),
                   disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: borderColor ?? Colors.transparent,
+                      color: borderColor ?? colors.borderSubtle,
                     ),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.error,
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                      color: AppColors.statusCritical,
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: borderColor ?? Colors.black),
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: borderColor ?? colors.border,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: focusColor ?? Colors.transparent,
+                      color: focusColor ?? AppColors.primaryAccent,
+                      width: 1.5,
                     ),
                   ),
                 ),

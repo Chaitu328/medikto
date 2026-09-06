@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 
 class TimeModel {
   String time;
@@ -15,11 +16,6 @@ class TimingsSection extends StatefulWidget {
 }
 
 class _TimingsSectionState extends State<TimingsSection> {
-  // Theme Colors consistent with your designs
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-  static const Color textSecondary = Colors.white54;
-
   List<TimeModel> times = [
     TimeModel(time: "04:30 PM", isEnabled: true),
     TimeModel(time: "08:30 PM", isEnabled: true),
@@ -27,8 +23,10 @@ class _TimingsSectionState extends State<TimingsSection> {
 
   TimeOfDay selectedTime = const TimeOfDay(hour: 12, minute: 0);
 
-  /// 🔥 Dark Mode Time Picker
   Future<void> _pickTime() async {
+    final theme = context.themeColors;
+    final isDark = context.isDarkMode;
+
     final picked = await showTimePicker(
       context: context,
       initialTime: selectedTime,
@@ -36,26 +34,22 @@ class _TimingsSectionState extends State<TimingsSection> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              // 🔥 Switched to Dark
-              primary: accentCyan,
-              onPrimary: Colors.black,
-              surface: Color(0xFF252525),
-              onSurface: Colors.white,
-            ),
-            dialogBackgroundColor: const Color(0xFF1E1E1E),
+            colorScheme: isDark
+                ? ColorScheme.dark(
+                    primary: theme.accentPrimary,
+                    onPrimary: theme.onAccentPrimary,
+                    surface: const Color(0xFF252525),
+                    onSurface: Colors.white,
+                  )
+                : ColorScheme.light(
+                    primary: theme.accentPrimary,
+                    onPrimary: theme.onAccentPrimary,
+                    surface: Colors.white,
+                    onSurface: AppColors.lightTextPrimary,
+                  ),
+            dialogBackgroundColor: theme.surface,
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: accentCyan),
-            ),
-            timePickerTheme: const TimePickerThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
-              hourMinuteTextColor: accentCyan,
-              hourMinuteColor: Colors.white10,
-              dayPeriodTextColor: accentCyan,
-              dayPeriodColor: Colors.white10,
-              dialHandColor: accentCyan,
-              dialBackgroundColor: Colors.white10,
-              entryModeIconColor: accentCyan,
+              style: TextButton.styleFrom(foregroundColor: theme.accentPrimary),
             ),
           ),
           child: child!,
@@ -83,16 +77,17 @@ class _TimingsSectionState extends State<TimingsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Timings & Alerts",
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: accentCyan, // Section header in brand Cyan
-            
+            color: theme.accentMedium,
           ),
         ),
         const SizedBox(height: 15),
@@ -104,21 +99,21 @@ class _TimingsSectionState extends State<TimingsSection> {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: surfaceColor,
+              color: theme.card,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: theme.borderSubtle),
             ),
             child: Row(
               children: [
-                const Icon(Icons.access_time, size: 18, color: accentCyan),
+                Icon(Icons.access_time, size: 18, color: theme.accentMedium),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     item.time,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white,
+                      color: theme.textPrimary,
                     ),
                   ),
                 ),
@@ -132,32 +127,32 @@ class _TimingsSectionState extends State<TimingsSection> {
                           context: context,
                           barrierDismissible: false,
                           builder: (ctx) => AlertDialog(
-                            backgroundColor: surfaceColor,
+                            backgroundColor: theme.surface,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            title: const Row(
+                            title: Row(
                               children: [
-                                Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 28),
-                                SizedBox(width: 10),
+                                const Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 28),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     "Disable Notifications?",
-                                    style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: theme.textPrimary, fontSize: 17, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ],
                             ),
-                            content: const Text(
+                            content: Text(
                               "Switching off will stop critical notifications for the medicines.",
-                              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                              style: TextStyle(color: theme.textSecondary, fontSize: 14, height: 1.4),
                             ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text(
+                                child: Text(
                                   "Keep Enabled",
-                                  style: TextStyle(color: accentCyan, fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: theme.accentMedium, fontWeight: FontWeight.bold),
                                 ),
                               ),
                               TextButton(
@@ -177,10 +172,10 @@ class _TimingsSectionState extends State<TimingsSection> {
                         setState(() => item.isEnabled = true);
                       }
                     },
-                    activeColor: accentCyan,
-                    activeTrackColor: accentCyan.withOpacity(0.3),
-                    inactiveThumbColor: Colors.white24,
-                    inactiveTrackColor: Colors.black26,
+                    activeColor: theme.accentPrimary,
+                    activeTrackColor: theme.accentPrimary.withOpacity(0.3),
+                    inactiveThumbColor: theme.textMuted,
+                    inactiveTrackColor: theme.borderSubtle,
                     trackOutlineColor: WidgetStateProperty.all(
                       Colors.transparent,
                     ),
@@ -197,9 +192,9 @@ class _TimingsSectionState extends State<TimingsSection> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: surfaceColor,
+            color: theme.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: accentCyan.withOpacity(0.2)),
+            border: Border.all(color: theme.accentPrimary.withOpacity(0.25)),
           ),
           child: Row(
             children: [
@@ -210,16 +205,16 @@ class _TimingsSectionState extends State<TimingsSection> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         "Select Reminder",
-                        style: TextStyle(color: textSecondary, fontSize: 10),
+                        style: TextStyle(color: theme.textSecondary, fontSize: 10),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         formatTime(selectedTime),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
-                          color: Colors.white,
+                          color: theme.textPrimary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -232,8 +227,8 @@ class _TimingsSectionState extends State<TimingsSection> {
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text("Add"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: accentCyan,
-                  foregroundColor: Colors.black,
+                  backgroundColor: theme.accentPrimary,
+                  foregroundColor: theme.onAccentPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

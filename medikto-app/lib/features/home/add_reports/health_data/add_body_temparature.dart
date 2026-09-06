@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
@@ -20,39 +21,11 @@ class AddBodyTemparatureScreen extends ConsumerStatefulWidget {
 
 class _AddBodyTemparatureScreenState
     extends ConsumerState<AddBodyTemparatureScreen> {
-  // Theme Palette
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   final temparatureController = TextEditingController();
   final dateController = TextEditingController();
   final timeController = TextEditingController();
   final notesController = TextEditingController();
   bool isLoading = false;
-
-  final List<FormFieldModel> btFields = [
-    FormFieldModel(
-      title: "Body Temperature",
-      hint: "98.6",
-      suffix: const Text(
-        "°F",
-        style: TextStyle(
-          color: Colors.white54,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-        ),
-      ),
-      isRequired: true,
-    ),
-    FormFieldModel(title: "", hint: "", isRow: true, isRequired: true),
-    FormFieldModel(
-      title: "Notes (Optional)",
-      hint: "e.g. Oral thermometer reading",
-      maxLines: 3,
-      isRequired: false,
-    ),
-  ];
 
   @override
   void initState() {
@@ -72,31 +45,40 @@ class _AddBodyTemparatureScreenState
   }
 
   Future<void> selectTime() async {
+    final theme = context.themeColors;
+    final isDark = context.isDarkMode;
+
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
       initialEntryMode: TimePickerEntryMode.input,
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: darkBg,
-            colorScheme: const ColorScheme.dark(
-              primary: accentCyan,
-              surface: Color(0xFF1E1E1E),
-              onSurface: Colors.white,
-            ),
-            timePickerTheme: const TimePickerThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
-              hourMinuteTextColor: Colors.white,
-              hourMinuteColor: Color(0xFF2A2A2A),
-              dialHandColor: accentCyan,
-              dialBackgroundColor: Color(0xFF2A2A2A),
-              entryModeIconColor: accentCyan,
-            ),
-            dialogTheme: const DialogThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
-            ),
-          ),
+          data: isDark
+              ? ThemeData.dark().copyWith(
+                  scaffoldBackgroundColor: theme.bg,
+                  colorScheme: ColorScheme.dark(
+                    primary: theme.accentPrimary,
+                    onPrimary: theme.onAccentPrimary,
+                    surface: const Color(0xFF1E1E1E),
+                    onSurface: Colors.white,
+                  ),
+                  dialogTheme: const DialogThemeData(
+                    backgroundColor: Color(0xFF1E1E1E),
+                  ),
+                )
+              : ThemeData.light().copyWith(
+                  scaffoldBackgroundColor: theme.bg,
+                  colorScheme: ColorScheme.light(
+                    primary: theme.accentPrimary,
+                    onPrimary: theme.onAccentPrimary,
+                    surface: Colors.white,
+                    onSurface: AppColors.lightTextPrimary,
+                  ),
+                  dialogTheme: const DialogThemeData(
+                    backgroundColor: Colors.white,
+                  ),
+                ),
           child: child!,
         );
       },
@@ -110,6 +92,9 @@ class _AddBodyTemparatureScreenState
   }
 
   Future<void> selectDate() async {
+    final theme = context.themeColors;
+    final isDark = context.isDarkMode;
+
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -117,25 +102,31 @@ class _AddBodyTemparatureScreenState
       lastDate: DateTime(2100),
       builder: (context, child) {
         return Theme(
-          data: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: darkBg,
-            colorScheme: const ColorScheme.dark(
-              primary: accentCyan,
-              surface: const Color(0xFF1E1E1E),
-              onSurface: Colors.white,
-            ),
-            dialogTheme: const DialogThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
-            ),
-            datePickerTheme: const DatePickerThemeData(
-              backgroundColor: Color(0xFF1E1E1E),
-              headerBackgroundColor: accentCyan,
-              headerForegroundColor: Colors.black,
-              dayForegroundColor: WidgetStatePropertyAll(Colors.white),
-              todayForegroundColor: WidgetStatePropertyAll(Colors.white),
-              yearForegroundColor: WidgetStatePropertyAll(Colors.white),
-            ),
-          ),
+          data: isDark
+              ? ThemeData.dark().copyWith(
+                  scaffoldBackgroundColor: theme.bg,
+                  colorScheme: ColorScheme.dark(
+                    primary: theme.accentPrimary,
+                    onPrimary: theme.onAccentPrimary,
+                    surface: const Color(0xFF1E1E1E),
+                    onSurface: Colors.white,
+                  ),
+                  dialogTheme: const DialogThemeData(
+                    backgroundColor: Color(0xFF1E1E1E),
+                  ),
+                )
+              : ThemeData.light().copyWith(
+                  scaffoldBackgroundColor: theme.bg,
+                  colorScheme: ColorScheme.light(
+                    primary: theme.accentPrimary,
+                    onPrimary: theme.onAccentPrimary,
+                    surface: Colors.white,
+                    onSurface: AppColors.lightTextPrimary,
+                  ),
+                  dialogTheme: const DialogThemeData(
+                    backgroundColor: Colors.white,
+                  ),
+                ),
           child: child!,
         );
       },
@@ -197,18 +188,42 @@ class _AddBodyTemparatureScreenState
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     final profileAsync = ref.watch(getProfileProvider);
     final isGuardian = profileAsync.value?.data is ProfileModel &&
         (profileAsync.value!.data as ProfileModel).role == 'guardian';
 
+    final List<FormFieldModel> btFields = [
+      FormFieldModel(
+        title: "Body Temperature",
+        hint: "98.6",
+        suffix: Text(
+          "°F",
+          style: TextStyle(
+            color: theme.textSecondary,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        isRequired: true,
+      ),
+      FormFieldModel(title: "", hint: "", isRow: true, isRequired: true),
+      FormFieldModel(
+        title: "Notes (Optional)",
+        hint: "e.g. Oral thermometer reading",
+        maxLines: 3,
+        isRequired: false,
+      ),
+    ];
+
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: theme.bg,
       appBar: CustomAppBar(
         title: "Add Body Temperature",
         onBack: () => Navigator.pop(context),
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: theme.bg,
+        titleStyle: TextStyle(
+          color: theme.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 18,
         ),
@@ -227,9 +242,9 @@ class _AddBodyTemparatureScreenState
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: surfaceColor,
+                        color: theme.card,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.white10),
+                        border: Border.all(color: theme.borderSubtle),
                       ),
                       child: Row(
                         children: [
@@ -237,17 +252,17 @@ class _AddBodyTemparatureScreenState
                             height: 40,
                             width: 40,
                             decoration: BoxDecoration(
-                              color: accentCyan.withOpacity(0.12),
+                              color: theme.accentSubtle,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.thermostat, color: accentCyan, size: 22),
+                            child: Icon(Icons.thermostat, color: theme.accentMedium, size: 22),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Text(
                               "Enter your temperature in degrees Fahrenheit (°F).",
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: theme.textSecondary,
                                 fontSize: 13,
                                 height: 1.3,
                               ),
@@ -281,9 +296,9 @@ class _AddBodyTemparatureScreenState
                   child: CustomButton(
                     onPressed: isLoading ? null : addTemperature,
                     buttonText: isLoading ? "Please wait..." : "Save Record",
-                    buttonColor: accentCyan,
-                    textStyle: const TextStyle(
-                      color: Colors.black,
+                    buttonColor: theme.accentPrimary,
+                    textStyle: TextStyle(
+                      color: theme.onAccentPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),

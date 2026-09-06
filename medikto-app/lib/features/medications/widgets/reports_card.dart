@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
 
 class ReportCard extends StatelessWidget {
@@ -6,17 +7,13 @@ class ReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     return Container(
       padding: const EdgeInsets.only(top: 16, left: 10, right: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFCCCCCC).withOpacity(0.3),
-            blurRadius: 6,
-          ),
-        ],
+        color: theme.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.borderSubtle),
       ),
       child: Column(
         children: [
@@ -25,12 +22,12 @@ class ReportCard extends StatelessWidget {
             height: 80,
             width: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFFECF4FF),
+              color: theme.cardSecondary,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Image.asset(
               "assets/images/item2.png",
-              color: const Color(0xFF213598),
+              color: theme.accent,
             ),
           ),
           const SizedBox(height: 12),
@@ -43,13 +40,13 @@ class ReportCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF263238),
+                    color: theme.textPrimary,
                   ),
                 ),
               ),
               InkWell(
                 onTap: () => _showBottomSheet(context),
-                child: Icon(Icons.more_horiz, size: 18),
+                child: Icon(Icons.more_horiz, size: 18, color: theme.iconColor),
               ),
             ],
           ),
@@ -59,9 +56,10 @@ class ReportCard extends StatelessWidget {
   }
 
   void _showBottomSheet(BuildContext context) {
+    final theme = context.themeColors;
     showModalBottomSheet(
-      backgroundColor: Colors.white,
-      constraints: BoxConstraints(maxWidth: double.infinity),
+      backgroundColor: theme.surface,
+      constraints: const BoxConstraints(maxWidth: double.infinity),
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -76,5 +74,4 @@ class ReportCard extends StatelessWidget {
       ),
     );
   }
-
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/constants/legal_content.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
@@ -25,10 +26,6 @@ class GoogleConsentScreen extends ConsumerStatefulWidget {
     this.name,
     this.picture,
   });
-
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
 
   @override
   ConsumerState<GoogleConsentScreen> createState() => _GoogleConsentScreenState();
@@ -109,19 +106,21 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return Scaffold(
-      backgroundColor: GoogleConsentScreen.darkBg,
+      backgroundColor: colors.bg,
       appBar: AppBar(
-        backgroundColor: GoogleConsentScreen.darkBg,
+        backgroundColor: colors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new, color: colors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Complete Your Profile",
           style: TextStyle(
-            color: Colors.white,
+            color: colors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -141,19 +140,19 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         "Almost there!",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: colors.textPrimary,
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         "Please confirm your account details and agree to our policies to activate your Medikto account.",
                         style: TextStyle(
-                          color: Colors.white54,
+                          color: colors.textSecondary,
                           fontSize: 14,
                           height: 1.5,
                         ),
@@ -164,20 +163,20 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: GoogleConsentScreen.surfaceColor,
+                          color: colors.card,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withOpacity(0.06)),
+                          border: Border.all(color: colors.borderSubtle),
                         ),
                         child: Row(
                           children: [
                             CircleAvatar(
                               radius: 22,
-                              backgroundColor: Colors.white10,
+                              backgroundColor: colors.surface,
                               backgroundImage: widget.picture != null && widget.picture!.isNotEmpty
                                   ? NetworkImage(widget.picture!)
                                   : null,
                               child: widget.picture == null || widget.picture!.isEmpty
-                                  ? const Icon(Icons.person, color: GoogleConsentScreen.accentCyan)
+                                  ? Icon(Icons.person, color: colors.accentPrimary)
                                   : null,
                             ),
                             const SizedBox(width: 14),
@@ -187,8 +186,8 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                                 children: [
                                   Text(
                                     widget.name ?? "Google User",
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: colors.textPrimary,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -196,17 +195,17 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     widget.email ?? "Authenticated via Google",
-                                    style: const TextStyle(
-                                      color: Colors.white54,
+                                    style: TextStyle(
+                                      color: colors.textSecondary,
                                       fontSize: 13,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const Icon(
+                            Icon(
                               Icons.check_circle,
-                              color: GoogleConsentScreen.accentCyan,
+                              color: colors.accentPrimary,
                               size: 20,
                             ),
                           ],
@@ -220,10 +219,10 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                         controller: _nameController,
                         title: "Full Name",
                         hintText: "Enter your full name",
-                        focusColor: GoogleConsentScreen.accentCyan,
-                        fillColor: GoogleConsentScreen.surfaceColor,
-                        color: Colors.white,
-                        borderColor: Colors.white10,
+                        focusColor: colors.accentPrimary,
+                        fillColor: colors.inputFill,
+                        color: colors.textPrimary,
+                        borderColor: colors.border,
                       ),
 
                       const SizedBox(height: 16),
@@ -233,10 +232,10 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                         controller: _phoneController,
                         title: "Phone Number (Optional)",
                         hintText: "Enter 10-digit mobile number",
-                        focusColor: GoogleConsentScreen.accentCyan,
-                        fillColor: GoogleConsentScreen.surfaceColor,
-                        color: Colors.white,
-                        borderColor: Colors.white10,
+                        focusColor: colors.accentPrimary,
+                        fillColor: colors.inputFill,
+                        color: colors.textPrimary,
+                        borderColor: colors.border,
                         textInputType: TextInputType.phone,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
@@ -251,11 +250,11 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Theme(
-                            data: ThemeData(unselectedWidgetColor: Colors.white54),
+                            data: ThemeData(unselectedWidgetColor: colors.textMuted),
                             child: Checkbox(
                               value: _isConsentChecked,
-                              activeColor: GoogleConsentScreen.accentCyan,
-                              checkColor: Colors.black,
+                              activeColor: colors.accentPrimary,
+                              checkColor: colors.onAccentPrimary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(4),
                               ),
@@ -270,12 +269,12 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                             child: Text.rich(
                               TextSpan(
                                 text: "I agree to the ",
-                                style: const TextStyle(fontSize: 12, color: Colors.white70),
+                                style: TextStyle(fontSize: 12, color: colors.textSecondary),
                                 children: [
                                   TextSpan(
                                     text: "Terms & Conditions",
-                                    style: const TextStyle(
-                                      color: GoogleConsentScreen.accentCyan,
+                                    style: TextStyle(
+                                      color: colors.accentMedium,
                                       fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
@@ -292,8 +291,8 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
                                   const TextSpan(text: " and "),
                                   TextSpan(
                                     text: "Privacy Policy",
-                                    style: const TextStyle(
-                                      color: GoogleConsentScreen.accentCyan,
+                                    style: TextStyle(
+                                      color: colors.accentMedium,
                                       fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
@@ -322,17 +321,17 @@ class _GoogleConsentScreenState extends ConsumerState<GoogleConsentScreen> {
               const SizedBox(height: 16),
 
               _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: GoogleConsentScreen.accentCyan),
+                  ? Center(
+                      child: CircularProgressIndicator(color: colors.accentPrimary),
                     )
                   : CustomButton(
                       onPressed: _handleCompleteRegistration,
                       buttonText: "Create Account",
-                      buttonColor: GoogleConsentScreen.accentCyan,
-                      textStyle: const TextStyle(
+                      buttonColor: colors.accentPrimary,
+                      textStyle: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: colors.onAccentPrimary,
                       ),
                     ),
             ],

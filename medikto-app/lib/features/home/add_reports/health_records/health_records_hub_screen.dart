@@ -1,3 +1,4 @@
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,11 +50,6 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   String _selectedReportType = "All"; // All, Medical, Lab, Vaccination, Prescription
   String _selectedPrescriptionReminder = "All"; // All, Active, Disabled
   bool _showTrendChart = true;
-
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color cardColor = Color(0xFF181818);
-  static const Color accentCyan = Color(0xFF81DEEA);
 
   @override
   void initState() {
@@ -214,17 +210,18 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     final profileAsync = ref.watch(getProfileProvider);
     final isGuardian = profileAsync.value?.data is ProfileModel &&
         (profileAsync.value!.data as ProfileModel).role == 'guardian';
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
         title: "Medical Documents Hub",
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: themeColors.bg,
+        titleStyle: TextStyle(
+          color: themeColors.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 18,
         ),
@@ -232,16 +229,16 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
       ),
       floatingActionButton: isGuardian
           ? null
-          : _buildFloatingActionButton(),
+          : _buildFloatingActionButton(themeColors),
       body: Column(
         children: [
           // Elegant, elderly-friendly TabBar container
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: surfaceColor,
+              color: themeColors.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: themeColors.border),
             ),
             child: TabBar(
               controller: _tabController,
@@ -249,12 +246,12 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               dividerColor: Colors.transparent,
               labelPadding: const EdgeInsets.symmetric(horizontal: 2),
               indicator: BoxDecoration(
-                color: accentCyan.withOpacity(0.18),
+                color: themeColors.accentSubtle,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: accentCyan.withOpacity(0.4)),
+                border: Border.all(color: themeColors.accentBorder),
               ),
-              labelColor: accentCyan,
-              unselectedLabelColor: Colors.white54,
+              labelColor: themeColors.accentPrimary,
+              unselectedLabelColor: themeColors.textMuted,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               unselectedLabelStyle:
                   const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
@@ -281,11 +278,11 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     );
   }
 
-  Widget? _buildFloatingActionButton() {
+  Widget? _buildFloatingActionButton(AppThemeColors themeColors) {
     if (_tabController.index == 1) {
       return FloatingActionButton.extended(
-        backgroundColor: accentCyan,
-        foregroundColor: Colors.black,
+        backgroundColor: themeColors.accentPrimary,
+        foregroundColor: themeColors.onAccentPrimary,
         icon: const Icon(Icons.upload_file, size: 20),
         label: const Text("Upload Report", style: TextStyle(fontWeight: FontWeight.bold)),
         onPressed: () async {
@@ -300,8 +297,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
       );
     } else if (_tabController.index == 2) {
       return FloatingActionButton.extended(
-        backgroundColor: accentCyan,
-        foregroundColor: Colors.black,
+        backgroundColor: themeColors.accentPrimary,
+        foregroundColor: themeColors.onAccentPrimary,
         icon: const Icon(Icons.add, size: 20),
         label: const Text("Add Prescription", style: TextStyle(fontWeight: FontWeight.bold)),
         onPressed: () async {
@@ -320,11 +317,12 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
   // ================= 1. HEALTH VITALS & CENTRAL HISTORY TAB =================
   Widget _buildVitalsHistoryTab(bool isGuardian) {
+    final themeColors = context.themeColors;
     final vitalsAsync = ref.watch(getVitalsProvider);
 
     return RefreshIndicator(
-      color: accentCyan,
-      backgroundColor: surfaceColor,
+      color: themeColors.accentPrimary,
+      backgroundColor: themeColors.surface,
       onRefresh: () async {
         ref.invalidate(getVitalsProvider);
       },
@@ -410,8 +408,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                     _selectedVitalFilter == "All"
                         ? "ALL PREVIOUS READINGS"
                         : "${_getVitalTitle(_selectedVitalFilter).toUpperCase()} HISTORY",
-                    style: const TextStyle(
-                      color: Colors.white54,
+                    style: TextStyle(
+                      color: themeColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -427,18 +425,18 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: accentCyan.withOpacity(0.12),
+                          color: themeColors.accentSubtle,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: accentCyan.withOpacity(0.3)),
+                          border: Border.all(color: themeColors.accentBorder),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.share_outlined, color: accentCyan, size: 14),
-                            SizedBox(width: 4),
+                            Icon(Icons.share_outlined, color: themeColors.accentMedium, size: 14),
+                            const SizedBox(width: 4),
                             Text(
                               "Share",
                               style: TextStyle(
-                                color: accentCyan,
+                                color: themeColors.accentMedium,
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -466,12 +464,11 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
           );
         },
         loading: () =>
-            const Center(child: CircularProgressIndicator(color: accentCyan)),
+            Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
         error: (err, st) => _buildErrorState(err.toString()),
       ),
     );
   }
-
   Widget _buildVitalSummaryGrid({
     required VitalsModel? latestBP,
     required VitalsModel? latestHR,
@@ -544,15 +541,16 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     required String? status,
     required bool isGuardian,
   }) {
+    final themeColors = context.themeColors;
     final hasValue = value != "No reading";
     final timeStr = date != null ? _formatRecordDate(date) : "";
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: themeColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,12 +561,12 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
             children: [
               Row(
                 children: [
-                  Icon(icon, color: accentCyan, size: 18),
+                  Icon(icon, color: themeColors.accentMedium, size: 18),
                   const SizedBox(width: 6),
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: themeColors.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
@@ -579,13 +577,13 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: accentCyan.withOpacity(0.12),
+                    color: themeColors.accentSubtle,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     status,
-                    style: const TextStyle(
-                      color: accentCyan,
+                    style: TextStyle(
+                      color: themeColors.accentMedium,
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
                     ),
@@ -600,7 +598,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               Text(
                 value,
                 style: TextStyle(
-                  color: hasValue ? Colors.white : Colors.white38,
+                  color: hasValue ? themeColors.textPrimary : themeColors.textMuted,
                   fontSize: hasValue ? 16 : 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -610,7 +608,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               if (timeStr.isNotEmpty)
                 Text(
                   timeStr,
-                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  style: TextStyle(color: themeColors.textMuted, fontSize: 10),
                   maxLines: 1,
                 ),
             ],
@@ -623,13 +621,13 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               height: 32,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: accentCyan.withOpacity(0.15),
-                  foregroundColor: accentCyan,
+                  backgroundColor: themeColors.accentSubtle,
+                  foregroundColor: themeColors.accentMedium,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: accentCyan.withOpacity(0.3)),
+                    side: BorderSide(color: themeColors.accentBorder),
                   ),
                 ),
                 onPressed: () => _openAddVitalScreen(type),
@@ -646,6 +644,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildVitalFilterChips() {
+    final themeColors = context.themeColors;
     final filters = [
       {"label": "All Vitals", "type": "All"},
       {"label": "Blood Pressure", "type": "bloodPressure"},
@@ -667,7 +666,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
             child: ChoiceChip(
               label: Text(item["label"]!),
               labelStyle: TextStyle(
-                color: isSelected ? accentCyan : Colors.white60,
+                color: isSelected ? themeColors.accentPrimary : themeColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               ),
@@ -677,15 +676,15 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   setState(() => _selectedVitalFilter = item["type"]!);
                 }
               },
-              backgroundColor: surfaceColor,
-              selectedColor: accentCyan.withOpacity(0.18),
-              checkmarkColor: accentCyan,
+              backgroundColor: themeColors.surface,
+              selectedColor: themeColors.accentSubtle,
+              checkmarkColor: themeColors.accentPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
                   color: isSelected
-                      ? accentCyan.withOpacity(0.5)
-                      : Colors.white10,
+                      ? themeColors.accentBorder
+                      : themeColors.border,
                 ),
               ),
             ),
@@ -696,6 +695,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildCentralTrendChart(List<VitalsModel> records, String vitalType) {
+    final themeColors = context.themeColors;
     if (records.isEmpty) return const SizedBox();
 
     final chartRecords = records.take(10).toList().reversed.toList();
@@ -736,9 +736,9 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: themeColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,18 +748,18 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
             children: [
               Text(
                 "${_getVitalTitle(vitalType)} Trend",
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: themeColors.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               if (vitalType == "bloodPressure")
-                const Row(
+                Row(
                   children: [
-                    Text("• Sys", style: TextStyle(color: accentCyan, fontSize: 11)),
-                    SizedBox(width: 8),
-                    Text("• Dia", style: TextStyle(color: Colors.white54, fontSize: 11)),
+                    Text("• Sys", style: TextStyle(color: themeColors.accentMedium, fontSize: 11)),
+                    const SizedBox(width: 8),
+                    Text("• Dia", style: TextStyle(color: themeColors.textSecondary, fontSize: 11)),
                   ],
                 ),
             ],
@@ -773,7 +773,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (val) => FlLine(
-                    color: Colors.white.withOpacity(0.06),
+                    color: themeColors.chartGrid,
                     strokeWidth: 1,
                   ),
                 ),
@@ -786,7 +786,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                       reservedSize: 32,
                       getTitlesWidget: (val, meta) => Text(
                         val.toInt().toString(),
-                        style: const TextStyle(color: Colors.white30, fontSize: 9),
+                        style: TextStyle(color: themeColors.textMuted, fontSize: 9),
                       ),
                     ),
                   ),
@@ -801,7 +801,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                           if (date != null) {
                             return Text(
                               DateFormat("dd/MM").format(date.toLocal()),
-                              style: const TextStyle(color: Colors.white38, fontSize: 9),
+                              style: TextStyle(color: themeColors.textMuted, fontSize: 9),
                             );
                           }
                         }
@@ -815,20 +815,20 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   LineChartBarData(
                     spots: mainSpots,
                     isCurved: true,
-                    color: accentCyan,
+                    color: themeColors.accentPrimary,
                     barWidth: 3,
                     isStrokeCapRound: true,
                     dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: accentCyan.withOpacity(0.12),
+                      color: themeColors.accentSubtle,
                     ),
                   ),
                   if (secondarySpots.isNotEmpty)
                     LineChartBarData(
                       spots: secondarySpots,
                       isCurved: true,
-                      color: Colors.white54,
+                      color: themeColors.textSecondary,
                       barWidth: 2,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: true),
@@ -843,6 +843,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildUnifiedVitalRecordCard(VitalsModel record) {
+    final themeColors = context.themeColors;
     final title = _getVitalTitle(record.type);
     final valStr = _getVitalValueWithUnit(record);
     final status = _getVitalStatus(record);
@@ -855,9 +856,9 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: themeColors.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -866,10 +867,10 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
             height: 42,
             width: 42,
             decoration: BoxDecoration(
-              color: accentCyan.withOpacity(0.1),
+              color: themeColors.accentSubtle,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: accentCyan, size: 20),
+            child: Icon(icon, color: themeColors.accentMedium, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -881,16 +882,16 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: themeColors.textSecondary,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
                       valStr,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: themeColors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -903,19 +904,19 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   children: [
                     Text(
                       dateStr,
-                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      style: TextStyle(color: themeColors.textMuted, fontSize: 11),
                     ),
                     if (status.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: accentCyan.withOpacity(0.12),
+                          color: themeColors.accentSubtle,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           status,
-                          style: const TextStyle(
-                            color: accentCyan,
+                          style: TextStyle(
+                            color: themeColors.accentMedium,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -927,8 +928,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   const SizedBox(height: 6),
                   Text(
                     "Note: ${record.notes}",
-                    style: const TextStyle(
-                      color: Colors.white54,
+                    style: TextStyle(
+                      color: themeColors.textSecondary,
                       fontSize: 11,
                       fontStyle: FontStyle.italic,
                     ),
@@ -961,6 +962,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
   // ================= 2. REPORTS TAB =================
   Widget _buildReportsTab() {
+    final themeColors = context.themeColors;
     final reportsAsync = ref.watch(getReportsProvider);
 
     return Column(
@@ -976,8 +978,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
         Expanded(
           child: RefreshIndicator(
-            color: accentCyan,
-            backgroundColor: surfaceColor,
+            color: themeColors.accentPrimary,
+            backgroundColor: themeColors.surface,
             onRefresh: () async {
               ref.invalidate(getReportsProvider);
             },
@@ -1024,7 +1026,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 );
               },
               loading: () =>
-                  const Center(child: CircularProgressIndicator(color: accentCyan)),
+                  Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
               error: (err, st) => _buildErrorState(err.toString()),
             ),
           ),
@@ -1035,6 +1037,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
   // ================= 3. PRESCRIPTIONS TAB =================
   Widget _buildPrescriptionsTab() {
+    final themeColors = context.themeColors;
     final prescriptionsAsync = ref.watch(getPrescriptionsProvider);
 
     return Column(
@@ -1050,8 +1053,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
         Expanded(
           child: RefreshIndicator(
-            color: accentCyan,
-            backgroundColor: surfaceColor,
+            color: themeColors.accentPrimary,
+            backgroundColor: themeColors.surface,
             onRefresh: () async {
               ref.invalidate(getPrescriptionsProvider);
             },
@@ -1099,7 +1102,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 );
               },
               loading: () =>
-                  const Center(child: CircularProgressIndicator(color: accentCyan)),
+                  Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
               error: (err, st) => _buildErrorState(err.toString()),
             ),
           ),
@@ -1111,23 +1114,24 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   // ================= GENERAL UI COMPONENTS =================
 
   Widget _buildSearchBar(TextEditingController controller, String hint) {
+    final themeColors = context.themeColors;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: themeColors.border),
       ),
       child: TextField(
         controller: controller,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: themeColors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-          prefixIcon: const Icon(Icons.search, color: Colors.white54, size: 20),
+          hintStyle: TextStyle(color: themeColors.textMuted, fontSize: 13),
+          prefixIcon: Icon(Icons.search, color: themeColors.textSecondary, size: 20),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.white54, size: 18),
+                  icon: Icon(Icons.clear, color: themeColors.textSecondary, size: 18),
                   onPressed: () => controller.clear(),
                 )
               : null,
@@ -1139,6 +1143,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildReportFilterChips() {
+    final themeColors = context.themeColors;
     final conditions = ["All", "Critical", "Moderate", "Normal"];
     return SizedBox(
       height: 44,
@@ -1154,7 +1159,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
             child: ChoiceChip(
               label: Text(cond),
               labelStyle: TextStyle(
-                color: isSelected ? accentCyan : Colors.white60,
+                color: isSelected ? themeColors.accentPrimary : themeColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               ),
@@ -1164,15 +1169,15 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   setState(() => _selectedReportCondition = cond);
                 }
               },
-              backgroundColor: surfaceColor,
-              selectedColor: accentCyan.withOpacity(0.18),
-              checkmarkColor: accentCyan,
+              backgroundColor: themeColors.surface,
+              selectedColor: themeColors.accentSubtle,
+              checkmarkColor: themeColors.accentPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
                   color: isSelected
-                      ? accentCyan.withOpacity(0.5)
-                      : Colors.white10,
+                      ? themeColors.accentBorder
+                      : themeColors.border,
                 ),
               ),
             ),
@@ -1183,6 +1188,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildPrescriptionFilterChips() {
+    final themeColors = context.themeColors;
     final filters = ["All", "Active", "Disabled"];
     return SizedBox(
       height: 44,
@@ -1200,7 +1206,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
             child: ChoiceChip(
               label: Text(displayName),
               labelStyle: TextStyle(
-                color: isSelected ? accentCyan : Colors.white60,
+                color: isSelected ? themeColors.accentPrimary : themeColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               ),
@@ -1210,15 +1216,15 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   setState(() => _selectedPrescriptionReminder = filterName);
                 }
               },
-              backgroundColor: surfaceColor,
-              selectedColor: accentCyan.withOpacity(0.18),
-              checkmarkColor: accentCyan,
+              backgroundColor: themeColors.surface,
+              selectedColor: themeColors.accentSubtle,
+              checkmarkColor: themeColors.accentPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
                   color: isSelected
-                      ? accentCyan.withOpacity(0.5)
-                      : Colors.white10,
+                      ? themeColors.accentBorder
+                      : themeColors.border,
                 ),
               ),
             ),
@@ -1229,16 +1235,17 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildReportCard(MedicalReportModel report) {
+    final themeColors = context.themeColors;
     Color condColor;
     switch (report.condition.toLowerCase()) {
       case "critical":
-        condColor = Colors.redAccent;
+        condColor = AppColors.missedRed;
         break;
       case "moderate":
-        condColor = Colors.orangeAccent;
+        condColor = AppColors.pendingAmber;
         break;
       default:
-        condColor = Colors.greenAccent;
+        condColor = AppColors.takenGreen;
     }
 
     final dateStr = DateFormat("dd MMM yyyy").format(report.date.toLocal());
@@ -1246,9 +1253,9 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: themeColors.border),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -1269,12 +1276,12 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 height: 42,
                 width: 42,
                 decoration: BoxDecoration(
-                  color: accentCyan.withOpacity(0.08),
+                  color: themeColors.accentSubtle,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.description_outlined,
-                  color: accentCyan,
+                  color: themeColors.accentMedium,
                   size: 22,
                 ),
               ),
@@ -1285,8 +1292,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   children: [
                     Text(
                       report.title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: themeColors.textPrimary,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1296,7 +1303,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                     const SizedBox(height: 4),
                     Text(
                       "$dateStr  •  ${report.type.toUpperCase()}",
-                      style: const TextStyle(color: Colors.white30, fontSize: 11),
+                      style: TextStyle(color: themeColors.textMuted, fontSize: 11),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1328,8 +1335,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               // Quick Share Button
               if (report.fileUrl.isNotEmpty)
                 IconButton(
-                  icon: const Icon(Icons.share_outlined,
-                      color: accentCyan, size: 18),
+                  icon: Icon(Icons.share_outlined,
+                      color: themeColors.accentMedium, size: 18),
                   onPressed: () {
                     Share.share(
                       "Medical Report: ${report.title}\nAttachment: ${report.fileUrl}",
@@ -1345,6 +1352,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildPrescriptionCard(PrescriptionModel prescription) {
+    final themeColors = context.themeColors;
     final activeReminders =
         prescription.reminders.where((r) => r.enabled).toList();
     final timesStr = activeReminders.map((r) => r.time).join(", ");
@@ -1354,9 +1362,9 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: themeColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: themeColors.border),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -1377,12 +1385,12 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 height: 42,
                 width: 42,
                 decoration: BoxDecoration(
-                  color: accentCyan.withOpacity(0.08),
+                  color: themeColors.accentSubtle,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.medication_outlined,
-                  color: accentCyan,
+                  color: themeColors.accentMedium,
                   size: 22,
                 ),
               ),
@@ -1393,8 +1401,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   children: [
                     Text(
                       prescription.medicineName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: themeColors.textPrimary,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1408,7 +1416,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                           : "No reminders scheduled",
                       style: TextStyle(
                         color:
-                            timesStr.isNotEmpty ? Colors.white54 : Colors.white24,
+                            timesStr.isNotEmpty ? themeColors.textSecondary : themeColors.textMuted,
                         fontSize: 12,
                       ),
                       maxLines: 1,
@@ -1422,8 +1430,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               // Quick Share Button
               if (hasAttachment)
                 IconButton(
-                  icon: const Icon(Icons.share_outlined,
-                      color: accentCyan, size: 18),
+                  icon: Icon(Icons.share_outlined,
+                      color: themeColors.accentMedium, size: 18),
                   onPressed: () {
                     Share.share(
                       "Prescription: ${prescription.medicineName}\nFile: ${prescription.fileUrl}",
@@ -1443,18 +1451,19 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     required String title,
     required String subtitle,
   }) {
+    final themeColors = context.themeColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 48, color: Colors.white24),
+            Icon(icon, size: 48, color: themeColors.textMuted),
             const SizedBox(height: 12),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: themeColors.textPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -1462,7 +1471,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(color: Colors.white30, fontSize: 12),
+              style: TextStyle(color: themeColors.textMuted, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1472,18 +1481,19 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildErrorState(String error) {
+    final themeColors = context.themeColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: Colors.redAccent, size: 44),
+            const Icon(Icons.error_outline, color: AppColors.missedRed, size: 44),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               "Something went wrong",
               style: TextStyle(
-                color: Colors.white,
+                color: themeColors.textPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -1491,7 +1501,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
             const SizedBox(height: 6),
             Text(
               error,
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              style: TextStyle(color: themeColors.textMuted, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],

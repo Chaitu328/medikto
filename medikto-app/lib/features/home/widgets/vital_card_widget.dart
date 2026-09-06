@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 
 class VitalCard extends StatelessWidget {
   final String title;
@@ -23,19 +24,16 @@ class VitalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+
     return Container(
       padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
       height: 86,
       width: 180,
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFCCCCCC).withAlpha(50),
-            blurRadius: 2,
-            spreadRadius: 2,
-          ),
-        ],
+        color: colors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,10 +47,10 @@ class VitalCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF263238),
+                  color: colors.textSecondary,
                 ),
               ),
 
@@ -60,19 +58,19 @@ class VitalCard extends StatelessWidget {
                 children: [
                   Text(
                     value,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF213598),
+                      color: colors.textPrimary,
                     ),
                   ),
                   if (unit != null)
                     Text(
                       " $unit",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: Color(0xFF263238),
+                        color: colors.textMuted,
                       ),
                     ),
                 ],
@@ -84,12 +82,12 @@ class VitalCard extends StatelessWidget {
               if (statusText != null)
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       "Status",
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w400,
-                        color: Color(0xFF263238),
+                        color: colors.textMuted,
                       ),
                     ),
                     SizedBox(width: MediaQuery.sizeOf(context).height * 0.02),
@@ -117,10 +115,10 @@ class VitalCard extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Text(
                                   statusText!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w400,
-                                    color: Color(0xFF213598),
+                                    color: statusColor ?? colors.textPrimary,
                                   ),
                                 ),
                               ],

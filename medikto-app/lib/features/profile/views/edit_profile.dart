@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
@@ -22,11 +23,6 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
-  // Theme Colors
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-  static const Color primaryBlue = Color(0xFF213598);
   File? selectedImage;
   final ImagePicker _picker = ImagePicker();
   String selectedCountryCode = "+91";
@@ -44,6 +40,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   bool isDataLoaded = false;
 
   void _showCountryCodePicker() {
+    final themeColors = context.themeColors;
     final List<Map<String, String>> countries = [
       {"code": "+91", "name": "India"},
       {"code": "+1", "name": "USA / Canada"},
@@ -61,10 +58,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: surfaceColor,
-          title: const Text(
+          backgroundColor: themeColors.surface,
+          title: Text(
             "Select Country Code",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(color: themeColors.textPrimary, fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -76,10 +73,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     return ListTile(
                       title: Text(
                         "${c['name']} (${c['code']})",
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: themeColors.textPrimary),
                       ),
                       trailing: selectedCountryCode == c['code']
-                          ? const Icon(Icons.check, color: accentCyan)
+                          ? Icon(Icons.check, color: themeColors.accentPrimary)
                           : null,
                       onTap: () {
                         setState(() {
@@ -88,22 +85,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         Navigator.pop(context);
                       },
                     );
-                  }).toList(),
-                  const Divider(color: Colors.white24),
+                  }),
+                  Divider(color: themeColors.border),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: TextField(
                       controller: customCodeController,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: themeColors.textPrimary),
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: "Enter custom code (e.g. +353)",
-                        hintStyle: TextStyle(color: Colors.white38),
+                        hintStyle: TextStyle(color: themeColors.textMuted),
                         enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white24),
+                          borderSide: BorderSide(color: themeColors.border),
                         ),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: accentCyan),
+                          borderSide: BorderSide(color: themeColors.accentPrimary),
                         ),
                       ),
                     ),
@@ -111,8 +108,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   const SizedBox(height: 12),
                   CustomButton(
                     buttonText: "Apply Custom Code",
-                    buttonColor: accentCyan,
-                    textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    buttonColor: themeColors.accentPrimary,
+                    textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
                     onPressed: () {
                       String code = customCodeController.text.trim();
                       if (code.isNotEmpty) {
@@ -180,9 +177,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   void _showImagePickerSheet() {
+    final themeColors = context.themeColors;
     showModalBottomSheet(
       context: context,
-      backgroundColor: surfaceColor,
+      backgroundColor: themeColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -192,9 +190,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 "Select Profile Image",
-                style: TextStyle(color: Colors.white, fontSize: 18),
+                style: TextStyle(color: themeColors.textPrimary, fontSize: 18),
               ),
               const SizedBox(height: 20),
 
@@ -219,7 +217,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    // 🔥 Request permission
     if (source == ImageSource.camera) {
       var status = await Permission.camera.request();
       if (!status.isGranted) {
@@ -234,7 +231,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       }
     }
 
-    // 🔥 Pick image
     final picked = await _picker.pickImage(source: source, imageQuality: 70);
 
     if (picked != null) {
@@ -246,8 +242,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-
-Future<void> updateProfile() async {
+  Future<void> updateProfile() async {
     if (phoneController.text.trim().length != 10) {
       AppToasts.showError(context, "Contact number must be exactly 10 digits");
       return;
@@ -282,10 +277,8 @@ Future<void> updateProfile() async {
       if (response.status == ResponseStatus.SUCCESS) {
         AppToasts.showSuccess(context, "Profile updated successfully");
 
-        /// REFRESH PROFILE
         ref.invalidate(getProfileProvider);
 
-        /// SMALL DELAY FOR SMOOTH UX
         await Future.delayed(const Duration(milliseconds: 500));
 
         if (mounted) {
@@ -308,23 +301,22 @@ Future<void> updateProfile() async {
   }
 
   Widget _sheetOption(IconData icon, String title, VoidCallback onTap) {
+    final themeColors = context.themeColors;
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: accentCyan,
-            child: Icon(icon, color: Colors.black),
+            backgroundColor: themeColors.accentSubtle,
+            child: Icon(icon, color: themeColors.accentPrimary),
           ),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.white70)),
+          Text(title, style: TextStyle(color: themeColors.textSecondary)),
         ],
       ),
     );
   }
-
-
 
   @override
   void dispose() {
@@ -336,38 +328,37 @@ Future<void> updateProfile() async {
     weightController.dispose();
     super.dispose();
   }
-  
-  
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     final Size screenSize = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: AppBar(
         titleSpacing: 0,
         toolbarHeight: 60,
-        backgroundColor: darkBg,
+        backgroundColor: themeColors.bg,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         leading: GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          child: Icon(Icons.arrow_back_ios_new, color: themeColors.textPrimary),
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 20),
-            child: Icon(Icons.info_outline_rounded, color: Colors.white),
+            padding: const EdgeInsets.only(right: 20),
+            child: Icon(Icons.info_outline_rounded, color: themeColors.textPrimary),
           ),
         ],
-        title: const Text(
+        title: Text(
           "Edit Profile",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: themeColors.textPrimary,
           ),
         ),
       ),
@@ -382,55 +373,50 @@ Future<void> updateProfile() async {
                 children: [
                   SizedBox(height: screenSize.height * 0.016),
 
-                  /// 🔹 Profile Image (Dark Mode Styling)
+                  /// 🔹 Profile Image
                   Align(
                     alignment: Alignment.center,
                     child: GestureDetector(
-                      onTap: _showImagePickerSheet, // 👈 OPEN BOTTOM SHEET
+                      onTap: _showImagePickerSheet,
                       child: Stack(
                         children: [
                           Container(
                             height: 120,
                             width: 120,
                             decoration: BoxDecoration(
-                              color: surfaceColor,
+                              color: themeColors.surface,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white10,
+                                color: themeColors.border,
                                 width: 2,
                               ),
-
-                              /// 🔥 SHOW IMAGE IF SELECTED
                               image: selectedImage != null
                                   ? DecorationImage(
                                       image: FileImage(selectedImage!),
                                       fit: BoxFit.cover,
                                     )
                                   : isDataLoaded &&
-                                        ref
-                                                .read(getProfileProvider)
-                                                .value
-                                                ?.data
-                                                ?.profilePic !=
-                                            null &&
-                                        ref
-                                            .read(getProfileProvider)
-                                            .value!
-                                            .data
-                                            .profilePic!
-                                            .isNotEmpty
-                                  ? DecorationImage(
-                                      image: CachedNetworkImageProvider(
-                                        "${ref.read(getProfileProvider).value!.data.profilePic!}?t=${DateTime.now().millisecondsSinceEpoch}",
-                                      ),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
+                                          ref
+                                                  .read(getProfileProvider)
+                                                  .value
+                                                  ?.data
+                                                  ?.profilePic !=
+                                              null &&
+                                          ref
+                                              .read(getProfileProvider)
+                                              .value!
+                                              .data
+                                              .profilePic!
+                                              .isNotEmpty
+                                      ? DecorationImage(
+                                          image: CachedNetworkImageProvider(
+                                            "${ref.read(getProfileProvider).value!.data.profilePic!}?t=${DateTime.now().millisecondsSinceEpoch}",
+                                          ),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                             ),
-
-                            /// 🔥 DEFAULT ICON IF NO IMAGE
-                            child:
-                                (selectedImage == null &&
+                            child: (selectedImage == null &&
                                     !(isDataLoaded &&
                                         ref
                                                 .read(getProfileProvider)
@@ -438,15 +424,15 @@ Future<void> updateProfile() async {
                                                 ?.data
                                                 ?.profilePic !=
                                             null))
-                                ? const Icon(
+                                ? Icon(
                                     Icons.person,
                                     size: 60,
-                                    color: Colors.white24,
+                                    color: themeColors.textMuted,
                                   )
                                 : null,
                           ),
 
-                          /// 🔥 CAMERA BUTTON
+                          /// CAMERA BUTTON
                           Positioned(
                             bottom: 5,
                             right: 5,
@@ -454,34 +440,34 @@ Future<void> updateProfile() async {
                               height: 34,
                               width: 34,
                               decoration: BoxDecoration(
-                                color: accentCyan,
+                                color: themeColors.accentPrimary,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black.withOpacity(0.2),
                                     blurRadius: 5,
                                   ),
                                 ],
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.camera_alt,
                                 size: 18,
-                                color: Colors.black,
+                                color: themeColors.onAccentPrimary,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-),
+                  ),
                   SizedBox(height: screenSize.height * 0.04),
 
-                  const Text(
+                  Text(
                     "Basic Details",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: themeColors.textPrimary,
                     ),
                   ),
 
@@ -500,9 +486,9 @@ Future<void> updateProfile() async {
                     controller: phoneController,
                     title: "Contact",
                     hintText: "Enter phone number",
-                    focusColor: accentCyan,
-                    fillColor: surfaceColor,
-                    color: Colors.white,
+                    focusColor: themeColors.accentPrimary,
+                    fillColor: themeColors.surface,
+                    color: themeColors.textPrimary,
                     textInputType: TextInputType.phone,
                     inputFormatters: [LengthLimitingTextInputFormatter(10)],
                     prefix: GestureDetector(
@@ -513,34 +499,33 @@ Future<void> updateProfile() async {
                         children: [
                           Text(
                             selectedCountryCode,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: accentCyan,
+                              color: themeColors.accentPrimary,
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.arrow_drop_down,
-                            color: Colors.white54,
+                            color: themeColors.textSecondary,
                             size: 18,
                           ),
                           const SizedBox(width: 4),
                         ],
                       ),
                     ),
-                    borderColor: Colors.white10,
-                    hintStyle: const TextStyle(
+                    borderColor: themeColors.border,
+                    hintStyle: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white24,
+                      color: themeColors.textMuted,
                     ),
-                    titleTextStyle: const TextStyle(
+                    titleTextStyle: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white70,
+                      color: themeColors.textSecondary,
                     ),
                   ),
-                  
                   const SizedBox(height: 15),
 
                   _buildField(
@@ -567,15 +552,14 @@ Future<void> updateProfile() async {
                       const SizedBox(width: 15),
                       Expanded(
                         flex: 2,
-                        child:
-                            GenderSection(
+                        child: GenderSection(
                           selectedGender: selectedGender,
                           onChanged: (value) {
                             setState(() {
                               selectedGender = value;
                             });
                           },
-                        )
+                        ),
                       )
                     ],
                   ),
@@ -607,13 +591,13 @@ Future<void> updateProfile() async {
 
                   SizedBox(
                     height: screenSize.height * 0.15,
-                  ), // Spacing for bottom button
+                  ),
                 ],
               ),
             ),
           ),
 
-          /// 🔥 Bottom Save Button
+          /// Bottom Save Button
           Positioned(
             left: 20,
             right: 20,
@@ -621,12 +605,12 @@ Future<void> updateProfile() async {
             child: CustomButton(
               onPressed: updateProfile,
               isLoading: isLoading,
-              buttonColor: accentCyan, // Cyan pops better in Dark Mode
+              buttonColor: themeColors.accentPrimary,
               buttonText: "Save Changes",
-              textStyle: const TextStyle(
+              textStyle: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold, 
-                color: Colors.black,
+                color: themeColors.onAccentPrimary,
               ),
             ),
           ),
@@ -635,30 +619,30 @@ Future<void> updateProfile() async {
     );
   }
 
-  /// 🔥 Dark Mode Field Helper
   Widget _buildField({
     required TextEditingController controller,
     required String title,
     required String hint,
     IconData? suffixIcon,
   }) {
+    final themeColors = context.themeColors;
     return AppTextFormFieldTitled(
       controller: controller,
-      focusColor: accentCyan,
+      focusColor: themeColors.accentPrimary,
       hintText: hint,
-      hintStyle: const TextStyle(
+      hintStyle: TextStyle(
         fontSize: 16,
-        color: Colors.white24,
+        color: themeColors.textMuted,
         fontWeight: FontWeight.w400,
       ),
-      borderColor: Colors.white10,
-      fillColor: surfaceColor,
-      color: Colors.white,
+      borderColor: themeColors.border,
+      fillColor: themeColors.surface,
+      color: themeColors.textPrimary,
       title: title,
-      titleTextStyle: const TextStyle(
+      titleTextStyle: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: Colors.white70,
+        color: themeColors.textSecondary,
       ),
       suffixIcon: suffixIcon,
     );

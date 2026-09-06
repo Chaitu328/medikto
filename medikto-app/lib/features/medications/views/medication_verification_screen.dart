@@ -4,19 +4,18 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
 import 'package:medikto/features/medications/models/medication_model.dart';
 import 'package:medikto/features/medications/views/activity_history_screen.dart';
-import 'package:medikto/core/network/base_response.dart';
 
 class MedicationTiming {
   final TimeOfDay time;
   final String label;
-  bool
-  isNotificationEnabled; // Changed to non-final so you can toggle it in the list
+  bool isNotificationEnabled;
 
   MedicationTiming({
     required this.time,
@@ -48,10 +47,6 @@ class MedicationVerificationScreen extends ConsumerStatefulWidget {
 
 class _MedicationVerificationScreenState
     extends ConsumerState<MedicationVerificationScreen> {
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF00E5FF);
-
   File? capturedImage;
   final ImagePicker _picker = ImagePicker();
   bool remindersEnabled = true;
@@ -166,9 +161,11 @@ class _MedicationVerificationScreenState
   List<String> selectedTimings = [];
 
   void _showAddTimingBottomSheet() async {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
     TimeOfDay? pickedTime = const TimeOfDay(hour: 8, minute: 30);
     final labelController = TextEditingController();
-    bool isNotifyEnabled = true; // Local state for the popup
+    bool isNotifyEnabled = true;
 
     showModalBottomSheet(
       context: context,
@@ -185,7 +182,7 @@ class _MedicationVerificationScreenState
                 top: 10,
               ),
               decoration: BoxDecoration(
-                color: surfaceColor, // Matches your app's dark background
+                color: colors.surface,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(28),
                 ),
@@ -201,25 +198,25 @@ class _MedicationVerificationScreenState
                       height: 4,
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: colors.border,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                  const Text(
+                  Text(
                     "Add Timing",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colors.textPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  const Text(
+                  Text(
                     "SELECT TIME",
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: colors.textSecondary,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -233,33 +230,36 @@ class _MedicationVerificationScreenState
                         initialEntryMode: TimePickerEntryMode.input,
                         builder: (BuildContext context, Widget? child) {
                           return Theme(
-                            data: Theme.of(context).copyWith(
-                              // 1. Set the background color of the dialog
-                              colorScheme: ColorScheme.dark(
-                                primary: accentCyan, // Header text & clock hand
-                                onPrimary: Colors
-                                    .black, // Text on top of primary (hand needle)
-                                surface: surfaceColor, // Dialog background
-                                onSurface: Colors.white, // Default text color
-                              ),
-                              // 2. Customizing specific picker styles
+                            data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+                              colorScheme: isDark
+                                  ? ColorScheme.dark(
+                                      primary: colors.accentPrimary,
+                                      onPrimary: colors.onAccentPrimary,
+                                      surface: colors.surface,
+                                      onSurface: colors.textPrimary,
+                                    )
+                                  : ColorScheme.light(
+                                      primary: colors.accentPrimary,
+                                      onPrimary: colors.onAccentPrimary,
+                                      surface: colors.surface,
+                                      onSurface: colors.textPrimary,
+                                    ),
                               timePickerTheme: TimePickerThemeData(
-                                backgroundColor: surfaceColor,
-                                hourMinuteColor: Colors.white.withAlpha(13),
-                                hourMinuteTextColor: Colors.white,
-                                dialBackgroundColor: Colors.white.withAlpha(13),
-                                dialHandColor: accentCyan,
-                                dialTextColor: Colors.white,
-                                entryModeIconColor: accentCyan,
-                                helpTextStyle: const TextStyle(
-                                  color: Colors.white70,
+                                backgroundColor: colors.surface,
+                                hourMinuteColor: colors.inputFill,
+                                hourMinuteTextColor: colors.textPrimary,
+                                dialBackgroundColor: colors.inputFill,
+                                dialHandColor: colors.accentPrimary,
+                                dialTextColor: colors.textPrimary,
+                                entryModeIconColor: colors.accentPrimary,
+                                helpTextStyle: TextStyle(
+                                  color: colors.textSecondary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               textButtonTheme: TextButtonThemeData(
                                 style: TextButton.styleFrom(
-                                  foregroundColor:
-                                      accentCyan, // Color for OK/CANCEL buttons
+                                  foregroundColor: colors.accentPrimary,
                                 ),
                               ),
                             ),
@@ -273,14 +273,15 @@ class _MedicationVerificationScreenState
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(13),
+                        color: colors.inputFill,
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: colors.borderSubtle),
                       ),
                       child: Center(
                         child: Text(
                           "${pickedTime!.hourOfPeriod.toString().padLeft(2, '0')} : ${pickedTime!.minute.toString().padLeft(2, '0')} ${pickedTime!.period == DayPeriod.am ? 'AM' : 'PM'}",
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: colors.textPrimary,
                             fontSize: 42,
                             fontWeight: FontWeight.w400,
                           ),
@@ -290,10 +291,10 @@ class _MedicationVerificationScreenState
                   ),
                   const SizedBox(height: 24),
 
-                  const Text(
+                  Text(
                     "LABEL (OPTIONAL)",
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: colors.textSecondary,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -301,29 +302,33 @@ class _MedicationVerificationScreenState
                   const SizedBox(height: 8),
                   TextField(
                     controller: labelController,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: colors.textPrimary),
                     decoration: InputDecoration(
                       hintText: "e.g. Morning dose",
-                      hintStyle: const TextStyle(color: Colors.white24),
+                      hintStyle: TextStyle(color: colors.textMuted),
                       suffixIcon: const Icon(
                         Icons.wb_sunny_outlined,
                         color: Colors.orangeAccent,
                         size: 20,
                       ),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.05),
+                      fillColor: colors.inputFill,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                        borderSide: BorderSide(color: colors.borderSubtle),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: colors.borderSubtle),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  const Text(
+                  Text(
                     "NOTIFICATION FOR THIS TIME",
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: colors.textSecondary,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -332,33 +337,33 @@ class _MedicationVerificationScreenState
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.03),
+                      color: colors.inputFill,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: colors.borderSubtle),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.notifications_active,
-                          color: accentCyan,
+                          color: colors.accentPrimary,
                           size: 24,
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 "Enable Notification",
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: colors.textPrimary,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                               Text(
                                 "Get reminded for this timing",
                                 style: TextStyle(
-                                  color: Colors.white38,
+                                  color: colors.textMuted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -367,14 +372,14 @@ class _MedicationVerificationScreenState
                         ),
                         Switch(
                           value: isNotifyEnabled,
-                          activeColor: accentCyan,
+                          activeColor: colors.accentPrimary,
                           onChanged: (val) async {
                             if (!val) {
                               final shouldDisable = await showDialog<bool>(
                                 context: context,
                                 barrierDismissible: false,
                                 builder: (ctx) => AlertDialog(
-                                  backgroundColor: surfaceColor,
+                                  backgroundColor: colors.surface,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                   title: const Row(
                                     children: [
@@ -383,21 +388,21 @@ class _MedicationVerificationScreenState
                                       Expanded(
                                         child: Text(
                                           "Disable Notifications?",
-                                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                                         ),
                                       ),
                                     ],
                                   ),
-                                  content: const Text(
+                                  content: Text(
                                     "Switching off will stop critical notifications for the medicines.",
-                                    style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                                    style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(ctx, false),
-                                      child: const Text(
+                                      child: Text(
                                         "Keep Enabled",
-                                        style: TextStyle(color: accentCyan, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: colors.accentPrimary, fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                     TextButton(
@@ -423,13 +428,14 @@ class _MedicationVerificationScreenState
                   ),
                   const SizedBox(height: 32),
 
-                  // Action Buttons matching your design
+                  // Action Buttons matching design
                   SizedBox(
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: accentCyan,
+                        backgroundColor: colors.accentPrimary,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(27),
                         ),
@@ -448,10 +454,10 @@ class _MedicationVerificationScreenState
                         });
                         Navigator.pop(context);
                       },
-                      child: const Text(
+                      child: Text(
                         "SAVE TIMING",
                         style: TextStyle(
-                          color: Colors.black,
+                          color: colors.onAccentPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -464,16 +470,16 @@ class _MedicationVerificationScreenState
                     height: 54,
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white10),
+                        side: BorderSide(color: colors.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(27),
                         ),
                       ),
                       onPressed: () => Navigator.pop(context),
-                      child: const Text(
+                      child: Text(
                         "CANCEL",
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: colors.textSecondary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -490,8 +496,11 @@ class _MedicationVerificationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: colors.bg,
       appBar: _buildAppBar(),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -500,87 +509,38 @@ class _MedicationVerificationScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "VERIFICATION PROTOCOL",
                 style: TextStyle(
-                  color: accentCyan,
+                  color: colors.accentMedium,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
                 ),
               ),
               const SizedBox(height: 5),
-              const Text(
-                "Add new medication",
+              Text(
+                widget.isEdit == true ? "Edit medication" : "Add new medication",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: colors.textPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 20),
 
-              /// 1. CAMERA SCANNER FRAME
-              // _buildCameraFrame(),
-
-              // const SizedBox(height: 30),
-
-              /// 2. VERIFY BUTTON
-              // ElevatedButton.icon(
-              //   style: ElevatedButton.styleFrom(
-              //     backgroundColor: accentCyan,
-              //     foregroundColor: Colors.black,
-              //     minimumSize: const Size(double.infinity, 56),
-              //     shape: RoundedRectangleBorder(
-              //       borderRadius: BorderRadius.circular(30),
-              //     ),
-              //   ),
-              //   onPressed: () => _captureProofImage(),
-              //   icon: const Icon(Icons.camera_alt),
-              //   label: const Text(
-              //     "Verify with Selfie",
-              //     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              //   ),
-              // ),
-
-              // const SizedBox(height: 20),
-
-              /// 3. LOGGING INFO
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.center,
-              //   children: [
-              //     const Icon(
-              //       Icons.info_outline,
-              //       color: Colors.white38,
-              //       size: 14,
-              //     ),
-              //     const SizedBox(width: 8),
-              //     const Expanded(
-              //       child: Text(
-              //         "AUTOMATIC DATE, TIME, AND LOCATION LOGGING ENABLED",
-              //         style: TextStyle(
-              //           color: Colors.white38,
-              //           fontSize: 9,
-              //           fontWeight: FontWeight.bold,
-              //         ),
-              //       ),
-              //     ),
-              //   ],
-              // ),
-              // SizedBox(height: 30),
-
               /// 📝 2. MEDICATION FORM FIELDS
               AppTextFormFieldTitled(
                 controller: medicationNameController,
-                titleTextStyle: const TextStyle(
-                  color: Colors.white54,
+                titleTextStyle: TextStyle(
+                  color: colors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
                 title: "MEDICATION NAME",
                 hintText: "e.g. Lisinopril",
-                fillColor: surfaceColor,
-                borderColor: Colors.white10,
+                fillColor: colors.card,
+                borderColor: colors.borderSubtle,
               ),
               const SizedBox(height: 15),
 
@@ -589,15 +549,15 @@ class _MedicationVerificationScreenState
                   Expanded(
                     child: AppTextFormFieldTitled(
                       controller: dosageController,
-                      titleTextStyle: const TextStyle(
-                        color: Colors.white54,
+                      titleTextStyle: TextStyle(
+                        color: colors.textSecondary,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                       title: "DOSAGE",
                       hintText: "50",
-                      fillColor: surfaceColor,
-                      borderColor: Colors.white10,
+                      fillColor: colors.card,
+                      borderColor: colors.borderSubtle,
                     ),
                   ),
                   const SizedBox(width: 15),
@@ -621,16 +581,16 @@ class _MedicationVerificationScreenState
               /// 🗒️ 5. PATIENT INSTRUCTIONS
               AppTextFormFieldTitled(
                 controller: instructionsController,
-                titleTextStyle: const TextStyle(
-                  color: Colors.white54,
+                titleTextStyle: TextStyle(
+                  color: colors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
                 title: "PATIENT INSTRUCTIONS",
                 hintText: "Take with food, avoid alcohol...",
-                fillColor: surfaceColor,
+                fillColor: colors.card,
                 maxLines: 3,
-                borderColor: Colors.white10,
+                borderColor: colors.borderSubtle,
               ),
 
               const SizedBox(height: 30),
@@ -638,8 +598,9 @@ class _MedicationVerificationScreenState
               /// 🔥 6. ADD MEDICATION BUTTON
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: accentCyan,
-                  foregroundColor: Colors.black,
+                  backgroundColor: colors.accentPrimary,
+                  foregroundColor: colors.onAccentPrimary,
+                  elevation: 0,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -756,10 +717,10 @@ class _MedicationVerificationScreenState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     "RECENT ACTIVITY",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -773,9 +734,13 @@ class _MedicationVerificationScreenState
                         ),
                       );
                     },
-                    child: const Text(
+                    child: Text(
                       "View History",
-                      style: TextStyle(color: accentCyan, fontSize: 12),
+                      style: TextStyle(
+                        color: colors.accentMedium,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -794,7 +759,7 @@ class _MedicationVerificationScreenState
                       padding: const EdgeInsets.all(20),
                       child: Text(
                         error.toString(),
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: colors.textPrimary),
                       ),
                     ),
 
@@ -802,11 +767,11 @@ class _MedicationVerificationScreenState
                       final List<dynamic> historyData = response.data ?? [];
 
                       if (historyData.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.all(20),
+                        return Padding(
+                          padding: const EdgeInsets.all(20),
                           child: Text(
                             "No Recent Activity",
-                            style: TextStyle(color: Colors.white54),
+                            style: TextStyle(color: colors.textMuted),
                           ),
                         );
                       }
@@ -817,16 +782,13 @@ class _MedicationVerificationScreenState
                               (item.status ?? "").toLowerCase() == "taken";
 
                           final Color statusColor = isTaken
-                              ? Colors.teal
-                              : Colors.redAccent;
+                              ? AppColors.takenGreen
+                              : AppColors.missedRed;
 
                           return _buildActivityTile(
                             item.name ?? "No Name",
-
                             "${item.time ?? ""} • ${item.verified == true ? "Verified" : "Not Verified"}",
-
                             (item.status ?? "").toUpperCase(),
-
                             statusColor,
                           );
                         }).toList(),
@@ -845,34 +807,41 @@ class _MedicationVerificationScreenState
   }
 
   Widget _buildTimingSection() {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               "TIMINGS",
               style: TextStyle(
-                color: Colors.white54,
+                color: colors.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
             ),
             GestureDetector(
               onTap: () => _showAddTimingBottomSheet(),
-              child: const Row(
+              child: Row(
                 children: [
                   Text(
                     "Add Timing",
                     style: TextStyle(
-                      color: accentCyan,
+                      color: colors.accentMedium,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(width: 4),
-                  Icon(Icons.add, color: accentCyan, size: 20),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.add,
+                    color: colors.accentMedium,
+                    size: 20,
+                  ),
                 ],
               ),
             ),
@@ -887,7 +856,9 @@ class _MedicationVerificationScreenState
   }
 
   Widget _buildTimingCard(MedicationTiming timing) {
-    // Logic for icon based on time of day
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     IconData timeIcon = Icons.wb_sunny_rounded;
     Color iconColor = Colors.yellow;
 
@@ -910,9 +881,18 @@ class _MedicationVerificationScreenState
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: colors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: !isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                )
+              ]
+            : null,
       ),
       child: Row(
         children: [
@@ -924,23 +904,31 @@ class _MedicationVerificationScreenState
               children: [
                 Text(
                   timing.label.isEmpty ? "Dose" : timing.label,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   timing.formattedTime,
-                  style: const TextStyle(color: accentCyan, fontSize: 13),
+                  style: TextStyle(
+                    color: colors.accentMedium,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.notifications_active, color: accentCyan, size: 18),
+          Icon(
+            Icons.notifications_active,
+            color: colors.accentMedium,
+            size: 18,
+          ),
           const SizedBox(width: 6),
-          const Text(
+          Text(
             "Notification",
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: colors.textMuted, fontSize: 12),
           ),
           Switch(
             value: timing.isNotificationEnabled,
@@ -950,7 +938,7 @@ class _MedicationVerificationScreenState
                   context: context,
                   barrierDismissible: false,
                   builder: (ctx) => AlertDialog(
-                    backgroundColor: surfaceColor,
+                    backgroundColor: colors.surface,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     title: const Row(
                       children: [
@@ -959,21 +947,21 @@ class _MedicationVerificationScreenState
                         Expanded(
                           child: Text(
                             "Disable Notifications?",
-                            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
                     ),
-                    content: const Text(
+                    content: Text(
                       "Switching off will stop critical notifications for the medicines.",
-                      style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                      style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text(
+                        child: Text(
                           "Keep Enabled",
-                          style: TextStyle(color: accentCyan, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: colors.accentPrimary, fontWeight: FontWeight.bold),
                         ),
                       ),
                       TextButton(
@@ -993,7 +981,7 @@ class _MedicationVerificationScreenState
                 setState(() => timing.isNotificationEnabled = true);
               }
             },
-            activeColor: accentCyan,
+            activeColor: colors.accentPrimary,
           ),
         ],
       ),
@@ -1001,10 +989,11 @@ class _MedicationVerificationScreenState
   }
 
   Widget _timeDigit(String val) {
+    final colors = context.themeColors;
     return Text(
       val,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: colors.textPrimary,
         fontSize: 48,
         fontWeight: FontWeight.w400,
       ),
@@ -1013,13 +1002,15 @@ class _MedicationVerificationScreenState
 
   /// 🔹 Helper for the Unit Dropdown
   Widget _buildFrequencyDropdown() {
+    final colors = context.themeColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "FREQUENCY",
           style: TextStyle(
-            color: Colors.white54,
+            color: colors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -1029,18 +1020,18 @@ class _MedicationVerificationScreenState
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: surfaceColor,
+            color: colors.card,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: colors.borderSubtle),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               padding: EdgeInsets.zero,
               value: selectedFrequency,
-              dropdownColor: surfaceColor,
-              icon: const Icon(
+              dropdownColor: colors.surface,
+              icon: Icon(
                 Icons.keyboard_arrow_down,
-                color: Colors.white54,
+                color: colors.textMuted,
               ),
               onChanged: (String? newValue) {
                 if (newValue != null) {
@@ -1049,19 +1040,19 @@ class _MedicationVerificationScreenState
                   });
                 }
               },
-              items: const [
+              items: [
                 DropdownMenuItem(
                   value: "daily",
                   child: Text(
                     "Daily",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                    style: TextStyle(color: colors.textPrimary, fontSize: 14),
                   ),
                 ),
                 DropdownMenuItem(
                   value: "weekly",
                   child: Text(
                     "Weekly",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                    style: TextStyle(color: colors.textPrimary, fontSize: 14),
                   ),
                 ),
               ],
@@ -1073,13 +1064,15 @@ class _MedicationVerificationScreenState
   }
 
   Widget _buildDropdownField(String title) {
+    final colors = context.themeColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.white54,
+          style: TextStyle(
+            color: colors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -1088,27 +1081,27 @@ class _MedicationVerificationScreenState
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          // height: 54,
           decoration: BoxDecoration(
-            color: surfaceColor,
+            color: colors.card,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: colors.borderSubtle),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               padding: EdgeInsets.zero,
               value: selectedUnit,
-              dropdownColor: surfaceColor,
-              icon: const Icon(
+              dropdownColor: colors.surface,
+              icon: Icon(
                 Icons.keyboard_arrow_down,
-                color: Colors.white54,
+                color: colors.textMuted,
               ),
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-
+              style: TextStyle(color: colors.textPrimary, fontSize: 16),
               items: units.map((unit) {
-                return DropdownMenuItem(value: unit, child: Text(unit));
+                return DropdownMenuItem(
+                  value: unit,
+                  child: Text(unit, style: TextStyle(color: colors.textPrimary)),
+                );
               }).toList(),
-
               onChanged: (value) {
                 setState(() {
                   selectedUnit = value!;
@@ -1121,32 +1114,10 @@ class _MedicationVerificationScreenState
     );
   }
 
-  /// 🔹 Helper for Frequency Chips
-  // Widget _buildFrequencyChip(String label, bool isSelected) {
-  //   return Container(
-  //     margin: const EdgeInsets.only(right: 10),
-  //     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-  //     decoration: BoxDecoration(
-  //       color: isSelected ? accentCyan : Colors.transparent,
-  //       borderRadius: BorderRadius.circular(25),
-  //       border: Border.all(color: isSelected ? accentCyan : Colors.white10),
-  //       boxShadow: isSelected
-  //           ? [BoxShadow(color: accentCyan.withOpacity(0.3), blurRadius: 10)]
-  //           : null,
-  //     ),
-  //     child: Text(
-  //       label,
-  //       style: TextStyle(
-  //         color: isSelected ? Colors.black : Colors.white,
-  //         fontWeight: FontWeight.bold,
-  //         fontSize: 14,
-  //       ),
-  //     ),
-  //   );
-  // }
-
   /// 🔹 Helper for Course Duration & Continuous Option
   Widget _buildCourseDurationSection() {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
     final now = DateTime.now();
     final isToday = selectedStartDate.year == now.year &&
         selectedStartDate.month == now.month &&
@@ -1163,22 +1134,31 @@ class _MedicationVerificationScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: colors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withAlpha(14)),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: !isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Section Title
-          const Row(
+          Row(
             children: [
-              Icon(Icons.calendar_month_outlined, color: accentCyan, size: 20),
-              SizedBox(width: 8),
+              Icon(Icons.calendar_month_outlined, color: colors.accentPrimary, size: 20),
+              const SizedBox(width: 8),
               Text(
                 "MEDICATION DURATION",
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: colors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -1198,13 +1178,22 @@ class _MedicationVerificationScreenState
                 lastDate: DateTime(2040),
                 builder: (context, child) {
                   return Theme(
-                    data: ThemeData.dark().copyWith(
-                      colorScheme: const ColorScheme.dark(
-                        primary: accentCyan,
-                        surface: surfaceColor,
-                        onSurface: Colors.white,
+                    data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+                      scaffoldBackgroundColor: colors.bg,
+                      colorScheme: isDark
+                          ? ColorScheme.dark(
+                              primary: colors.accentPrimary,
+                              surface: colors.surface,
+                              onSurface: colors.textPrimary,
+                            )
+                          : ColorScheme.light(
+                              primary: colors.accentPrimary,
+                              surface: colors.surface,
+                              onSurface: colors.textPrimary,
+                            ),
+                      dialogTheme: DialogThemeData(
+                        backgroundColor: colors.surface,
                       ),
-                      dialogBackgroundColor: surfaceColor,
                     ),
                     child: child!,
                   );
@@ -1220,28 +1209,28 @@ class _MedicationVerificationScreenState
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(10),
+                color: colors.cardSecondary,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white10),
+                border: Border.all(color: colors.borderSubtle),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.play_circle_outline, color: accentCyan, size: 20),
+                  Icon(Icons.play_circle_outline, color: colors.accentPrimary, size: 20),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     "Start Date: ",
-                    style: TextStyle(color: Colors.white60, fontSize: 13),
+                    style: TextStyle(color: colors.textSecondary, fontSize: 13),
                   ),
                   Text(
                     startDateStr,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: colors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const Spacer(),
-                  const Icon(Icons.edit_calendar, color: Colors.white38, size: 18),
+                  Icon(Icons.edit_calendar, color: colors.textMuted, size: 18),
                 ],
               ),
             ),
@@ -1252,18 +1241,18 @@ class _MedicationVerificationScreenState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isContinueMedication ? accentCyan.withAlpha(25) : Colors.white.withAlpha(8),
+              color: isContinueMedication ? colors.accentSubtle : colors.cardSecondary,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isContinueMedication ? accentCyan.withAlpha(80) : Colors.white10,
+                color: isContinueMedication ? colors.accentBorder : colors.borderSubtle,
               ),
             ),
             child: Row(
               children: [
                 Checkbox(
                   value: isContinueMedication,
-                  activeColor: accentCyan,
-                  checkColor: Colors.black,
+                  activeColor: colors.accentPrimary,
+                  checkColor: colors.onAccentPrimary,
                   onChanged: (val) {
                     setState(() {
                       isContinueMedication = val ?? false;
@@ -1274,10 +1263,10 @@ class _MedicationVerificationScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         "Continue until stopped",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: colors.textPrimary,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1285,7 +1274,7 @@ class _MedicationVerificationScreenState
                       Text(
                         "For long-term medicines like BP or diabetes",
                         style: TextStyle(
-                          color: isContinueMedication ? Colors.white70 : Colors.white38,
+                          color: colors.textMuted,
                           fontSize: 11,
                         ),
                       ),
@@ -1298,9 +1287,9 @@ class _MedicationVerificationScreenState
 
           if (!isContinueMedication) ...[
             const SizedBox(height: 16),
-            const Text(
+            Text(
               "COURSE DURATION",
-              style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+              style: TextStyle(color: colors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
 
@@ -1313,10 +1302,10 @@ class _MedicationVerificationScreenState
                 return ChoiceChip(
                   label: Text("$days Days"),
                   selected: isSelected,
-                  selectedColor: accentCyan,
-                  backgroundColor: Colors.white.withAlpha(12),
+                  selectedColor: colors.accentPrimary,
+                  backgroundColor: colors.cardSecondary,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white,
+                    color: isSelected ? colors.onAccentPrimary : colors.textPrimary,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     fontSize: 12,
                   ),
@@ -1337,17 +1326,18 @@ class _MedicationVerificationScreenState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withAlpha(8),
+                color: colors.cardSecondary,
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colors.borderSubtle),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.event_available, color: accentCyan, size: 18),
+                  Icon(Icons.event_available, color: colors.accentPrimary, size: 18),
                   const SizedBox(width: 8),
                   Text(
                     "Ends: $endDateStr ($selectedDurationDays days)",
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: colors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1362,12 +1352,13 @@ class _MedicationVerificationScreenState
   }
 
   Future<void> _handleNotificationToggle(bool value) async {
+    final colors = context.themeColors;
     if (!value) {
       final shouldDisable = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          backgroundColor: surfaceColor,
+          backgroundColor: colors.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Row(
             children: [
@@ -1376,21 +1367,21 @@ class _MedicationVerificationScreenState
               Expanded(
                 child: Text(
                   "Disable Notifications?",
-                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-          content: const Text(
+          content: Text(
             "Switching off will stop critical notifications for the medicines.",
-            style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+            style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text(
+              child: Text(
                 "Keep Enabled",
-                style: TextStyle(color: accentCyan, fontWeight: FontWeight.bold),
+                style: TextStyle(color: colors.accentPrimary, fontWeight: FontWeight.bold),
               ),
             ),
             TextButton(
@@ -1414,32 +1405,44 @@ class _MedicationVerificationScreenState
 
   /// 🔹 Helper for the Reminder Card
   Widget _buildNotificationToggleCard() {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: colors.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withAlpha(14)),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: !isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                )
+              ]
+            : null,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 "Notifications",
                 style: TextStyle(
-                  color: Colors.white,
+                  color: colors.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
                 "Get alerts when your medicine is due",
                 style: TextStyle(
-                  color: Colors.white38,
+                  color: colors.textMuted,
                   fontSize: 11,
                 ),
               ),
@@ -1451,42 +1454,14 @@ class _MedicationVerificationScreenState
               materialTapTargetSize: MaterialTapTargetSize.padded,
               padding: EdgeInsets.zero,
               value: remindersEnabled,
-              activeThumbColor: accentCyan,
-              activeTrackColor: accentCyan.withAlpha(60),
-              inactiveThumbColor: Colors.white24,
-              inactiveTrackColor: Colors.white10,
+              activeThumbColor: colors.accentPrimary,
+              activeTrackColor: colors.accentSubtle,
+              inactiveThumbColor: colors.textMuted,
+              inactiveTrackColor: colors.cardSecondary,
               onChanged: _handleNotificationToggle,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCorner({
-    double? top,
-    double? bottom,
-    double? left,
-    double? right,
-    required double angle,
-  }) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
-      child: Transform.rotate(
-        angle: angle,
-        child: Container(
-          height: 30,
-          width: 30,
-          decoration: const BoxDecoration(
-            border: Border(
-              top: BorderSide(color: accentCyan, width: 3),
-              left: BorderSide(color: accentCyan, width: 3),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1497,12 +1472,25 @@ class _MedicationVerificationScreenState
     String status,
     Color statusColor,
   ) {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     return Container(
       margin: const EdgeInsets.only(top: 15),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: colors.card,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: !isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                )
+              ]
+            : null,
       ),
       child: Row(
         children: [
@@ -1521,15 +1509,15 @@ class _MedicationVerificationScreenState
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
                 ),
                 Text(
                   desc,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: colors.textMuted, fontSize: 12),
                 ),
               ],
             ),
@@ -1562,121 +1550,21 @@ class _MedicationVerificationScreenState
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final colors = context.themeColors;
+
     return AppBar(
-      backgroundColor: darkBg,
+      backgroundColor: colors.bg,
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back, color: colors.iconColor),
       ),
-      // title: const Row(
-      //   children: [
-      //     CircleAvatar(
-      //       radius: 15,
-      //       backgroundColor: Colors.white12,
-      //       child: Icon(Icons.person, color: Colors.white, size: 18),
-      //     ),
-      //     SizedBox(width: 10),
-      //     Text(
-      //       "Medikto",
-      //       style: TextStyle(
-      //         color: accentCyan,
-      //         fontWeight: FontWeight.bold,
-      //         fontSize: 18,
-      //       ),
-      //     ),
-      //   ],
-      // ),
       actions: [
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.notifications_none, color: Colors.white),
+          icon: Icon(Icons.notifications_none, color: colors.iconColor),
         ),
       ],
-    );
-  }
-
-  Widget _buildCameraFrame() {
-    return Container(
-      height: 280,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        image: capturedImage != null
-            ? DecorationImage(
-                image: FileImage(capturedImage!),
-                fit: BoxFit.cover,
-              )
-            : null,
-        color: surfaceColor,
-      ),
-      child: Stack(
-        children: [
-          /// 🌫 Dark overlay for better contrast
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Colors.black.withOpacity(
-                capturedImage != null ? 0.2 : 0.45,
-              ),
-            ),
-          ),
-
-          /// 🔥 CORNERS
-          _buildCorner(top: 0, left: 0, angle: 0),
-          _buildCorner(top: 0, right: 0, angle: 1.57),
-          _buildCorner(bottom: 0, left: 0, angle: 4.71),
-          _buildCorner(bottom: 0, right: 0, angle: 3.14),
-
-          /// 📷 CENTER CONTENT
-          if (capturedImage == null)
-            const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_alt, color: Colors.white54, size: 55),
-                  SizedBox(height: 10),
-                  Text(
-                    "Tap to capture proof",
-                    style: TextStyle(
-                      color: Colors.white54,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // /// 📌 BOTTOM INSTRUCTION
-          // Positioned(
-          //   bottom: 18,
-          //   left: 18,
-          //   right: 18,
-          //   child: Container(
-          //     padding: const EdgeInsets.symmetric(
-          //       horizontal: 16,
-          //       vertical: 10,
-          //     ),
-          //     decoration: BoxDecoration(
-          //       color: Colors.black.withOpacity(0.6),
-          //       borderRadius: BorderRadius.circular(16),
-          //       border: Border.all(
-          //         color: const Color(0xFF00E5FF).withOpacity(0.4),
-          //       ),
-          //     ),
-          //     child: const Text(
-          //       "Tap to capture proof of medication",
-          //       textAlign: TextAlign.center,
-          //       style: TextStyle(
-          //         color: Color(0xFF00E5FF),
-          //         fontSize: 12,
-          //         fontWeight: FontWeight.w600,
-          //       ),
-          //     ),
-          //   ),
-          // ),
-        ],
-      ),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:medikto/core/network/base_response.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
@@ -13,21 +13,18 @@ class MedicalReportDetailScreen extends ConsumerWidget {
 
   const MedicalReportDetailScreen({super.key, required this.reportId});
 
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeColors = context.themeColors;
     final reportAsync = ref.watch(getReportByIdProvider(reportId));
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
         title: "Report Details",
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: themeColors.bg,
+        titleStyle: TextStyle(
+          color: themeColors.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 18,
         ),
@@ -40,10 +37,10 @@ class MedicalReportDetailScreen extends ConsumerWidget {
               : null;
 
           if (report == null) {
-            return const Center(
+            return Center(
               child: Text(
                 "Report not found",
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+                style: TextStyle(color: themeColors.textSecondary, fontSize: 16),
               ),
             );
           }
@@ -54,13 +51,13 @@ class MedicalReportDetailScreen extends ConsumerWidget {
           Color conditionColor;
           switch (report.condition.toLowerCase()) {
             case "critical":
-              conditionColor = Colors.redAccent;
+              conditionColor = AppColors.missedRed;
               break;
             case "moderate":
-              conditionColor = Colors.orangeAccent;
+              conditionColor = AppColors.pendingAmber;
               break;
             default:
-              conditionColor = Colors.greenAccent;
+              conditionColor = AppColors.takenGreen;
           }
 
           return SingleChildScrollView(
@@ -76,8 +73,8 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         report.title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: themeColors.textPrimary,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
@@ -109,9 +106,9 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: surfaceColor,
+                    color: themeColors.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white10),
+                    border: Border.all(color: themeColors.border),
                   ),
                   child: Row(
                     children: [
@@ -119,32 +116,32 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "RECORDED DATE",
-                              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: themeColors.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               dateStr,
-                              style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
+                              style: TextStyle(color: themeColors.textSecondary, fontSize: 14, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
                       ),
-                      Container(width: 1, height: 40, color: Colors.white10),
+                      Container(width: 1, height: 40, color: themeColors.border),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "REPORT TYPE",
-                              style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: themeColors.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               report.type.toUpperCase(),
-                              style: const TextStyle(color: accentCyan, fontSize: 14, fontWeight: FontWeight.w600),
+                              style: TextStyle(color: themeColors.accentMedium, fontSize: 14, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -156,22 +153,22 @@ class MedicalReportDetailScreen extends ConsumerWidget {
 
                 // Description section
                 if (report.description != null && report.description!.isNotEmpty) ...[
-                  const Text(
+                  Text(
                     "DESCRIPTION / NOTES",
-                    style: TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    style: TextStyle(color: themeColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     report.description!,
-                    style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+                    style: TextStyle(color: themeColors.textSecondary, fontSize: 15, height: 1.5),
                   ),
                   const SizedBox(height: 25),
                 ],
 
                 // Attachment Section Header
-                const Text(
+                Text(
                   "ATTACHMENT",
-                  style: TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  style: TextStyle(color: themeColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                 ),
                 const SizedBox(height: 10),
 
@@ -179,9 +176,9 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                 if (isImage)
                   Container(
                     decoration: BoxDecoration(
-                      color: surfaceColor,
+                      color: themeColors.surface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: themeColors.border),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Column(
@@ -190,19 +187,19 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                           maxScale: 4.0,
                           child: CachedNetworkImage(
                             imageUrl: report.fileUrl,
-                            placeholder: (context, url) => const SizedBox(
+                            placeholder: (context, url) => SizedBox(
                               height: 250,
-                              child: Center(child: CircularProgressIndicator(color: accentCyan)),
+                              child: Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
                             ),
-                            errorWidget: (context, url, error) => const SizedBox(
+                            errorWidget: (context, url, error) => SizedBox(
                               height: 250,
                               child: Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.broken_image_outlined, color: Colors.white24, size: 48),
-                                    SizedBox(height: 10),
-                                    Text("Unable to load image", style: TextStyle(color: Colors.white38)),
+                                    Icon(Icons.broken_image_outlined, color: themeColors.textMuted, size: 48),
+                                    const SizedBox(height: 10),
+                                    Text("Unable to load image", style: TextStyle(color: themeColors.textMuted)),
                                   ],
                                 ),
                               ),
@@ -212,16 +209,16 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          color: Colors.black26,
+                          color: context.isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 "Image Attachment",
-                                style: TextStyle(color: Colors.white54, fontSize: 13),
+                                style: TextStyle(color: themeColors.textSecondary, fontSize: 13),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.share_outlined, color: accentCyan, size: 20),
+                                icon: Icon(Icons.share_outlined, color: themeColors.accentMedium, size: 20),
                                 onPressed: () {
                                   Share.share(report.fileUrl, subject: report.title);
                                 },
@@ -236,33 +233,33 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: surfaceColor,
+                      color: themeColors.surface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: themeColors.border),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.redAccent.withOpacity(0.1),
+                            color: AppColors.missedRed.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 28),
+                          child: const Icon(Icons.picture_as_pdf, color: AppColors.missedRed, size: 28),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 "Document Attachment",
-                                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: themeColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 report.fileUrl.split('/').last,
-                                style: const TextStyle(color: Colors.white38, fontSize: 12),
+                                style: TextStyle(color: themeColors.textMuted, fontSize: 12),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -270,7 +267,7 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.share_outlined, color: accentCyan),
+                          icon: Icon(Icons.share_outlined, color: themeColors.accentMedium),
                           onPressed: () {
                             Share.share(report.fileUrl, subject: report.title);
                           },
@@ -283,23 +280,23 @@ class MedicalReportDetailScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: accentCyan),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: themeColors.accentPrimary),
         ),
         error: (err, st) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+              const Icon(Icons.error_outline, color: AppColors.missedRed, size: 48),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 "Error loading report details",
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(color: themeColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
                 err.toString(),
-                style: const TextStyle(color: Colors.white38, fontSize: 12),
+                style: TextStyle(color: themeColors.textMuted, fontSize: 12),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 
 class FaqScreen extends StatefulWidget {
   const FaqScreen({super.key});
@@ -8,10 +9,6 @@ class FaqScreen extends StatefulWidget {
 }
 
 class _FaqScreenState extends State<FaqScreen> {
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   int _selectedCategoryIndex = 0;
 
   final List<Map<String, dynamic>> _faqCategories = [
@@ -129,22 +126,23 @@ class _FaqScreenState extends State<FaqScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     final currentCategory = _faqCategories[_selectedCategoryIndex];
     final List<dynamic> currentItems = currentCategory["items"];
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: AppBar(
-        backgroundColor: darkBg,
+        backgroundColor: themeColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new, color: themeColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Frequently Asked Questions",
           style: TextStyle(
-            color: Colors.white,
+            color: themeColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -170,12 +168,12 @@ class _FaqScreenState extends State<FaqScreen> {
                     avatar: Icon(
                       cat["icon"] as IconData,
                       size: 16,
-                      color: isSelected ? Colors.black : accentCyan,
+                      color: isSelected ? themeColors.onAccentPrimary : themeColors.accentMedium,
                     ),
                     label: Text(
                       cat["category"] as String,
                       style: TextStyle(
-                        color: isSelected ? Colors.black : Colors.white70,
+                        color: isSelected ? themeColors.onAccentPrimary : themeColors.textSecondary,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                         fontSize: 13,
                       ),
@@ -186,14 +184,14 @@ class _FaqScreenState extends State<FaqScreen> {
                         _selectedCategoryIndex = index;
                       });
                     },
-                    backgroundColor: surfaceColor,
-                    selectedColor: accentCyan,
+                    backgroundColor: themeColors.surface,
+                    selectedColor: themeColors.accentPrimary,
                     checkmarkColor: Colors.transparent,
                     showCheckmark: false,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: isSelected ? accentCyan : Colors.white10,
+                        color: isSelected ? themeColors.accentPrimary : themeColors.border,
                       ),
                     ),
                   ),
@@ -213,10 +211,10 @@ class _FaqScreenState extends State<FaqScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Material(
-                    color: surfaceColor,
+                    color: themeColors.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.white.withOpacity(0.05)),
+                      side: BorderSide(color: themeColors.border),
                     ),
                     child: Theme(
                       data: Theme.of(context).copyWith(
@@ -225,12 +223,12 @@ class _FaqScreenState extends State<FaqScreen> {
                       child: ExpansionTile(
                         tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
                         childrenPadding: const EdgeInsets.only(left: 18, right: 18, bottom: 18),
-                        iconColor: accentCyan,
-                        collapsedIconColor: Colors.white54,
+                        iconColor: themeColors.accentMedium,
+                        collapsedIconColor: themeColors.textSecondary,
                         title: Text(
                           item["q"] as String,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: themeColors.textPrimary,
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
@@ -238,8 +236,8 @@ class _FaqScreenState extends State<FaqScreen> {
                         children: [
                           Text(
                             item["a"] as String,
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: themeColors.textSecondary,
                               fontSize: 14,
                               height: 1.5,
                             ),

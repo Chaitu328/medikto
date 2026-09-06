@@ -5,6 +5,7 @@ import 'package:medikto/bottom_bar.dart';
 import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
 import 'package:medikto/features/onboarding/views/onboarding_screens.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -15,9 +16,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  static const Color darkBg = Color(0xFF121212);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   @override
   void initState() {
     super.initState();
@@ -101,17 +99,20 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
+    final isDark = context.isDarkMode;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: darkBg,
+        backgroundColor: colors.bg,
         body: Container(
           height: double.infinity,
           width: double.infinity,
-          decoration: const BoxDecoration(color: darkBg),
+          decoration: BoxDecoration(color: colors.bg),
           child: Center(
             child: Image.asset(
               "assets/images/medikto_logo.png",

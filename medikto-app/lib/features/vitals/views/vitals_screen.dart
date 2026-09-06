@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/health_data/add_blood_pressure.dart';
 import 'package:medikto/features/home/add_reports/health_data/add_body_temparature.dart';
@@ -19,9 +20,6 @@ class AddReportsScreen extends ConsumerStatefulWidget {
 }
 
 class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
-  static const Color darkBg = Color(0xFF121212);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   final ScrollController _controller = ScrollController();
 
   /// Static data for quick actions
@@ -71,6 +69,7 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.themeColors;
     final size = MediaQuery.sizeOf(context);
     final vitalsAsync = ref.watch(getVitalsProvider);
 
@@ -121,12 +120,12 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
     };
 
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: theme.bg,
       appBar: CustomAppBar(
         title: "Health Hub",
-        backgroundColor: darkBg,
-        titleStyle: const TextStyle(
-          color: Colors.white,
+        backgroundColor: theme.bg,
+        titleStyle: TextStyle(
+          color: theme.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 18,
         ),
@@ -140,7 +139,7 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                 MaterialPageRoute(builder: (_) => const NotificationScreen()),
               );
             },
-            icon: const Icon(Icons.notifications, color: accentCyan),
+            icon: Icon(Icons.notifications, color: theme.accent),
           ),
           const SizedBox(width: 10),
         ],
@@ -163,12 +162,12 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       "Health Data",
                       style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: theme.textPrimary,
                       ),
                     ),
                     InkWell(
@@ -181,10 +180,10 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                           ),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         "View History",
                         style: TextStyle(
-                          color: accentCyan,
+                          color: theme.accent,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
@@ -199,12 +198,12 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                 SizedBox(height: size.height * 0.03),
 
                 // Health Records Section
-                const Text(
+                Text(
                   "Health Records",
                   style: TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: theme.textPrimary,
                   ),
                 ),
                 SizedBox(height: size.height * 0.015),
@@ -218,16 +217,12 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1E2A38), Color(0xFF141F2C)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: theme.card,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: accentCyan.withOpacity(0.3)),
+                    border: Border.all(color: theme.accent.withOpacity(0.3)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.35),
+                        color: Colors.black.withOpacity(0.08),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -239,12 +234,12 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                         height: 52,
                         width: 52,
                         decoration: BoxDecoration(
-                          color: accentCyan.withOpacity(0.14),
+                          color: theme.accentSubtle,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.folder_shared_outlined,
-                          color: accentCyan,
+                          color: theme.accent,
                           size: 26,
                         ),
                       ),
@@ -253,19 +248,19 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "Medical Documents Hub",
                               style: TextStyle(
-                                color: Colors.white,
+                                color: theme.textPrimary,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               "View your complete vitals history, medical reports & prescriptions.",
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: theme.textSecondary,
                                 fontSize: 12,
                                 height: 1.3,
                               ),
@@ -281,21 +276,21 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                                   ),
                                 );
                               },
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     "Open Documents Hub",
                                     style: TextStyle(
-                                      color: accentCyan,
+                                      color: theme.accent,
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  SizedBox(width: 4),
+                                  const SizedBox(width: 4),
                                   Icon(
                                     Icons.arrow_forward,
-                                    color: accentCyan,
+                                    color: theme.accent,
                                     size: 14,
                                   ),
                                 ],

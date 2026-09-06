@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/features/home/notifications/notification_model.dart';
@@ -14,10 +15,6 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-
   String _getTimeAgo(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime.toLocal());
     if (diff.inDays > 7) {
@@ -56,14 +53,15 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
     final notificationsAsync = ref.watch(getNotificationsProvider);
 
     return Scaffold(
-      backgroundColor: darkBg,
-      appBar: _buildAppBar(),
+      backgroundColor: colors.bg,
+      appBar: _buildAppBar(colors),
       body: RefreshIndicator(
-        color: accentCyan,
-        backgroundColor: surfaceColor,
+        color: AppColors.cyan,
+        backgroundColor: colors.surface,
         onRefresh: () async {
           ref.invalidate(getNotificationsProvider);
         },
@@ -80,17 +78,17 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.notifications_off_outlined, size: 56, color: Colors.white24),
-                          SizedBox(height: 16),
+                        children: [
+                          Icon(Icons.notifications_off_outlined, size: 56, color: colors.textMuted),
+                          const SizedBox(height: 16),
                           Text(
                             "No Notifications Yet",
-                            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: colors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(height: 6),
+                          const SizedBox(height: 6),
                           Text(
                             "You will see your medication alerts and report updates here.",
-                            style: TextStyle(color: Colors.white30, fontSize: 12),
+                            style: TextStyle(color: colors.textSecondary, fontSize: 12),
                           ),
                         ],
                       ),
@@ -104,7 +102,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 const SliverToBoxAdapter(child: SizedBox(height: 10)),
-                
+
                 /// 🔹 Header Section
                 SliverToBoxAdapter(
                   child: Padding(
@@ -112,13 +110,13 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           "Recent Updates",
-                          style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: colors.textSecondary, fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         TextButton(
                           onPressed: _markAllAsRead,
-                          child: const Text("Mark all as read", style: TextStyle(color: accentCyan, fontSize: 12)),
+                          child: Text("Mark all as read", style: TextStyle(color: colors.accent, fontSize: 12, fontWeight: FontWeight.bold)),
                         )
                       ],
                     ),
@@ -142,24 +140,24 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SliverToBoxAdapter(child: SizedBox(height: 50)),
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator(color: accentCyan)),
+          loading: () => Center(child: CircularProgressIndicator(color: colors.accent)),
           error: (err, st) => Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   "Unable to load notifications",
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: colors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Text(err.toString(), style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                Text(err.toString(), style: TextStyle(color: colors.textMuted, fontSize: 12)),
               ],
             ),
           ),
@@ -168,17 +166,17 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(AppThemeColors colors) {
     return AppBar(
-      backgroundColor: darkBg,
+      backgroundColor: colors.bg,
       elevation: 0,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+        icon: Icon(Icons.arrow_back_ios_new, color: colors.textPrimary, size: 20),
       ),
-      title: const Text(
+      title: Text(
         "Notifications",
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+        style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 20),
       ),
       actions: const [
         SizedBox(width: 10),
@@ -200,6 +198,7 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.themeColors;
     bool isRead = item.isRead;
 
     return InkWell(
@@ -209,10 +208,10 @@ class _NotificationTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isRead ? const Color(0xFF1E1E1E) : const Color(0xFF252A2C),
+          color: isRead ? colors.card : colors.cardSecondary,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isRead ? Colors.transparent : const Color(0xFF81DEEA).withOpacity(0.2),
+            color: isRead ? colors.borderSubtle : colors.accent.withOpacity(0.3),
           ),
         ),
         child: Row(
@@ -223,13 +222,13 @@ class _NotificationTile extends StatelessWidget {
               height: 45,
               width: 45,
               decoration: BoxDecoration(
-                color: _getIconColor(item.type).withOpacity(0.1),
+                color: _getIconColor(item.type, colors).withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(_getIcon(item.type), color: _getIconColor(item.type), size: 22),
+              child: Icon(_getIcon(item.type), color: _getIconColor(item.type, colors), size: 22),
             ),
             const SizedBox(width: 15),
-            
+
             // Text Content
             Expanded(
               child: Column(
@@ -242,7 +241,7 @@ class _NotificationTile extends StatelessWidget {
                         child: Text(
                           item.title,
                           style: TextStyle(
-                            color: isRead ? Colors.white70 : Colors.white,
+                            color: isRead ? colors.textSecondary : colors.textPrimary,
                             fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
                             fontSize: 15,
                           ),
@@ -250,26 +249,26 @@ class _NotificationTile extends StatelessWidget {
                       ),
                       Text(
                         timeAgo,
-                        style: const TextStyle(color: Colors.white38, fontSize: 11),
+                        style: TextStyle(color: colors.textMuted, fontSize: 11),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
                     item.body,
-                    style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
+                    style: TextStyle(color: colors.textSecondary, fontSize: 13, height: 1.4),
                   ),
                 ],
               ),
             ),
-            
+
             // Unread Indicator Dot
             if (!isRead)
               Container(
                 margin: const EdgeInsets.only(left: 10, top: 5),
                 height: 8,
                 width: 8,
-                decoration: const BoxDecoration(color: Color(0xFF81DEEA), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle),
               ),
           ],
         ),
@@ -286,12 +285,12 @@ class _NotificationTile extends StatelessWidget {
     }
   }
 
-  Color _getIconColor(String type) {
+  Color _getIconColor(String type, AppThemeColors colors) {
     switch (type) {
-      case 'medicine': return const Color(0xFF81DEEA); // Cyan
-      case 'report': return const Color(0xFF81C784);   // Green
-      case 'alert': return const Color(0xFFE57373);    // Red
-      default: return Colors.white70;
+      case 'medicine': return colors.accent;
+      case 'report': return const Color(0xFF10B981);   // Green
+      case 'alert': return const Color(0xFFEF3235);    // Red
+      default: return Colors.blueGrey;
     }
   }
 }

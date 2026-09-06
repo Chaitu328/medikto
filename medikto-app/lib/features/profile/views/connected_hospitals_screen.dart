@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
@@ -16,10 +17,7 @@ class ConnectedHospitalsScreen extends ConsumerStatefulWidget {
 }
 
 class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScreen> {
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
-  static const Color accentCyan = Color(0xFF81DEEA);
-  static const Color alertRed = Color(0xFFFF5252);
+  static const Color alertRed = AppColors.missedRed;
 
   List<dynamic> connectedHospitals = [];
   bool isLoading = true;
@@ -47,21 +45,21 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
   }
 
   Future<void> handleDisconnect(String hospitalId, String hospitalName) async {
-    // Show confirmation Dialog
+    final themeColors = context.themeColors;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: surfaceColor,
+        backgroundColor: themeColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Revoke Access?", style: TextStyle(color: Colors.white)),
+        title: Text("Revoke Access?", style: TextStyle(color: themeColors.textPrimary)),
         content: Text(
           "Are you sure you want to disconnect from $hospitalName? They will immediately lose access to monitor your health reports, vitals, and prescriptions.",
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: themeColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel", style: TextStyle(color: Colors.white38)),
+            child: Text("Cancel", style: TextStyle(color: themeColors.textMuted)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -79,7 +77,7 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator(color: accentCyan)),
+        builder: (_) => Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
       );
 
       final response = await ProfileManager().disconnectHospital(hospitalId);
@@ -96,6 +94,7 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
   }
 
   void _showConnectHospitalBottomSheet() {
+    final themeColors = context.themeColors;
     final profileAsync = ref.read(getProfileProvider);
     final profile = profileAsync.value?.data as ProfileModel?;
     final String patientPhone = profile?.phone ?? "";
@@ -115,13 +114,12 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: surfaceColor,
+      backgroundColor: themeColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
-          // Fetch hospitals list once when sheet opens
           if (isLoadingHospitals && allHospitals.isEmpty) {
             ProfileManager().getAllHospitals().then((response) {
               setModalState(() {
@@ -148,55 +146,55 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         "Connect a Hospital",
-                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: themeColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white54),
+                        icon: Icon(Icons.close, color: themeColors.textSecondary),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   if (isLoadingHospitals)
-                    const Center(
+                    Center(
                       child: Padding(
-                        padding: EdgeInsets.all(20.0),
-                        child: CircularProgressIndicator(color: accentCyan),
+                        padding: const EdgeInsets.all(20.0),
+                        child: CircularProgressIndicator(color: themeColors.accentPrimary),
                       ),
                     )
                   else if (allHospitals.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
                       child: Text(
                         "No hospitals available to connect.",
-                        style: TextStyle(color: Colors.white54),
+                        style: TextStyle(color: themeColors.textSecondary),
                       ),
                     )
                   else ...[
-                    const Text(
+                    Text(
                       "Select Hospital",
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: themeColors.textSecondary),
                     ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: darkBg,
+                        color: themeColors.bg,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                        border: Border.all(color: themeColors.border),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: selectedHospitalId,
-                          dropdownColor: surfaceColor,
+                          dropdownColor: themeColors.surface,
                           isExpanded: true,
-                          hint: const Text("Choose a hospital", style: TextStyle(color: Colors.white38)),
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
-                          icon: const Icon(Icons.arrow_drop_down, color: accentCyan),
+                          hint: Text("Choose a hospital", style: TextStyle(color: themeColors.textMuted)),
+                          style: TextStyle(color: themeColors.textPrimary, fontSize: 16),
+                          icon: Icon(Icons.arrow_drop_down, color: themeColors.accentPrimary),
                           onChanged: isOtpSent
-                              ? null // Disable changing hospital after OTP is sent
+                              ? null
                               : (val) {
                                   setModalState(() {
                                     selectedHospitalId = val;
@@ -217,10 +215,10 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                         title: "Verification Code (OTP)",
                         hintText: "Enter 6-digit OTP",
                         controller: otpController,
-                        focusColor: accentCyan,
-                        fillColor: darkBg,
-                        color: Colors.white,
-                        borderColor: Colors.white.withOpacity(0.1),
+                        focusColor: themeColors.accentPrimary,
+                        fillColor: themeColors.bg,
+                        color: themeColors.textPrimary,
+                        borderColor: themeColors.border,
                         textInputType: TextInputType.number,
                       ),
                       const SizedBox(height: 10),
@@ -248,16 +246,16 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                                     AppToasts.showError(context, res.message);
                                   }
                                 },
-                          child: const Text("Resend Code", style: TextStyle(color: accentCyan)),
+                          child: Text("Resend Code", style: TextStyle(color: themeColors.accentPrimary)),
                         ),
                       ),
                     ],
                     const SizedBox(height: 24),
                     CustomButton(
                       buttonText: isOtpSent ? "Verify & Connect" : "Request Connection Code",
-                      buttonColor: accentCyan,
+                      buttonColor: themeColors.accentPrimary,
                       isLoading: isActionLoading,
-                      textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                      textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
                       onPressed: () async {
                         if (selectedHospitalId == null) {
                           AppToasts.showError(context, "Please select a hospital");
@@ -265,7 +263,6 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                         }
 
                         if (!isOtpSent) {
-                          // Request OTP
                           setModalState(() => isActionLoading = true);
                           final res = await ProfileManager().requestHospitalOTP(
                             phone: patientPhone,
@@ -285,7 +282,6 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                             AppToasts.showError(context, res.message);
                           }
                         } else {
-                          // Verify OTP
                           final otp = otpController.text.trim();
                           if (otp.length < 4) {
                             AppToasts.showError(context, "Please enter a valid OTP code");
@@ -300,8 +296,8 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                           setModalState(() => isActionLoading = false);
                           if (res.status == ResponseStatus.SUCCESS) {
                             AppToasts.showSuccess(context, "Successfully connected to hospital");
-                            Navigator.pop(ctx); // Close sheet
-                            fetchHospitals(); // Refresh list
+                            Navigator.pop(ctx);
+                            fetchHospitals();
                           } else {
                             AppToasts.showError(context, res.message);
                           }
@@ -320,31 +316,32 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.themeColors;
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: themeColors.bg,
       appBar: AppBar(
         titleSpacing: 0,
-        backgroundColor: darkBg,
+        backgroundColor: themeColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new, color: themeColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Hospital Connections",
-          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(color: themeColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: accentCyan))
+          ? Center(child: CircularProgressIndicator(color: themeColors.accentPrimary))
           : Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
                   Expanded(
                     child: RefreshIndicator(
-                      color: accentCyan,
-                      backgroundColor: surfaceColor,
+                      color: themeColors.accentPrimary,
+                      backgroundColor: themeColors.surface,
                       onRefresh: fetchHospitals,
                       child: connectedHospitals.isEmpty
                           ? ListView(
@@ -357,28 +354,28 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                                       Container(
                                         padding: const EdgeInsets.all(20),
                                         decoration: BoxDecoration(
-                                          color: surfaceColor,
+                                          color: themeColors.surface,
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white.withOpacity(0.05)),
+                                          border: Border.all(color: themeColors.border),
                                         ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.local_hospital_outlined,
                                           size: 64,
-                                          color: Colors.white38,
+                                          color: themeColors.textMuted,
                                         ),
                                       ),
                                       const SizedBox(height: 24),
-                                      const Text(
+                                      Text(
                                         "No Connected Hospitals",
-                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: themeColors.textPrimary),
                                       ),
                                       const SizedBox(height: 8),
-                                      const Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: 40),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 40),
                                         child: Text(
                                           "You aren't connected to any hospitals yet. Select a hospital using the button below to initiate connection.",
                                           textAlign: TextAlign.center,
-                                          style: TextStyle(fontSize: 14, color: Colors.white38),
+                                          style: TextStyle(fontSize: 14, color: themeColors.textMuted),
                                         ),
                                       ),
                                     ],
@@ -399,12 +396,14 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                                   margin: const EdgeInsets.only(top: 16),
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: surfaceColor,
+                                    color: themeColors.surface,
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                                    border: Border.all(color: themeColors.border),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
+                                        color: context.isDarkMode
+                                            ? Colors.black.withOpacity(0.2)
+                                            : Colors.black.withOpacity(0.04),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       )
@@ -415,12 +414,12 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                                       Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: accentCyan.withOpacity(0.1),
+                                          color: themeColors.accentSubtle,
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(
+                                        child: Icon(
                                           Icons.local_hospital,
-                                          color: accentCyan,
+                                          color: themeColors.accentPrimary,
                                           size: 24,
                                         ),
                                       ),
@@ -431,18 +430,18 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                                           children: [
                                             Text(
                                               name,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.bold,
-                                                color: Colors.white,
+                                                color: themeColors.textPrimary,
                                               ),
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
                                               address,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 12,
-                                                color: Colors.white38,
+                                                color: themeColors.textMuted,
                                               ),
                                             ),
                                           ],
@@ -467,8 +466,8 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                   const SizedBox(height: 16),
                   CustomButton(
                     buttonText: "Connect a Hospital",
-                    buttonColor: accentCyan,
-                    textStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    buttonColor: themeColors.accentPrimary,
+                    textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
                     onPressed: _showConnectHospitalBottomSheet,
                   ),
                   const SizedBox(height: 24),

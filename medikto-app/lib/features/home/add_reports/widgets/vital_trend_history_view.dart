@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
 import 'package:share_plus/share_plus.dart';
@@ -21,9 +22,6 @@ class VitalTrendHistoryView extends ConsumerWidget {
     required this.accentColor,
     required this.onAddTap,
   });
-
-  static const Color darkBg = Color(0xFF121212);
-  static const Color surfaceColor = Color(0xFF1E1E1E);
 
   void _shareVitals(List<VitalsModel> records) {
     if (records.isEmpty) {
@@ -77,6 +75,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = context.themeColors;
     final vitalsAsync = ref.watch(getVitalsProvider);
 
     return vitalsAsync.when(
@@ -101,7 +100,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: surfaceColor,
+                      color: theme.card,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.show_chart, color: accentColor, size: 48),
@@ -109,17 +108,17 @@ class VitalTrendHistoryView extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Text(
                     "No $title History",
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: theme.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     "You haven't recorded any readings yet.\nTap below to add your first reading.",
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                    style: TextStyle(color: theme.textSecondary, fontSize: 13),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
@@ -143,7 +142,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
 
         return RefreshIndicator(
           color: accentColor,
-          backgroundColor: surfaceColor,
+          backgroundColor: theme.card,
           onRefresh: () async {
             ref.invalidate(getVitalsProvider);
           },
@@ -152,21 +151,21 @@ class VitalTrendHistoryView extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             children: [
               // 1. Current / Latest Reading Card
-              _buildLatestReadingCard(latest),
+              _buildLatestReadingCard(context, latest),
               const SizedBox(height: 16),
 
               // 2. Trend Graph Card
-              _buildTrendChartCard(records),
+              _buildTrendChartCard(context, records),
               const SizedBox(height: 20),
 
               // 3. Historical Log Header & Share
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     "PREVIOUS READINGS",
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: theme.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
@@ -203,14 +202,14 @@ class VitalTrendHistoryView extends ConsumerWidget {
               const SizedBox(height: 12),
 
               // 4. Readings List
-              ...records.map((r) => _buildReadingItem(r)),
+              ...records.map((r) => _buildReadingItem(context, r)),
               const SizedBox(height: 30),
             ],
           ),
         );
       },
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: Color(0xFF81DEEA)),
+      loading: () => Center(
+        child: CircularProgressIndicator(color: theme.accentPrimary),
       ),
       error: (err, _) => Center(
         child: Text(
@@ -221,7 +220,8 @@ class VitalTrendHistoryView extends ConsumerWidget {
     );
   }
 
-  Widget _buildLatestReadingCard(VitalsModel latest) {
+  Widget _buildLatestReadingCard(BuildContext context, VitalsModel latest) {
+    final theme = context.themeColors;
     String valueStr = "";
     String statusStr = "";
 
@@ -251,11 +251,11 @@ class VitalTrendHistoryView extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: theme.card,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: accentColor.withAlpha(40)),
         gradient: LinearGradient(
-          colors: [accentColor.withAlpha(20), surfaceColor],
+          colors: [accentColor.withAlpha(20), theme.card],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -266,9 +266,9 @@ class VitalTrendHistoryView extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "CURRENT / LATEST READING",
-                style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+                style: TextStyle(color: theme.textSecondary, fontSize: 11, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Row(
@@ -286,14 +286,14 @@ class VitalTrendHistoryView extends ConsumerWidget {
                   const SizedBox(width: 6),
                   Text(
                     unit,
-                    style: const TextStyle(color: Colors.white60, fontSize: 13),
+                    style: TextStyle(color: theme.textSecondary, fontSize: 13),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
                 "Recorded on $dateStr",
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                style: TextStyle(color: theme.textMuted, fontSize: 11),
               ),
             ],
           ),
@@ -319,8 +319,8 @@ class VitalTrendHistoryView extends ConsumerWidget {
     );
   }
 
-  Widget _buildTrendChartCard(List<VitalsModel> records) {
-    // Take up to 10 latest readings and reverse so chronological left-to-right
+  Widget _buildTrendChartCard(BuildContext context, List<VitalsModel> records) {
+    final theme = context.themeColors;
     final chartRecords = records.take(10).toList().reversed.toList();
 
     List<FlSpot> mainSpots = [];
@@ -352,9 +352,9 @@ class VitalTrendHistoryView extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: theme.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: theme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,8 +364,8 @@ class VitalTrendHistoryView extends ConsumerWidget {
             children: [
               Text(
                 "$title Trend",
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: theme.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -375,11 +375,11 @@ class VitalTrendHistoryView extends ConsumerWidget {
                   children: [
                     Container(width: 8, height: 8, decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    const Text("Sys", style: TextStyle(color: Colors.white54, fontSize: 11)),
+                    Text("Sys", style: TextStyle(color: theme.textSecondary, fontSize: 11)),
                     const SizedBox(width: 8),
                     Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFBA68C8), shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    const Text("Dia", style: TextStyle(color: Colors.white54, fontSize: 11)),
+                    Text("Dia", style: TextStyle(color: theme.textSecondary, fontSize: 11)),
                   ],
                 ),
             ],
@@ -393,7 +393,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (val) => FlLine(
-                    color: Colors.white.withAlpha(15),
+                    color: theme.chartGrid,
                     strokeWidth: 1,
                   ),
                 ),
@@ -406,7 +406,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
                       reservedSize: 34,
                       getTitlesWidget: (val, meta) => Text(
                         val.toInt().toString(),
-                        style: const TextStyle(color: Colors.white30, fontSize: 10),
+                        style: TextStyle(color: theme.textMuted, fontSize: 10),
                       ),
                     ),
                   ),
@@ -421,7 +421,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
                           if (date != null) {
                             return Text(
                               DateFormat("dd/MM").format(date.toLocal()),
-                              style: const TextStyle(color: Colors.white38, fontSize: 9),
+                              style: TextStyle(color: theme.textMuted, fontSize: 9),
                             );
                           }
                         }
@@ -444,7 +444,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
                         radius: 4,
                         color: accentColor,
                         strokeWidth: 2,
-                        strokeColor: surfaceColor,
+                        strokeColor: theme.card,
                       ),
                     ),
                     belowBarData: BarAreaData(
@@ -465,7 +465,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
                           radius: 4,
                           color: const Color(0xFFBA68C8),
                           strokeWidth: 2,
-                          strokeColor: surfaceColor,
+                          strokeColor: theme.card,
                         ),
                       ),
                       belowBarData: BarAreaData(
@@ -482,7 +482,8 @@ class VitalTrendHistoryView extends ConsumerWidget {
     );
   }
 
-  Widget _buildReadingItem(VitalsModel record) {
+  Widget _buildReadingItem(BuildContext context, VitalsModel record) {
+    final theme = context.themeColors;
     String valStr = "";
     String statusStr = "";
 
@@ -513,9 +514,9 @@ class VitalTrendHistoryView extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: theme.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: theme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,8 +526,8 @@ class VitalTrendHistoryView extends ConsumerWidget {
             children: [
               Text(
                 valStr,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: theme.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -535,7 +536,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(12),
+                    color: accentColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -552,13 +553,13 @@ class VitalTrendHistoryView extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             dateStr,
-            style: const TextStyle(color: Colors.white38, fontSize: 12),
+            style: TextStyle(color: theme.textMuted, fontSize: 12),
           ),
           if (record.notes != null && record.notes!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
               "Note: ${record.notes}",
-              style: const TextStyle(color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic),
+              style: TextStyle(color: theme.textSecondary, fontSize: 12, fontStyle: FontStyle.italic),
             ),
           ],
         ],
