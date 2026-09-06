@@ -1,5 +1,6 @@
 const Medication = require("../models/medicationModel");
-const PLAN_LIMITS = require("../utils/planLimits");
+const { PLAN_LIMITS } = require("../utils/planLimits");
+const { getEffectiveSubscription } = require("./subscriptionController");
 const User = require("../models/userModel");
 const Dose = require("../models/doseModel");
 const {
@@ -76,7 +77,8 @@ const isDoseInFuture = (doseDate, doseTime, timezone = "Asia/Kolkata") => {
     const doseTotalMinutes = parseTimeToMinutes(doseTime);
     if (doseTotalMinutes === null) return false;
 
-    return currTotalMinutes < doseTotalMinutes;
+    // Action window opens 10 minutes before scheduled time
+    return currTotalMinutes < (doseTotalMinutes - 10);
   } catch (err) {
     return false;
   }
@@ -131,6 +133,25 @@ exports.addMedication = async (req, res) => {
       return res.status(400).json({
         message: "Missing required fields"
       });
+    }
+
+    // Entitlement check: enforce active medication limit based on subscription plan
+    const user = await User.findById(req.user.id);
+    const { limits, plan } = getEffectiveSubscription(user);
+    if (limits && limits.medications !== Infinity) {
+      const activeMedCount = await Medication.countDocuments({
+        user: req.user.id,
+        status: "active"
+      });
+      if (activeMedCount >= limits.medications) {
+        return res.status(403).json({
+          message: `Basic plan limit reached (max ${limits.medications} active medications). Please upgrade to Premium for unlimited medications.`,
+          limitReached: true,
+          currentCount: activeMedCount,
+          maxLimit: limits.medications,
+          plan
+        });
+      }
     }
 
     const medStartDate = startDate ? new Date(startDate) : new Date();
@@ -507,34 +528,14 @@ exports.verifyWithSelfie = async (req, res) => {
     dose.proofImage = s3Key;
 
     const user = await User.findById(dose.user || req.user.id);
+    const { limits, plan } = getEffectiveSubscription(user);
 
-const expiryAt = new Date();
+    const expiryAt = new Date();
+    const retentionHours = limits?.selfieRetentionHours || 48;
+    expiryAt.setHours(expiryAt.getHours() + retentionHours);
 
-// FREE + BASIC
-if (
-  user.subscription === "free" ||
-  user.subscription === "basic"
-) {
-
-  expiryAt.setHours(
-    expiryAt.getHours() + 48
-  );
-}
-
-// PREMIUM
-else if (
-  user.subscription === "premium"
-) {
-
-  expiryAt.setMonth(
-    expiryAt.getMonth() + 3
-  );
-}
-
-dose.expiryAt = expiryAt;
-
-dose.planType =
-  user.subscription;
+    dose.expiryAt = expiryAt;
+    dose.planType = plan;
 
     await dose.save();
 

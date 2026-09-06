@@ -92,7 +92,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
   bool _isDoseInFuture(String? dateStr, String? timeStr) {
     final scheduled = _parseDoseDateTime(dateStr, timeStr);
     if (scheduled == null) return false;
-    return scheduled.isAfter(DateTime.now());
+    final actionStartTime = scheduled.subtract(const Duration(minutes: 10));
+    return DateTime.now().isBefore(actionStartTime);
   }
 
   bool _isDoseExpired(String? dateStr, String? timeStr) {

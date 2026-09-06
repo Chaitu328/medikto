@@ -55,11 +55,28 @@ const userSchema = new mongoose.Schema({
     default: "patient"
 },
 
-  // 🔥 UPDATED SUBSCRIPTION
+  // 🔥 SUBSCRIPTION
   subscription: {
     type: String,
     enum: ["free", "basic", "premium"],
     default: "free"
+  },
+  subscriptionDetails: {
+    plan: {
+      type: String,
+      enum: ["free", "basic", "premium"],
+      default: "basic"
+    },
+    status: {
+      type: String,
+      enum: ["active", "trial", "expired", "cancelled"],
+      default: "active"
+    },
+    trialStart: { type: Date },
+    trialEnd: { type: Date },
+    trialUsed: { type: Boolean, default: false },
+    subscriptionStart: { type: Date },
+    subscriptionEnd: { type: Date }
   },
   familyMembers: [
     {

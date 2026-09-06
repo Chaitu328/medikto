@@ -10,6 +10,7 @@ class ProfileModel {
   final String? profilePic;
   final bool? isVerified;
   final String? subscription;
+  final Map<String, dynamic>? subscriptionDetails;
   final List<dynamic>? familyMembers;
   final String? createdAt;
   final String? role;
@@ -29,6 +30,7 @@ class ProfileModel {
     this.profilePic,
     this.isVerified,
     this.subscription,
+    this.subscriptionDetails,
     this.familyMembers,
     this.createdAt,
     this.role,
@@ -36,6 +38,20 @@ class ProfileModel {
     this.hospital,
     this.authProvider,
   });
+
+  bool get isPremium {
+    if (subscriptionDetails != null && subscriptionDetails!['isPremium'] == true) {
+      return true;
+    }
+    return (subscription ?? '').toLowerCase() == 'premium';
+  }
+
+  bool get isTrial {
+    if (subscriptionDetails != null && subscriptionDetails!['status'] == 'trial') {
+      return true;
+    }
+    return false;
+  }
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     return ProfileModel(
@@ -55,6 +71,9 @@ class ProfileModel {
       profilePic: json['profilePic'],
       isVerified: json['isVerified'],
       subscription: json['subscription'],
+      subscriptionDetails: json['subscriptionDetails'] is Map<String, dynamic>
+          ? json['subscriptionDetails']
+          : null,
       familyMembers: json['familyMembers'],
       createdAt: json['createdAt'],
       role: json['role'],

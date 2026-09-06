@@ -8,6 +8,7 @@ const {
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendInviteEmail } = require("../utils/emailHelper");
 const { buildPatientListFilter } = require("../utils/accessControl");
+const { getEffectiveSubscription } = require("./subscriptionController");
 const bcrypt = require("bcrypt");
 
 
@@ -31,6 +32,20 @@ exports.getProfile = async (req, res) => {
     if (userObj.profilePic) {
       userObj.profilePic = await resolveFileUrl(userObj.profilePic);
     }
+
+    const effective = getEffectiveSubscription(user);
+    userObj.subscription = effective.plan;
+    userObj.subscriptionDetails = {
+      plan: effective.plan,
+      status: effective.status,
+      isPremium: effective.isPremium,
+      trialUsed: effective.trialUsed,
+      canClaimTrial: effective.canClaimTrial,
+      trialStart: effective.trialStart,
+      trialEnd: effective.trialEnd,
+      subscriptionStart: effective.subscriptionStart,
+      subscriptionEnd: effective.subscriptionEnd,
+    };
 
     return res.status(200).json(userObj);
 

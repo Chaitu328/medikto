@@ -9,7 +9,6 @@
     getAllUsers,
     updateProfile,
     addFamilyMember,
-    updateSubscription,
     getConnectedHospitals,
     unlinkHospital,
     updateFCMToken,
@@ -18,6 +17,13 @@
     deleteCaretaker,
     getCaretakerPatients
   } = require("../controllers/userController");
+
+  const {
+    getSubscriptionStatus,
+    getPlans,
+    startTrial,
+    updateSubscription
+  } = require("../controllers/subscriptionController");
 
   const {
     sendLinkOTP,
@@ -174,8 +180,13 @@
   router.get("/users", auth, getAllUsers);
   router.put("/profile", auth, upload.single("image"), updateProfile);
   router.post("/family-members", auth, auth.blockGuardianWrite, addFamilyMember);
-  router.put("/subscription", updateSubscription);
   router.put("/profile/fcm-token", auth, updateFCMToken);
+
+  // ================= SUBSCRIPTION =================
+  router.get("/subscription", auth, getSubscriptionStatus);
+  router.get("/subscription/plans", getPlans);
+  router.post("/subscription/trial", auth, auth.blockGuardianWrite, startTrial);
+  router.put("/subscription", auth, auth.blockGuardianWrite, updateSubscription);
 
   // ================= HOSPITAL LINKS =================
   router.post("/hospitals/send-link-otp", auth, sendLinkOTP);

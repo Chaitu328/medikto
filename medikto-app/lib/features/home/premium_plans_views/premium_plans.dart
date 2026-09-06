@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/bottom_bar.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
-import 'package:medikto/features/profile/data/profile_manager.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
+import 'package:medikto/features/profile/data/subscription_provider.dart';
+import 'package:medikto/features/profile/models/subscription_model.dart';
 
 class PremiumPlansScreen extends ConsumerStatefulWidget {
   const PremiumPlansScreen({super.key});
@@ -14,42 +15,7 @@ class PremiumPlansScreen extends ConsumerStatefulWidget {
 }
 
 class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
-  final ValueNotifier<int> _selectedPlanIndex = ValueNotifier<int>(0);
-
-  List<Map<String, dynamic>> _getPlans(AppThemeColors colors) => [
-    {
-      "title": "Basic plan",
-      "price": "₹499",
-      "icon": Icons.favorite,
-      "iconBg": const Color(0xFF2D1F21),
-      "iconColor": const Color(0xFFF28F8F),
-      "badge": "assets/images/basic-plan.png",
-      "features": [
-        "🧾 Store up to 50 health reports",
-        "💊 Manage up to 5 active medications",
-        "🔔 Daily reminders for medications",
-        "📸 Take photo & delete in 48 hours",
-        "📁 Upload and view prescriptions anytime",
-        "☁️ Secure cloud backup (limited space)",
-      ],
-    },
-    {
-      "title": "Premium Plan",
-      "price": "₹2000",
-      "icon": Icons.diamond_outlined,
-      "iconBg": const Color(0xFF2D2A1F),
-      "iconColor": colors.accentPrimary,
-      "badge": "assets/images/premium-plan.png",
-      "features": [
-        "🧾 Store up to 250 health reports",
-        "💊 Manage unlimited medications",
-        "📸 Take photo & store indefinitely",
-        "📈 Detailed AI health analytics",
-        "☁️ Full cloud storage & sync across devices",
-        "📤 Share as PDF, JPEG via Bluetooth/Email",
-      ],
-    }
-  ];
+  final ValueNotifier<int> _selectedPlanIndex = ValueNotifier<int>(1); // Default select Premium
 
   @override
   void dispose() {
@@ -57,47 +23,189 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
     super.dispose();
   }
 
+  Future<void> _handleStartFreeTrial(AppThemeColors colors) async {
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => _TrialConfirmationDialog(colors: colors),
+    );
+
+    if (shouldProceed != true) return;
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: CircularProgressIndicator(color: colors.accentPrimary),
+      ),
+    );
+
+    final response = await ref.read(profileProvider).startFreeTrial();
+
+    if (mounted) {
+      Navigator.pop(context); // Pop loading spinner
+    }
+
+    if (response.status == ResponseStatus.SUCCESS) {
+      // Refresh providers
+      ref.invalidate(subscriptionStatusProvider);
+      ref.invalidate(getProfileProvider);
+
+      if (mounted) {
+        showDialog(
+          barrierColor: Colors.black54,
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => _SuccessDialog(
+            surfaceColor: colors.card,
+            title: "Free Trial Activated!",
+            subtitle: "You now have 30 days of free Premium access.",
+          ),
+        );
+
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const BaseBottomNavigationPage(),
+              ),
+              (route) => false,
+            );
+          }
+        });
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: AppColors.statusCritical,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleUpdateSubscription(String plan, AppThemeColors colors) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: CircularProgressIndicator(color: colors.accentPrimary),
+      ),
+    );
+
+    final response = await ref.read(profileProvider).updateSubscription(plan: plan);
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
+
+    if (response.status == ResponseStatus.SUCCESS) {
+      ref.invalidate(subscriptionStatusProvider);
+      ref.invalidate(getProfileProvider);
+
+      if (mounted) {
+        showDialog(
+          barrierColor: Colors.black54,
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => _SuccessDialog(
+            surfaceColor: colors.card,
+            title: "Plan Updated",
+            subtitle: "Your subscription is now updated to ${plan.toUpperCase()}.",
+          ),
+        );
+
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const BaseBottomNavigationPage(),
+              ),
+              (route) => false,
+            );
+          }
+        });
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message),
+            backgroundColor: AppColors.statusCritical,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.themeColors;
-    final plans = _getPlans(colors);
+    final plansAsync = ref.watch(subscriptionPlansProvider);
+    final statusAsync = ref.watch(subscriptionStatusProvider);
 
     return Scaffold(
       backgroundColor: colors.bg,
       appBar: _buildAppBar(colors),
-      body: Stack(
-        children: [
-          ValueListenableBuilder(
-            valueListenable: _selectedPlanIndex,
-            builder: (context, selectedIndex, _) {
-              return CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _PlanCard(
-                            plan: plans[index],
-                            isSelected: selectedIndex == index,
-                            accentColor: colors.accentPrimary,
-                            surfaceColor: colors.card,
-                            onTap: () => _selectedPlanIndex.value = index,
-                          ),
-                        );
-                      }, childCount: plans.length),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
-              );
-            },
+      body: plansAsync.when(
+        data: (plans) {
+          final status = statusAsync.value ?? SubscriptionStatusModel.defaultBasic();
+
+          return Stack(
+            children: [
+              ValueListenableBuilder<int>(
+                valueListenable: _selectedPlanIndex,
+                builder: (context, selectedIndex, _) {
+                  return CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate((context, index) {
+                            final plan = plans[index];
+                            final isPlanSelected = selectedIndex == index;
+                            final isCurrentPlan = status.plan == plan.id;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _PlanCard(
+                                plan: plan,
+                                isSelected: isPlanSelected,
+                                isCurrentPlan: isCurrentPlan,
+                                status: status,
+                                accentColor: colors.accentPrimary,
+                                surfaceColor: colors.card,
+                                onTap: () => _selectedPlanIndex.value = index,
+                              ),
+                            );
+                          }, childCount: plans.length),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                    ],
+                  );
+                },
+              ),
+              _buildBottomButton(colors, plans, status),
+            ],
+          );
+        },
+        loading: () => Center(
+          child: CircularProgressIndicator(color: colors.accentPrimary),
+        ),
+        error: (e, _) => Center(
+          child: Text(
+            "Failed to load plans",
+            style: TextStyle(color: colors.textSecondary),
           ),
-          _buildBottomButton(colors, plans),
-        ],
+        ),
       ),
     );
   }
@@ -115,16 +223,14 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
         "Our Plans",
         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textPrimary),
       ),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.help_outline, color: colors.textSecondary),
-          onPressed: () {},
-        ),
-      ],
     );
   }
 
-  Widget _buildBottomButton(AppThemeColors colors, List<Map<String, dynamic>> plans) {
+  Widget _buildBottomButton(
+    AppThemeColors colors,
+    List<PlanOfferingModel> plans,
+    SubscriptionStatusModel status,
+  ) {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
@@ -132,75 +238,73 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
         decoration: BoxDecoration(
           color: colors.bg,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, -5)),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, -5),
+            ),
           ],
         ),
-        child: ValueListenableBuilder(
+        child: ValueListenableBuilder<int>(
           valueListenable: _selectedPlanIndex,
           builder: (context, selectedIndex, child) {
+            final selectedPlan = selectedIndex < plans.length ? plans[selectedIndex] : plans[0];
+            final isSelectingBasic = selectedPlan.id == "basic";
+            final isSelectingPremium = selectedPlan.id == "premium";
+
+            String buttonText = "SELECT PLAN";
+            bool isCurrent = false;
+            VoidCallback? onPressed;
+
+            if (isSelectingBasic) {
+              if (status.plan == "basic" && !status.isPremium) {
+                buttonText = "CURRENT PLAN";
+                isCurrent = true;
+                onPressed = null;
+              } else {
+                buttonText = "Switch to Basic";
+                onPressed = () => _handleUpdateSubscription("basic", colors);
+              }
+            } else if (isSelectingPremium) {
+              if (status.status == "trial" && status.isPremium) {
+                final days = status.remainingTrialDays;
+                buttonText = days > 0 ? "Premium Trial Active ($days days left)" : "Premium Trial Active";
+                isCurrent = true;
+                onPressed = null;
+              } else if (status.isPremium && status.status == "active") {
+                buttonText = "Premium Active";
+                isCurrent = true;
+                onPressed = null;
+              } else if (status.canClaimTrial) {
+                buttonText = "Start 1 Month Free Trial";
+                onPressed = () => _handleStartFreeTrial(colors);
+              } else {
+                buttonText = "Upgrade to Premium (${selectedPlan.priceText})";
+                onPressed = () => _handleUpdateSubscription("premium", colors);
+              }
+            }
+
             return ElevatedButton(
-              onPressed: () async {
-                final selectedPlan = selectedIndex == 0 ? "basic" : "premium";
-
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => Center(
-                    child: CircularProgressIndicator(color: colors.accentPrimary),
-                  ),
-                );
-
-                final response = await ref
-                    .read(profileProvider)
-                    .updateSubscription(plan: selectedPlan);
-
-                if (context.mounted) {
-                  Navigator.pop(context);
-                }
-
-                if (response.status == ResponseStatus.SUCCESS) {
-                  showDialog(
-                    barrierColor: Colors.black54,
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) =>
-                        _SuccessDialog(surfaceColor: colors.card),
-                  );
-
-                  Future.delayed(const Duration(seconds: 2), () {
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const BaseBottomNavigationPage(),
-                        ),
-                        (route) => false,
-                      );
-                    }
-                  });
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(response.message),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
+              onPressed: onPressed,
               style: ElevatedButton.styleFrom(
-                backgroundColor: colors.accentPrimary,
+                backgroundColor: isCurrent ? colors.cardSecondary : colors.accentPrimary,
+                disabledBackgroundColor: colors.cardSecondary,
                 minimumSize: const Size(double.infinity, 54),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
+                  side: isCurrent
+                      ? BorderSide(color: colors.border)
+                      : BorderSide.none,
                 ),
-                elevation: 0,
+                elevation: isCurrent ? 0 : 2,
               ),
               child: Text(
-                "Activate ${plans[selectedIndex]['title']}",
+                buttonText,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: colors.onAccentPrimary,
+                  color: isCurrent ? colors.textSecondary : colors.onAccentPrimary,
+                  letterSpacing: 0.3,
                 ),
               ),
             );
@@ -212,8 +316,10 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
 }
 
 class _PlanCard extends StatelessWidget {
-  final Map<String, dynamic> plan;
+  final PlanOfferingModel plan;
   final bool isSelected;
+  final bool isCurrentPlan;
+  final SubscriptionStatusModel status;
   final Color accentColor;
   final Color surfaceColor;
   final VoidCallback onTap;
@@ -221,6 +327,8 @@ class _PlanCard extends StatelessWidget {
   const _PlanCard({
     required this.plan,
     required this.isSelected,
+    required this.isCurrentPlan,
+    required this.status,
     required this.accentColor,
     required this.surfaceColor,
     required this.onTap,
@@ -229,6 +337,7 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.themeColors;
+    final isPremium = plan.id == "premium";
 
     return GestureDetector(
       onTap: onTap,
@@ -237,16 +346,16 @@ class _PlanCard extends StatelessWidget {
         curve: Curves.easeInOut,
         decoration: BoxDecoration(
           color: surfaceColor,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected ? accentColor : colors.borderSubtle,
-            width: 2,
+            width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: accentColor.withOpacity(0.1),
-                blurRadius: 12,
+                color: accentColor.withOpacity(0.12),
+                blurRadius: 14,
                 offset: const Offset(0, 4),
               ),
           ],
@@ -254,6 +363,7 @@ class _PlanCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top Header
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -261,44 +371,160 @@ class _PlanCard extends StatelessWidget {
                   Container(
                     height: 44,
                     width: 44,
-                    decoration: BoxDecoration(color: plan['iconBg'], shape: BoxShape.circle),
-                    child: Icon(plan['icon'], color: plan['iconColor'], size: 22),
+                    decoration: BoxDecoration(
+                      color: isPremium ? const Color(0xFF2D2A1F) : const Color(0xFF2D1F21),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isPremium ? Icons.diamond_outlined : Icons.favorite,
+                      color: isPremium ? colors.accentPrimary : const Color(0xFFF28F8F),
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    plan['title'],
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                  Expanded(
+                    child: Text(
+                      plan.title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
                   ),
-                  const Spacer(),
                   _buildRadioIcon(colors),
                 ],
               ),
             ),
             Divider(height: 1, thickness: 1, color: colors.borderSubtle),
+
+            // Content Area
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Opacity(
-                    opacity: 0.9,
-                    child: Image.asset(plan['badge'], width: 110, height: 32, fit: BoxFit.contain),
-                  ),
-                  const SizedBox(height: 12),
-                  RichText(
-                    text: TextSpan(
-                      text: "${plan['price']}/ ",
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                  if (plan.badge.isNotEmpty) ...[
+                    Opacity(
+                      opacity: 0.95,
+                      child: Image.asset(
+                        plan.badge,
+                        width: 110,
+                        height: 30,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Pricing Display
+                  if (!isPremium) ...[
+                    // Basic Plan Pricing
+                    Text(
+                      "FREE",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: colors.textPrimary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    // Premium Plan Pricing
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        TextSpan(
-                          text: "per month",
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.normal, color: colors.textSecondary),
+                        // Struck-through Regular Price
+                        Text(
+                          "₹2,000/month",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: colors.textMuted,
+                            decoration: TextDecoration.lineThrough,
+                            decorationColor: colors.textMuted,
+                            decorationThickness: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        // 50% OFF Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                          ),
+                          child: const Text(
+                            "50% OFF",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.redAccent,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  ...plan['features'].map<Widget>((feature) => _buildFeatureItem(feature, colors)).toList(),
+                    const SizedBox(height: 6),
+                    // ₹1,000 / per month
+                    RichText(
+                      text: TextSpan(
+                        text: "₹1,000/ ",
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: "per month",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.normal,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // 1 MONTH FREE TRIAL Highlight
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: colors.accentPrimary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: colors.accentPrimary.withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            color: colors.accentPrimary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "1 MONTH FREE TRIAL",
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: colors.accentPrimary,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Feature List
+                  ...plan.features.map<Widget>((feature) => _buildFeatureItem(feature, colors)).toList(),
                 ],
               ),
             ),
@@ -314,10 +540,15 @@ class _PlanCard extends StatelessWidget {
       width: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: isSelected ? accentColor : colors.border, width: 2),
+        border: Border.all(
+          color: isSelected ? accentColor : colors.border,
+          width: 2,
+        ),
       ),
       child: isSelected
-          ? Center(child: Icon(Icons.check_circle, size: 20, color: accentColor))
+          ? Center(
+              child: Icon(Icons.check_circle, size: 20, color: accentColor),
+            )
           : null,
     );
   }
@@ -327,7 +558,127 @@ class _PlanCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         text,
-        style: TextStyle(fontSize: 14, height: 1.5, color: colors.textSecondary),
+        style: TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: colors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+class _TrialConfirmationDialog extends StatelessWidget {
+  final AppThemeColors colors;
+  const _TrialConfirmationDialog({required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: colors.card,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colors.borderSubtle),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors.accentPrimary.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.workspace_premium,
+                color: colors.accentPrimary,
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Premium Plan",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: colors.accentPrimary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                "1 Month FREE Trial",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: colors.accentPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              "Then ₹1,000/month\n50% OFF regular ₹2,000/month",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.4,
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: colors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text(
+                      "Cancel",
+                      style: TextStyle(color: colors.textSecondary),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.accentPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      "Start Free Trial",
+                      style: TextStyle(
+                        color: colors.onAccentPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -335,7 +686,14 @@ class _PlanCard extends StatelessWidget {
 
 class _SuccessDialog extends StatelessWidget {
   final Color surfaceColor;
-  const _SuccessDialog({required this.surfaceColor});
+  final String title;
+  final String subtitle;
+
+  const _SuccessDialog({
+    required this.surfaceColor,
+    required this.title,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +702,10 @@ class _SuccessDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: surfaceColor,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colors.borderSubtle),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
         child: Column(
@@ -353,13 +714,13 @@ class _SuccessDialog extends StatelessWidget {
             Image.asset("assets/images/account-create-success.png", width: 120),
             const SizedBox(height: 20),
             Text(
-              "Plan Request Received",
+              title,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.textPrimary),
             ),
             const SizedBox(height: 8),
             Text(
-              "Our team will get back to you soon.",
+              subtitle,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: colors.textSecondary),
             ),

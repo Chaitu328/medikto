@@ -54,7 +54,7 @@ const isDoseInFuture = (doseDate, doseTime, referenceNow, timezone = "Asia/Kolka
     const doseTotalMinutes = parseTimeToMinutes(doseTime);
     if (doseTotalMinutes === null) return false;
 
-    return currTotalMinutes < doseTotalMinutes;
+    return currTotalMinutes < (doseTotalMinutes - 10);
   } catch (err) {
     return false;
   }

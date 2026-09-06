@@ -536,9 +536,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: (profile.subscription ?? "")
-                                                    .toLowerCase() ==
-                                                "premium"
+                                        color: profile.isPremium
                                             ? colors.accentSubtle
                                             : colors.cardSecondary,
                                         borderRadius: BorderRadius.circular(30),
@@ -547,25 +545,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
-                                            (profile.subscription ?? "")
-                                                        .toLowerCase() ==
-                                                    "premium"
+                                            profile.isPremium
                                                 ? Icons.workspace_premium
                                                 : Icons.lock_outline,
                                             size: 14,
-                                            color: (profile.subscription ?? "")
-                                                        .toLowerCase() ==
-                                                    "premium"
+                                            color: profile.isPremium
                                                 ? colors.accent
                                                 : colors.textSecondary,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            ((profile.subscription ?? "free").toUpperCase()),
+                                            profile.isTrial
+                                                ? "PREMIUM TRIAL"
+                                                : (profile.isPremium ? "PREMIUM" : "FREE"),
                                             style: TextStyle(
-                                              color: (profile.subscription ?? "")
-                                                          .toLowerCase() ==
-                                                      "premium"
+                                              color: profile.isPremium
                                                   ? colors.accent
                                                   : colors.textSecondary,
                                               fontSize: 11,
@@ -665,7 +659,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 100),
               ] else ...[
-                if ((profile?.subscription ?? "").toLowerCase() != "premium") ...[
+                if (profile?.isPremium != true) ...[
                   SizedBox(height: screenSize.height * 0.02),
                   _buildPremiumCard(colors),
                 ],
@@ -806,12 +800,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           inactiveTrackColor: colors.border,
                         ),
                       ),
-                    ),
-                    _ListItem(
-                      icon: Icons.language,
-                      title: "Language",
-                      subtitle: "English",
-                      trailing: Icons.arrow_forward_ios,
                     ),
                   ],
                 ),
@@ -1170,27 +1158,13 @@ class _PremiumCard extends StatelessWidget {
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Upgrade to Premium",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Unlock smart reports & insights",
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: colors.textSecondary, fontSize: 12),
-                  ),
-                ],
+              child: Text(
+                "Upgrade to Premium",
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             const SizedBox(width: 10),

@@ -17,6 +17,8 @@ class ApiUrls {
   static const String reportIssue = "/support/report-issue";
   static const String profile = "/profile";
   static const String subscription = "/subscription";
+  static const String subscriptionPlans = "/subscription/plans";
+  static const String subscriptionTrial = "/subscription/trial";
   static const String guardianLogin = "/guardian/login";
   static const String changeGuardianPassword = "/guardian/change-password";
 

@@ -115,6 +115,78 @@ class ProfileManager {
     }
   }
 
+  /// GET SUBSCRIPTION STATUS
+  Future<ResponseData> getSubscriptionStatus() async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get(ApiUrls.subscription);
+      if (response.statusCode == 200 && response.data['subscription'] != null) {
+        return ResponseData(
+          "Subscription status fetched",
+          ResponseStatus.SUCCESS,
+          data: response.data['subscription'],
+        );
+      }
+      return ResponseData("Failed to fetch subscription status", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Failed to fetch subscription status",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet connection", ResponseStatus.FAILED);
+    }
+  }
+
+  /// GET SUBSCRIPTION PLANS
+  Future<ResponseData> getSubscriptionPlans() async {
+    Response response;
+    try {
+      response = await dioClient.ref!.get(ApiUrls.subscriptionPlans);
+      if (response.statusCode == 200) {
+        return ResponseData(
+          "Plans fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData("Failed to fetch plans", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Failed to fetch plans",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet connection", ResponseStatus.FAILED);
+    }
+  }
+
+  /// START 1-MONTH FREE TRIAL
+  Future<ResponseData> startFreeTrial() async {
+    Response response;
+    try {
+      response = await dioClient.ref!.post(ApiUrls.subscriptionTrial);
+      if (response.statusCode == 200) {
+        return ResponseData(
+          response.data['message'] ?? "1-Month Free Trial activated successfully!",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData(
+        response.data['message'] ?? "Failed to start free trial",
+        ResponseStatus.FAILED,
+      );
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Failed to start free trial",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet connection", ResponseStatus.FAILED);
+    }
+  }
+
   /// UPDATE SUBSCRIPTION
   Future<ResponseData> updateSubscription({required String plan}) async {
     Response response;

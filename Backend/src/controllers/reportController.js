@@ -1,4 +1,5 @@
-const PLAN_LIMITS = require("../utils/planLimits");
+const { PLAN_LIMITS } = require("../utils/planLimits");
+const { getEffectiveSubscription } = require("./subscriptionController");
 const User = require("../models/userModel");
 const Report = require("../models/reportModel");
 const {
@@ -30,6 +31,22 @@ exports.uploadReport = async (req, res) => {
       return res.status(400).json({
         message: "File is required",
       });
+    }
+
+    // Entitlement check: enforce report limit based on subscription plan
+    const user = await User.findById(req.user.id);
+    const { limits, plan } = getEffectiveSubscription(user);
+    if (limits && limits.reports !== Infinity) {
+      const reportCount = await Report.countDocuments({ user: req.user.id });
+      if (reportCount >= limits.reports) {
+        return res.status(403).json({
+          message: `Basic plan limit reached (max ${limits.reports} reports). Please upgrade to Premium to store up to 250 reports.`,
+          limitReached: true,
+          currentCount: reportCount,
+          maxLimit: limits.reports,
+          plan
+        });
+      }
     }
 
     const normalizedCondition = condition?.toLowerCase();

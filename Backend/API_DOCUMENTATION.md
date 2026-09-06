@@ -388,11 +388,140 @@ Status: `400`
 
 ---
 
+## Get Subscription Status
+
+**Method:** `GET`  
+**URL:** `/subscription`  
+**Description:** Retrieves the authenticated user's authoritative subscription state, trial eligibility, expiry dates, pricing, and feature limits.
+
+### Headers
+```http
+Authorization: Bearer jwt_token_here
+```
+
+### Response Example (200 OK)
+```json
+{
+  "success": true,
+  "subscription": {
+    "plan": "basic",
+    "status": "active",
+    "isPremium": false,
+    "trialUsed": false,
+    "canClaimTrial": true,
+    "trialStart": null,
+    "trialEnd": null,
+    "subscriptionStart": null,
+    "subscriptionEnd": null,
+    "limits": {
+      "reports": 50,
+      "medications": 5,
+      "selfieRetentionHours": 48,
+      "cloudSync": "limited",
+      "aiAnalytics": false,
+      "exportFormats": ["pdf"]
+    }
+  }
+}
+```
+
+---
+
+## Get Subscription Plans & Pricing Configuration
+
+**Method:** `GET`  
+**URL:** `/subscription/plans`  
+**Description:** Returns official plan pricing (₹2,000 regular price, 50% discount, ₹1,000 promotional price, 1-month free trial) and feature entitlements.
+
+### Response Example (200 OK)
+```json
+{
+  "success": true,
+  "plans": [
+    {
+      "id": "basic",
+      "title": "Basic Plan",
+      "priceText": "FREE",
+      "payableAmount": 0,
+      "isFree": true,
+      "features": [
+        "🧾 Store up to 50 health reports",
+        "💊 Manage up to 5 active medications",
+        "🔔 Daily medication reminders",
+        "📸 Take photo & delete in 48 hours",
+        "📁 Upload and view prescriptions anytime",
+        "☁️ Secure cloud backup (limited space)"
+      ]
+    },
+    {
+      "id": "premium",
+      "title": "Premium Plan",
+      "priceText": "₹1,000/month",
+      "regularPrice": 2000,
+      "discountPercent": 50,
+      "discountedPrice": 1000,
+      "payableAmount": 1000,
+      "hasTrial": true,
+      "trialDurationDays": 30,
+      "trialDurationText": "1 MONTH FREE TRIAL",
+      "features": [
+        "🧾 Store up to 250 health reports",
+        "💊 Manage unlimited medications",
+        "📸 Take photo & store indefinitely",
+        "📈 Detailed AI health analytics",
+        "☁️ Full cloud storage & sync across devices",
+        "📤 Share as PDF/JPEG via Bluetooth/Email"
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Start 1-Month Free Trial
+
+**Method:** `POST`  
+**URL:** `/subscription/trial`  
+**Description:** Starts the 1-month Premium free trial. Enforces the rule that each user can only claim the trial once.
+
+### Headers
+```http
+Authorization: Bearer jwt_token_here
+```
+
+### Response Example (200 OK)
+```json
+{
+  "success": true,
+  "message": "1-Month Free Trial activated successfully!",
+  "subscription": {
+    "plan": "premium",
+    "status": "trial",
+    "isPremium": true,
+    "trialUsed": true,
+    "canClaimTrial": false,
+    "trialStart": "2026-09-06T12:00:00.000Z",
+    "trialEnd": "2026-10-06T12:00:00.000Z"
+  }
+}
+```
+
+### Error Response (400 Bad Request)
+```json
+{
+  "success": false,
+  "message": "You have already used your 1-month free trial."
+}
+```
+
+---
+
 ## Update Subscription
 
 **Method:** `PUT`  
 **URL:** `/subscription`  
-**Description:** Updates user subscription plan.
+**Description:** Updates user subscription plan (`basic` or `premium`).
 
 ### Headers
 
@@ -405,28 +534,23 @@ Content-Type: application/json
 
 ```json
 {
-  "plan": "basic"
+  "plan": "premium"
 }
 ```
 
-Allowed values:
-
-```txt
-free, basic, premium
-```
-
-### Response Example
+### Response Example (200 OK)
 
 ```json
 {
-  "message": "Subscription updated",
-  "subscription": "basic"
+  "success": true,
+  "message": "Subscription updated to PREMIUM successfully",
+  "subscription": {
+    "plan": "premium",
+    "status": "active",
+    "isPremium": true
+  }
 }
 ```
-
-### Error Responses
-
-Status: `400`
 
 ```json
 {

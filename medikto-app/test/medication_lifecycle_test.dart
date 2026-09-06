@@ -42,7 +42,8 @@ bool isDoseInFuture(String? dateStr, String? timeStr, {DateTime? referenceNow}) 
   final scheduled = parseDoseDateTime(dateStr, timeStr);
   if (scheduled == null) return false;
   final now = referenceNow ?? DateTime.now();
-  return scheduled.isAfter(now);
+  final actionStartTime = scheduled.subtract(const Duration(minutes: 10));
+  return now.isBefore(actionStartTime);
 }
 
 bool isDoseExpired(String? dateStr, String? timeStr, {DateTime? referenceNow}) {
