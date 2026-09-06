@@ -200,15 +200,18 @@ Future<ResponseData> signInWithGoogle() async {
       final msg = response.data?["message"] ?? "Unable to sign in with Google. Please try again.";
       return ResponseData(msg, ResponseStatus.FAILED);
     }
-  } on FirebaseAuthException catch (e) {
-    return ResponseData(e.message ?? "Unable to sign in with Google. Please try again.", ResponseStatus.FAILED);
-  } on DioException catch (e) {
-    final msg = e.response?.data?["message"] ?? e.response?.data?["error"] ?? "Unable to connect to server. Please try again.";
-    return ResponseData(msg, ResponseStatus.FAILED);
-  } catch (e) {
-    return ResponseData("Unable to sign in with Google. Please try again.", ResponseStatus.FAILED);
+    } on FirebaseAuthException catch (e) {
+      debugPrint("GOOGLE AUTH FIREBASE ERROR: ${e.code} - ${e.message}");
+      return ResponseData(e.message ?? "Unable to sign in with Google. Please try again.", ResponseStatus.FAILED);
+    } on DioException catch (e) {
+      debugPrint("GOOGLE AUTH BACKEND DIO ERROR: ${e.response?.statusCode} - ${e.response?.data}");
+      final msg = e.response?.data?["message"] ?? e.response?.data?["error"] ?? "Unable to connect to server. Please try again.";
+      return ResponseData(msg, ResponseStatus.FAILED);
+    } catch (e) {
+      debugPrint("GOOGLE SIGN-IN GENERAL ERROR: $e");
+      return ResponseData("Google sign-in error: $e", ResponseStatus.FAILED);
+    }
   }
-}
 
 // ================= COMPLETE GOOGLE REGISTRATION =================
 Future<ResponseData> completeGoogleRegistration({

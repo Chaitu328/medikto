@@ -178,6 +178,97 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  void _showBloodGroupPickerSheet() {
+    final themeColors = context.themeColors;
+    final bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: themeColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Select Blood Group",
+                    style: TextStyle(
+                      color: themeColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (bloodGroupController.text.isNotEmpty)
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          bloodGroupController.clear();
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        "Clear",
+                        style: TextStyle(color: themeColors.textMuted),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: bloodGroups.map((bg) {
+                  final isSelected =
+                      bloodGroupController.text.trim().toUpperCase() == bg;
+                  return ChoiceChip(
+                    label: Text(
+                      bg,
+                      style: TextStyle(
+                        color: isSelected
+                            ? themeColors.onAccentPrimary
+                            : themeColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    selected: isSelected,
+                    selectedColor: themeColors.accentPrimary,
+                    backgroundColor: themeColors.cardSecondary,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isSelected
+                            ? themeColors.accentPrimary
+                            : themeColors.border,
+                      ),
+                    ),
+                    onSelected: (selected) {
+                      setState(() {
+                        bloodGroupController.text = bg;
+                      });
+                      Navigator.pop(context);
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showImagePickerSheet() {
     final themeColors = context.themeColors;
     showModalBottomSheet(
@@ -546,6 +637,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     title: "Blood Group",
                     hint: "Select Blood Group",
                     suffixIcon: Icons.keyboard_arrow_down_rounded,
+                    readOnly: true,
+                    onTap: _showBloodGroupPickerSheet,
                   ),
 
                   const SizedBox(height: 15),
@@ -638,6 +731,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     required String hint,
     IconData? suffixIcon,
     TextInputType? keyboardType,
+    bool readOnly = false,
+    VoidCallback? onTap,
   }) {
     final themeColors = context.themeColors;
     return AppTextFormFieldTitled(
@@ -645,6 +740,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       focusColor: themeColors.accentPrimary,
       hintText: hint,
       textInputType: keyboardType,
+      readOnly: readOnly,
+      onTap: onTap,
       hintStyle: TextStyle(
         fontSize: 16,
         color: themeColors.textMuted,
@@ -660,6 +757,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         color: themeColors.textSecondary,
       ),
       suffixIcon: suffixIcon,
+      suffixIconOnTap: onTap,
     );
   }
 }

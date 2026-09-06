@@ -29,6 +29,9 @@ exports.verifyOTP = async (req, res) => {
       });
     } else {
       user.isVerified = true;
+      if (user.bloodGroup === "" || user.bloodGroup === null) {
+        user.bloodGroup = undefined;
+      }
       await user.save();
     }
 
@@ -64,7 +67,7 @@ console.log("===============");
 // ================= REGISTER USER =================
 exports.register = async (req, res) => {
   try {
-    const { full_name, mobile_number, token } = req.body;
+    const { full_name, mobile_number, email, token } = req.body;
 
     let phone = mobile_number || req.body.phone;
     if (token) {
@@ -93,9 +96,12 @@ exports.register = async (req, res) => {
     const termsVersion = req.body.termsVersion || "1.0";
     const privacyPolicyVersion = req.body.privacyPolicyVersion || "1.0";
 
+    const normalizedEmail = email ? email.trim().toLowerCase() : undefined;
+
     user = await User.create({
       phone,
       firstName: name,
+      email: normalizedEmail,
       role: "patient",
       authProvider: "phone",
       isVerified: true,

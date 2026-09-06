@@ -30,6 +30,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
+  final emailController = TextEditingController();
   final dobController = TextEditingController();
 
   final caretakerNameController = TextEditingController();
@@ -138,6 +139,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void dispose() {
     nameController.dispose();
     phoneController.dispose();
+    emailController.dispose();
     dobController.dispose();
     caretakerNameController.dispose();
     caretakerEmailController.dispose();
@@ -320,6 +322,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               final data = {
                                 "full_name": nameController.text.trim(),
                                 "mobile_number": phone,
+                                if (emailController.text.trim().isNotEmpty)
+                                  "email": emailController.text.trim(),
                                 "dob": dobController.text.trim(),
                                 "gender": selectedGender,
                                 "token": idToken,
@@ -354,6 +358,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                                 nameController.clear();
                                 phoneController.clear();
+                                emailController.clear();
                                 dobController.clear();
                                 caretakerNameController.clear();
                                 caretakerEmailController.clear();
@@ -538,6 +543,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     _FormFields(
                       nameCont: nameController,
                       phoneCont: phoneController,
+                      emailCont: emailController,
                       dobCont: dobController,
                       selectedGender: selectedGender,
                       onGenderChanged: (value) {
@@ -769,6 +775,7 @@ class _ProfileAvatar extends StatelessWidget {
 class _FormFields extends StatelessWidget {
   final TextEditingController nameCont;
   final TextEditingController phoneCont;
+  final TextEditingController emailCont;
   final TextEditingController dobCont;
   final String selectedGender;
   final Function(String) onGenderChanged;
@@ -778,6 +785,7 @@ class _FormFields extends StatelessWidget {
   const _FormFields({
     required this.nameCont,
     required this.phoneCont,
+    required this.emailCont,
     required this.dobCont,
     required this.selectedGender,
     required this.onGenderChanged,
@@ -863,6 +871,8 @@ class _FormFields extends StatelessWidget {
           ),
         ),
         SizedBox(height: size.height * 0.01),
+        _buildField("Email Address", "Enter your email address", emailCont, colors, keyboardType: TextInputType.emailAddress),
+        SizedBox(height: size.height * 0.01),
         GestureDetector(
           onTap: () => _selectDOB(context, dobCont),
           child: AbsorbPointer(
@@ -884,6 +894,7 @@ class _FormFields extends StatelessWidget {
     TextEditingController controller,
     AppThemeColors colors, {
     bool obscureText = false,
+    TextInputType? keyboardType,
     Widget? suffix,
     VoidCallback? suffixIconOnTap,
   }) {
@@ -891,6 +902,7 @@ class _FormFields extends StatelessWidget {
       controller: controller,
       title: title,
       hintText: hint,
+      textInputType: keyboardType,
       focusColor: colors.accentPrimary,
       fillColor: colors.surface,
       color: colors.textPrimary,

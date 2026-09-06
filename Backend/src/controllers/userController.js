@@ -126,14 +126,30 @@ exports.updateProfile = async (req, res) => {
 
     const updateData = {};
 
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (phone !== undefined) updateData.phone = phone;
-    if (email !== undefined) updateData.email = email ? email.trim().toLowerCase() : null;
-    if (age !== undefined) updateData.age = age;
-    if (gender !== undefined) updateData.gender = gender.toLowerCase();
-    if (bloodGroup !== undefined) updateData.bloodGroup = bloodGroup.toUpperCase();
-    if (height !== undefined) updateData.height = height;
-    if (weight !== undefined) updateData.weight = weight;
+    if (firstName !== undefined) updateData.firstName = firstName.trim();
+    if (phone !== undefined) updateData.phone = phone.trim();
+    if (email !== undefined) updateData.email = email && email.trim().length > 0 ? email.trim().toLowerCase() : null;
+    if (age !== undefined) {
+      const parsedAge = parseInt(age, 10);
+      updateData.age = !isNaN(parsedAge) && parsedAge > 0 ? parsedAge : null;
+    }
+    if (gender !== undefined) {
+      const g = gender.trim().toLowerCase();
+      updateData.gender = ["male", "female", "other"].includes(g) ? g : null;
+    }
+    if (bloodGroup !== undefined) {
+      const validBloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+      const bg = bloodGroup.trim().toUpperCase();
+      updateData.bloodGroup = validBloodGroups.includes(bg) ? bg : null;
+    }
+    if (height !== undefined) {
+      const parsedHeight = parseFloat(height);
+      updateData.height = !isNaN(parsedHeight) && parsedHeight > 0 ? parsedHeight : null;
+    }
+    if (weight !== undefined) {
+      const parsedWeight = parseFloat(weight);
+      updateData.weight = !isNaN(parsedWeight) && parsedWeight > 0 ? parsedWeight : null;
+    }
 
     if (profilePic) updateData.profilePic = profilePic;
 
