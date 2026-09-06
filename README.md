@@ -200,7 +200,20 @@ For a dose scheduled at **11:30 AM IST**:
 - **Status Priority Rule**: `1. Status (taken/missed/cancelled) -> 2. Scheduled Date -> 3. Scheduled Time -> 4. Current Asia/Kolkata Time`.
 - **Taken Doses**: Permanently `taken`, distinct `time` (e.g. `11:30 AM`) and `takenAt` (ISO timestamp).
 - **Missed Doses**: Permanently `missed` after 60 minutes. Server rejects any take action on expired doses.
-- **Notification Tap**: Tapping a reminder notification opens the app directly to the **"My Medications"** tab.
+### 3. Medication Edit & Delete Actions & Historical Record Preservation
+- **Entity Relationship**: Recent Activity and Activity History display daily `Dose` records, which reference a parent `Medication` template. The **Edit** and **Delete** actions operate on the parent `Medication` entity (`dose.medication`).
+- **Edit Action**:
+  - Tapping Edit on a Recent Activity tile or Activity History item opens the Add Medication form pre-populated with existing medication details (Name, Dosage, Unit, Timings, Frequency, Start Date, Duration/Continuous, Notifications toggle, Patient Instructions).
+  - Form operates in EDIT mode with the button displaying `"UPDATE MEDICATION"`.
+  - Updating a medication re-calculates/updates **future** pending doses and notifications only.
+- **Delete Action**:
+  - Tapping Delete prompts the user with a confirmation dialog:
+    - *"Delete Medication? Are you sure you want to delete '[Name]'? Past medication history will be preserved, but future scheduled doses and reminders will be cancelled."*
+  - Deleting a medication sets `medication.status = "cancelled"` (removing it from the active medication schedule) and marks future pending doses as `cancelled` (`isDeleted: true`), immediately halting future reminders.
+- **Historical Record Preservation**:
+  - Editing or deleting a medication **never** alters, rewrites, or deletes past `TAKEN`, `MISSED`, or `CANCELLED` dose logs.
+  - Historical `scheduled date`, `scheduled time`, `takenAt` timestamps, and selfie verification proofs remain fully intact for medical auditing.
+- **Theme Consistency**: Edit and Delete actions function identically and present clean, theme-tokenized visual styles in both Dark Theme and Light Theme.
 
 ---
 

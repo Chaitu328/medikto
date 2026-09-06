@@ -72,3 +72,12 @@ final getAdherenceProvider = FutureProvider.autoDispose<ResponseData>((
 ) async {
   return ref.watch(medicationProvider).getAdherence();
 });
+
+final deleteMedicationProvider = FutureProvider.family<ResponseData, String>((
+  ref,
+  medicationId,
+) async {
+  return ref
+      .read(medicationProvider)
+      .deleteMedication(medicationId: medicationId);
+});

@@ -264,7 +264,7 @@ exports.getMedications = async (req, res) => {
   try {
     const filter = await buildUserAccessFilter(req, req.query.patientId);
 
-    const query = Medication.find(filter).sort({ createdAt: -1 });
+    const query = Medication.find({ ...filter, status: "active" }).sort({ createdAt: -1 });
     if (shouldPopulateUser(req)) {
       query.populate("user", "firstName phone email profilePic subscription hospitals");
     }
@@ -389,12 +389,10 @@ exports.getTodaySchedule = async (req, res) => {
     const query = Dose.find({
       ...filter,
       date: date,
-    }).sort({ time: 1 });
+    }).sort({ time: 1 }).populate("medication");
 
     if (shouldPopulateUser(req)) {
-      query
-        .populate("user", "firstName phone email profilePic subscription hospitals")
-        .populate("medication");
+      query.populate("user", "firstName phone email profilePic subscription hospitals");
     }
 
     const doses = await query;
@@ -667,6 +665,12 @@ exports.deleteSelfie = async (req, res) => {
 // ================= UPDATE MEDICATION =================
 exports.updateMedication = async (req, res) => {
   try {
+    const filter = await buildUserAccessFilter(req);
+    const currentMed = await Medication.findOne({ _id: req.params.id, ...filter });
+    if (!currentMed) {
+      return res.status(404).json({ message: "Medication not found or unauthorized" });
+    }
+
     const {
       name,
       dosage,
@@ -684,7 +688,7 @@ exports.updateMedication = async (req, res) => {
     const updateData = {};
 
     if (name) updateData.name = name;
-    if (dosage) updateData.dosage = dosage;
+    if (dosage) updateData.dosage = Number(dosage);
     if (unit) updateData.unit = unit;
     if (notifications !== undefined) updateData.notifications = notifications;
     if (instructions !== undefined) updateData.instructions = instructions;
@@ -696,12 +700,6 @@ exports.updateMedication = async (req, res) => {
 
     if (timings) {
       updateData.timings = timings;
-    }
-
-    // Recalculate endDate
-    const currentMed = await Medication.findById(req.params.id);
-    if (!currentMed) {
-      return res.status(404).json({ message: "Medication not found" });
     }
 
     const effStartDate = updateData.startDate || currentMed.startDate || currentMed.createdAt || new Date();
@@ -757,14 +755,15 @@ exports.updateMedicationStatus = async (req, res) => {
       });
     }
 
-    const med = await Medication.findByIdAndUpdate(
-      id,
+    const filter = await buildUserAccessFilter(req);
+    const med = await Medication.findOneAndUpdate(
+      { _id: id, ...filter },
       { status },
       { new: true }
     );
 
     if (!med) {
-      return res.status(404).json({ message: "Medication not found" });
+      return res.status(404).json({ message: "Medication not found or unauthorized" });
     }
 
     const today = getTodayDate();
@@ -801,15 +800,24 @@ exports.deleteMedication = async (req, res) => {
     const { id } = req.params;
     const today = getTodayDate();
 
+    const filter = await buildUserAccessFilter(req);
+    const med = await Medication.findOne({ _id: id, ...filter });
+    if (!med) {
+      return res.status(404).json({ message: "Medication not found or unauthorized" });
+    }
+
+    // Mark medication as cancelled so it is removed from active schedule while keeping history
+    med.status = "cancelled";
+    await med.save();
+
     // Mark future pending doses as cancelled so reminders cease, preserving historical taken/missed records
     await Dose.updateMany(
       { medication: id, date: { $gte: today }, status: "pending" },
       { status: "cancelled", isDeleted: true }
     );
 
-    await Medication.findByIdAndDelete(id);
-
     res.json({
+      success: true,
       message: "Medication deleted"
     });
 

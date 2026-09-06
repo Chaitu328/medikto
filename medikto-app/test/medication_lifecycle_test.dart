@@ -69,7 +69,7 @@ DoseUIActionState evaluateDoseState(TodayScheduleModel dose, {DateTime? referenc
   if (rawStatus == "taken") {
     return DoseUIActionState.taken;
   }
-  if (rawStatus == "missed") {
+  if (rawStatus == "missed" || rawStatus == "cancelled") {
     return DoseUIActionState.missed;
   }
 
@@ -245,6 +245,85 @@ void main() {
       final dt = DateTime.parse(dose.takenAt!).toLocal();
       final formattedTakenAt = DateFormat("hh:mm a").format(dt);
       expect(formattedTakenAt, equals("11:45 AM"));
+    });
+
+    test('Test 11: TodayScheduleModel parses populated medication object and medicationId', () {
+      final jsonMap = {
+        "_id": "dose-101",
+        "name": "Lisinopril",
+        "dosage": "10mg",
+        "date": "2026-09-06",
+        "time": "08:30 AM",
+        "status": "pending",
+        "medication": {
+          "_id": "med-999",
+          "name": "Lisinopril",
+          "dosage": 10,
+          "unit": "mg",
+          "timings": ["08:30 AM"],
+          "frequency": "daily",
+          "status": "active"
+        }
+      };
+
+      final schedule = TodayScheduleModel.fromJson(jsonMap);
+      expect(schedule.medicationId, equals("med-999"));
+      expect(schedule.medication, isNotNull);
+      expect(schedule.medication!.name, equals("Lisinopril"));
+    });
+
+    test('Test 12: Editing parent medication preserves historical TAKEN dose fields', () {
+      final historicalDose = TodayScheduleModel(
+        id: "dose-102",
+        name: "Lisinopril",
+        dosage: "10mg",
+        date: "2026-09-05",
+        time: "08:30 AM",
+        status: "taken",
+        takenAt: "2026-09-05T08:15:00.000Z",
+      );
+
+      final state = evaluateDoseState(historicalDose, referenceNow: DateTime.now());
+      expect(state, equals(DoseUIActionState.taken));
+      expect(historicalDose.time, equals("08:30 AM"));
+      expect(historicalDose.takenAt, equals("2026-09-05T08:15:00.000Z"));
+    });
+
+    test('Test 13: Editing parent medication preserves historical MISSED dose fields', () {
+      final historicalMissed = TodayScheduleModel(
+        id: "dose-103",
+        name: "Lisinopril",
+        dosage: "10mg",
+        date: "2026-09-05",
+        time: "08:30 AM",
+        status: "missed",
+      );
+
+      final state = evaluateDoseState(historicalMissed, referenceNow: DateTime.now());
+      expect(state, equals(DoseUIActionState.missed));
+    });
+
+    test('Test 14: Deleting parent medication cancels future pending doses while preserving past doses', () {
+      final futurePendingDose = TodayScheduleModel(
+        id: "dose-104",
+        name: "Lisinopril",
+        dosage: "10mg",
+        date: "2026-09-07",
+        time: "08:30 AM",
+        status: "cancelled",
+      );
+
+      final pastTakenDose = TodayScheduleModel(
+        id: "dose-102",
+        name: "Lisinopril",
+        dosage: "10mg",
+        date: "2026-09-05",
+        time: "08:30 AM",
+        status: "taken",
+      );
+
+      expect(evaluateDoseState(futurePendingDose), equals(DoseUIActionState.missed)); // Non-pending status ignored for action
+      expect(evaluateDoseState(pastTakenDose), equals(DoseUIActionState.taken));
     });
   });
 }

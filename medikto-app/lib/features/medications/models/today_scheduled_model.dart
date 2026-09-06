@@ -1,3 +1,5 @@
+import 'package:medikto/features/medications/models/medication_model.dart';
+
 class TodayScheduleModel {
   final String? id;
   final String? name;
@@ -8,6 +10,8 @@ class TodayScheduleModel {
   final String? takenAt;
   final bool? verified;
   final String? proofImage;
+  final String? medicationId;
+  final MedicationModel? medication;
 
   TodayScheduleModel({
     this.id,
@@ -19,9 +23,23 @@ class TodayScheduleModel {
     this.takenAt,
     this.verified,
     this.proofImage,
+    this.medicationId,
+    this.medication,
   });
 
   factory TodayScheduleModel.fromJson(Map<String, dynamic> json) {
+    String? medId;
+    MedicationModel? medObj;
+
+    if (json["medication"] != null) {
+      if (json["medication"] is Map<String, dynamic>) {
+        medObj = MedicationModel.fromJson(json["medication"]);
+        medId = medObj.id ?? json["medication"]["_id"];
+      } else if (json["medication"] is String) {
+        medId = json["medication"];
+      }
+    }
+
     return TodayScheduleModel(
       id: json["_id"],
       name: json["name"],
@@ -32,6 +50,8 @@ class TodayScheduleModel {
       takenAt: json["takenAt"],
       verified: json["verified"],
       proofImage: json["proofImage"],
+      medicationId: medId,
+      medication: medObj,
     );
   }
 }

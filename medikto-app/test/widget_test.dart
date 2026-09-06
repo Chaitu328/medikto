@@ -87,7 +87,8 @@ void main() {
 
     test('Future time detection accurately flags upcoming doses', () {
       final now = DateTime.now();
-      final futureTime = DateFormat("hh:mm a").format(now.add(const Duration(hours: 3)));
+      final futureDateTime = now.add(const Duration(minutes: 30));
+      final futureTime = DateFormat("hh:mm a").format(futureDateTime);
       final cleanTime = futureTime.trim();
       final isPM = cleanTime.toUpperCase().endsWith("PM");
       final isAM = cleanTime.toUpperCase().endsWith("AM");
@@ -98,7 +99,7 @@ void main() {
       if (isPM && hour < 12) hour += 12;
       if (isAM && hour == 12) hour = 0;
 
-      final scheduled = DateTime(now.year, now.month, now.day, hour, minute);
+      final scheduled = DateTime(futureDateTime.year, futureDateTime.month, futureDateTime.day, hour, minute);
       expect(scheduled.isAfter(now), isTrue);
     });
   });

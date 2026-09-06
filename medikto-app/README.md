@@ -74,6 +74,12 @@ The Medikto mobile app adheres strictly to the unified medication lifecycle and 
 - **Taken**: Badge displays **"Medicine Taken"**; action buttons are hidden regardless of time.
 - **Notification Tap**: Tapping a reminder notification opens the app directly to the **"My Medications"** tab (`BaseBottomNavigationPage(index: 1)`).
 
+### 3. Medication Edit & Delete Actions
+- **Recent Activity & Activity History**: Both screens display compact Edit (`Icons.edit_outlined`) and Delete (`Icons.delete_outline`) icon buttons on medication activity cards.
+- **Parent Medication Targeting**: Edit and Delete actions operate on the parent `Medication` model referenced by the dose.
+- **Edit Mode**: Opens `MedicationVerificationScreen` pre-populated with existing medication details and displays `"UPDATE MEDICATION"`.
+- **Delete Confirmation**: Shows a confirmation dialog before calling `deleteMedicationProvider`, cancelling future doses and stopping future reminders while preserving historical TAKEN and MISSED dose logs.
+
 ---
 
 ## 📖 Complete Guides
