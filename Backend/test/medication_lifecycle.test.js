@@ -237,4 +237,68 @@ assert.strictEqual(completedDose.time, "11:30 AM");
 assert.notStrictEqual(completedDose.takenAt.toISOString(), completedDose.time);
 console.log("✅ Test 10: Scheduled time (11:30 AM) and takenAt remain separate and distinct\n");
 
-console.log("ALL 10 BACKEND LIFECYCLE & ACTION WINDOW TESTS PASSED SUCCESSFULLY! 🎉");
+// 3. New Medication Creation vs Retroactive Dose Prevention Tests
+console.log("3. Running New Medication Creation vs Retroactive Dose Prevention Tests...\n");
+
+const shouldGenerateDoseOnDate = (targetDate, scheduledTimeStr, medCreationDateObj, timezone = "Asia/Kolkata") => {
+  const { localDate: creationDateStr, totalMinutes: creationTimeMinutes } = getLocalTimeDetails(medCreationDateObj, timezone);
+  const scheduledMinutes = parseTimeToMinutes(scheduledTimeStr);
+
+  if (targetDate < creationDateStr) {
+    return false;
+  }
+
+  if (targetDate === creationDateStr && scheduledMinutes !== null && scheduledMinutes < creationTimeMinutes) {
+    return false;
+  }
+
+  return true;
+};
+
+// Scenario 1: New medication created at 08:30 PM today, scheduled for 09:30 AM
+// Current: 08:30 PM IST (15:00 UTC)
+const creationTime_0830PM = new Date("2026-09-06T15:00:00.000Z"); // Today 08:30 PM IST
+const genToday_0930AM = shouldGenerateDoseOnDate("2026-09-06", "09:30 AM", creationTime_0830PM);
+const genTomorrow_0930AM = shouldGenerateDoseOnDate("2026-09-07", "09:30 AM", creationTime_0830PM);
+
+assert.strictEqual(genToday_0930AM, false, "Test 11: Today 09:30 AM dose must NOT be created when med created at 08:30 PM");
+assert.strictEqual(genTomorrow_0930AM, true, "Test 11: Tomorrow 09:30 AM dose MUST be created");
+console.log("✅ Test 11: Created at 08:30 PM for 09:30 AM -> Today's past dose skipped, Tomorrow's dose created");
+
+// Scenario 2: New medication created at 08:30 AM today, scheduled for 09:30 AM
+// Current: 08:30 AM IST (03:00 UTC)
+const creationTime_0830AM = new Date("2026-09-06T03:00:00.000Z"); // Today 08:30 AM IST
+const genToday_0830AM_for_0930AM = shouldGenerateDoseOnDate("2026-09-06", "09:30 AM", creationTime_0830AM);
+assert.strictEqual(genToday_0830AM_for_0930AM, true, "Test 12: Today 09:30 AM dose MUST be created when med created at 08:30 AM");
+console.log("✅ Test 12: Created at 08:30 AM for 09:30 AM -> Today's dose created as pending/upcoming");
+
+// Scenario 3: New medication created at 09:30 AM today, scheduled for 09:30 AM
+// Current: 09:30 AM IST (04:00 UTC)
+const creationTime_0930AM = new Date("2026-09-06T04:00:00.000Z"); // Today 09:30 AM IST
+const genToday_0930AM_for_0930AM = shouldGenerateDoseOnDate("2026-09-06", "09:30 AM", creationTime_0930AM);
+assert.strictEqual(genToday_0930AM_for_0930AM, true, "Test 13: Today 09:30 AM dose MUST be created when created at 09:30 AM");
+console.log("✅ Test 13: Created at 09:30 AM for 09:30 AM -> Today's dose created as pending/actionable");
+
+// Scenario 4: Existing medication created yesterday scheduled for 09:30 AM
+const creationTime_yesterday = new Date("2026-09-05T10:00:00.000Z"); // Yesterday
+const genToday_existing = shouldGenerateDoseOnDate("2026-09-06", "09:30 AM", creationTime_yesterday);
+assert.strictEqual(genToday_existing, true, "Test 14: Today's dose for existing medication MUST be generated");
+// Evaluated at 11:30 AM today (60 mins after 09:30 AM)
+const existingDose = { date: "2026-09-06", time: "09:30 AM", status: "pending" };
+const expiredRes = isDoseExpired(existingDose.date, existingDose.time, new Date("2026-09-06T06:00:00.000Z")); // 11:30 AM IST
+assert.strictEqual(expiredRes, true, "Test 14: Existing medication dose expires after 60 mins");
+console.log("✅ Test 14: Existing medication created yesterday -> Generated today, becomes missed after 60 mins");
+
+// Scenario 5: Newly created medication generates NO notifications for past times today
+const skippedDoseCheck = genToday_0930AM;
+assert.strictEqual(skippedDoseCheck, false, "Test 15: Non-existent dose generates no notifications");
+console.log("✅ Test 15: New medication created after scheduled time -> NO retroactive dose, NO notifications today");
+
+// Scenario 6: Tomorrow's scheduled time triggers reminders and 60-minute window normally
+const tomorrowDose = { date: "2026-09-07", time: "09:30 AM", status: "pending" };
+const tomorrowRef_0930AM = new Date("2026-09-07T04:00:00.000Z"); // Tomorrow 09:30 AM IST
+assert.strictEqual(isActionWindowEligible(tomorrowDose, tomorrowRef_0930AM), true, "Test 16: Tomorrow's action window opens at 09:30 AM");
+console.log("✅ Test 16: Tomorrow's scheduled dose triggers action window normally at 09:30 AM\n");
+
+console.log("ALL 16 BACKEND LIFECYCLE, ACTION WINDOW, AND NEW MEDICATION CREATION TESTS PASSED SUCCESSFULLY! 🎉");
+

@@ -39,6 +39,32 @@ const getTodayDate = (timezone = "Asia/Kolkata") => {
     return new Date().toISOString().split("T")[0];
   }
 };
+
+const getLocalTimeDetails = (dateObj, timezone = "Asia/Kolkata") => {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    });
+    const parts = formatter.formatToParts(dateObj);
+    const year = parts.find((p) => p.type === "year")?.value;
+    const month = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    const hour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
+    const minute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
+    const localDate = `${year}-${month}-${day}`;
+    const totalMinutes = hour * 60 + minute;
+    return { localDate, hour, minute, totalMinutes };
+  } catch (err) {
+    const fallbackDate = dateObj.toISOString().split("T")[0];
+    return { localDate: fallbackDate, hour: dateObj.getUTCHours(), minute: dateObj.getUTCMinutes(), totalMinutes: dateObj.getUTCHours() * 60 + dateObj.getUTCMinutes() };
+  }
+};
 const parseTimeToMinutes = (timeString) => {
   if (!timeString) return null;
   const cleanTime = timeString.replace(/\u202F|\u00A0/g, " ").trim();
@@ -183,21 +209,42 @@ exports.addMedication = async (req, res) => {
     const medStartDateStr = medStartDate.toISOString().split("T")[0];
     const medEndDateStr = medEndDate ? medEndDate.toISOString().split("T")[0] : null;
 
+    // Creation timestamp details in Asia/Kolkata
+    const createdTimestamp = medication.createdAt || new Date();
+    const createdLocal = getLocalTimeDetails(createdTimestamp, "Asia/Kolkata");
+    const creationDateStr = createdLocal.localDate;
+    const creationTimeMinutes = createdLocal.totalMinutes;
+
     // Only generate doses for today if today falls within [startDate, endDate] or isContinue
     const isTodayValid = today >= medStartDateStr && (isOngoing || !medEndDateStr || today <= medEndDateStr);
 
     if (isTodayValid && medication.status === "active") {
-      const doses = timings.map((t) => ({
-        user: req.user.id,
-        medication: medication._id,
-        name,
-        dosage: `${dosage}${unit}`,
-        date: today,
-        time: timingToTimeMap[t.toLowerCase()] || t,
-        status: "pending"
-      }));
+      const doses = [];
+      for (const t of timings) {
+        const scheduledTimeStr = timingToTimeMap[t.toLowerCase()] || t;
+        const scheduledMinutes = parseTimeToMinutes(scheduledTimeStr);
 
-      await Dose.insertMany(doses);
+        // Rule: If today is the creation date and the scheduled time for today had ALREADY PASSED before creation,
+        // do NOT generate a retroactive dose for today.
+        if (today === creationDateStr && scheduledMinutes !== null && scheduledMinutes < creationTimeMinutes) {
+          console.log(`[addMedication] Skipping past scheduled dose for new medication on creation date. Med=${medication._id} Scheduled=${scheduledTimeStr} (${scheduledMinutes}m) CreatedTime=${createdLocal.hour}:${createdLocal.minute} (${creationTimeMinutes}m)`);
+          continue;
+        }
+
+        doses.push({
+          user: req.user.id,
+          medication: medication._id,
+          name,
+          dosage: `${dosage}${unit}`,
+          date: today,
+          time: scheduledTimeStr,
+          status: "pending"
+        });
+      }
+
+      if (doses.length > 0) {
+        await Dose.insertMany(doses);
+      }
     }
 
     res.status(201).json({
@@ -279,6 +326,12 @@ const ensureDosesExist = async (req, date) => {
           }
         }
 
+        // Determine medication creation timestamp in Asia/Kolkata
+        const medCreationDate = med.createdAt || med.startDate || new Date();
+        const createdLocal = getLocalTimeDetails(medCreationDate, "Asia/Kolkata");
+        const creationDateStr = createdLocal.localDate;
+        const creationTimeMinutes = createdLocal.totalMinutes;
+
         const doseExists = await Dose.exists({
           user: patientId,
           medication: med._id,
@@ -286,15 +339,27 @@ const ensureDosesExist = async (req, date) => {
         });
 
         if (!doseExists) {
-          const newDoses = med.timings.map((t) => ({
-            user: patientId,
-            medication: med._id,
-            name: med.name,
-            dosage: `${med.dosage}${med.unit}`,
-            date: date,
-            time: timingToTimeMap[t.toLowerCase()] || t,
-            status: "pending",
-          }));
+          const newDoses = [];
+          for (const t of med.timings) {
+            const scheduledTimeStr = timingToTimeMap[t.toLowerCase()] || t;
+            const scheduledMinutes = parseTimeToMinutes(scheduledTimeStr);
+
+            // Rule: On creation date, skip any scheduled time that had already passed before the medication was created.
+            if (date === creationDateStr && scheduledMinutes !== null && scheduledMinutes < creationTimeMinutes) {
+              console.log(`[ensureDosesExist] Skipping past scheduled dose for new medication on creation date. Med=${med._id} Date=${date} Scheduled=${scheduledTimeStr} (${scheduledMinutes}m) CreatedTime=${creationTimeMinutes}m`);
+              continue;
+            }
+
+            newDoses.push({
+              user: patientId,
+              medication: med._id,
+              name: med.name,
+              dosage: `${med.dosage}${med.unit}`,
+              date: date,
+              time: scheduledTimeStr,
+              status: "pending",
+            });
+          }
 
           if (newDoses.length > 0) {
             await Dose.insertMany(newDoses);
