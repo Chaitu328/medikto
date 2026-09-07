@@ -4,7 +4,7 @@ class LegalContent {
   static const String termsLastUpdated = "September 2026";
   static const String privacyPolicyLastUpdated = "September 2026";
 
-  static const String supportEmail = "shahmedikto@gmail.com";
+  static const String supportEmail = "info@medikto.com";
   static const String supportPhone = "+91 9642331668";
 
   static const String termsAndConditions = """
