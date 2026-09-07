@@ -3,6 +3,7 @@ import Script from 'next/script';
 import './globals.css';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://medikto.com';
 
 export const viewport: Viewport = {
   themeColor: '#006591',
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'Medikto Health Technologies Inc.' }],
   creator: 'Medikto',
   publisher: 'Medikto Health Technologies Inc.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://medikto.health'),
+  metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: '/',
   },
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     title: 'Medikto — Patient-Centric Health & Medication Platform',
     description:
       'Empowering patients, seniors, and family caregivers with automated pill alarms, selfie dose verification, live vitals tracking, and doctor summary reports.',
-    url: 'https://medikto.health',
+    url: SITE_URL,
     siteName: 'Medikto',
     images: [
       {
@@ -62,9 +63,15 @@ export const metadata: Metadata = {
     images: ['/images/medikto_logo.png'],
   },
   icons: {
-    icon: '/images/medikto_icon.png',
-    shortcut: '/images/medikto_icon.png',
-    apple: '/images/medikto_icon.png',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/images/medikto_icon.png', sizes: '192x192', type: 'image/png' },
+      { url: '/images/medikto_icon_trimmed.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [
+      { url: '/images/medikto_icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
@@ -77,20 +84,20 @@ const structuredData = {
   '@graph': [
     {
       '@type': 'WebSite',
-      '@id': 'https://medikto.health/#website',
-      url: 'https://medikto.health',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
       name: 'Medikto',
       description: 'Patient-Centric Health & Medication Management Platform',
       publisher: {
-        '@id': 'https://medikto.health/#organization',
+        '@id': `${SITE_URL}/#organization`,
       },
     },
     {
       '@type': 'Organization',
-      '@id': 'https://medikto.health/#organization',
+      '@id': `${SITE_URL}/#organization`,
       name: 'Medikto Health Technologies Inc.',
-      url: 'https://medikto.health',
-      logo: 'https://medikto.health/images/medikto_logo.png',
+      url: SITE_URL,
+      logo: `${SITE_URL}/images/medikto_logo.png`,
       contactPoint: {
         '@type': 'ContactPoint',
         telephone: '+91-800-MEDIKTO',
@@ -100,7 +107,7 @@ const structuredData = {
     },
     {
       '@type': 'MobileApplication',
-      '@id': 'https://medikto.health/#app',
+      '@id': `${SITE_URL}/#app`,
       name: 'Medikto',
       operatingSystem: 'Android, iOS',
       applicationCategory: 'HealthApplication',
@@ -112,13 +119,13 @@ const structuredData = {
         priceCurrency: 'INR',
       },
       publisher: {
-        '@id': 'https://medikto.health/#organization',
+        '@id': `${SITE_URL}/#organization`,
       },
     },
     {
       '@type': 'MedicalWebPage',
-      '@id': 'https://medikto.health/#webpage',
-      url: 'https://medikto.health',
+      '@id': `${SITE_URL}/#webpage`,
+      url: SITE_URL,
       name: 'Medikto — Patient-Centric Health & Medication Platform',
       description:
         'Patient-centric medication adherence and vitals tracking application for patients, seniors, and family caregivers.',

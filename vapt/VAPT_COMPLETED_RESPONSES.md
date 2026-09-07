@@ -243,17 +243,29 @@ This document contains pre-filled, accurate technical and business answers for a
 
 # 📋 DOCUMENT 4: VAPT Prerequisite Checklist (`VAPT_Prerquisite_Checklist.docx`)
 
-### General & Network Prerequisites:
-- [x] **IP Whitelisting:** AWS Security Group & Nginx will whitelist tester IPs once provided.
-- [x] **Scope Definition:** Defined (Admin Portal + Backend REST APIs + Android/iOS Mobile Apps + AWS Host Config).
-- [x] **Testing Environment:** Staging environment provided with sanitized dummy patient data.
+### 1. General Requirements
+- [x] **Whitelist 2 IPs:** Agreed. AWS Security Groups, Host Nginx, and rate-limiters will whitelist tester IPs once provided.
+- [x] **Network Diagram:** Provided (AWS EC2, Host Nginx, Dockerized Next.js/Express containers, AWS DocumentDB TLS, S3 AES-256).
+- [x] **Complete Scope:** Admin Portal (`admin.medikto.com`), Backend REST API (`api-prd.medikto.com`), Android APK, iOS TestFlight, PhonePe webhook, Marketing site (`medikto.health`).
+- [x] **Limitations & Constraints:** No DoS/DDoS volumetric testing. Testing strictly on Staging/UAT clone.
+- [x] **Testing Environment:** Dedicated Staging/UAT isolated environment.
 
-### Database & System Access:
-- [x] **Database Type:** AWS DocumentDB (MongoDB API) with TLS certificate authentication.
-- [x] **Test Credentials:** Dedicated test user credentials with read/write access to test collections will be provisioned.
-- [x] **API Documentation:** Postman collection and endpoint specification provided.
-- [x] **Test Accounts:**
-  - `super_admin` test account
-  - `hospital_admin` test account
-  - `doctor` test account
-  - `patient` (mobile test account with SMS OTP test bypass or test SIM)
+### 2. Server Setup for Vulnerability Scanner (Rapid7 / Nessus)
+- [N/A] **Dedicated Scanner VM (16GB RAM / 350GB Storage):** Not Applicable. This is a remote Web, REST API, and Mobile App Gray-Box Pentest conducted over public HTTPS using the agency's remote tools. No internal scanner VM is needed on our AWS account. The Medikto staging server runs on AWS EC2 (Ubuntu Linux / Docker).
+
+### 3. External IP Testing Requirements
+- [x] **Internet Access / Routing:** Public Elastic IP with port 80/443 open.
+- [x] **OS Details:** Ubuntu Linux 24.04 LTS (x86_64), Docker 27.x. 100% compatible with Rapid7 / Nessus / Qualys.
+
+### 4. Database Access
+- [N/A] **Oracle Packages (DBMS_METADATA / DBA_USERS):** Not Applicable. The database is **AWS DocumentDB (MongoDB 6.0 wire protocol)**, not Oracle.
+- [x] **Database Test Account:** Dedicated test user with `readWrite` access to test collections and TLS encryption (`global-bundle.pem`).
+
+### 5. Pentesting-Specific Requirements
+- [x] **System Access:** Gray-box credentials for all 5 roles (`super_admin`, `hospital_admin`, `doctor`, `patient`, `caregiver`). SSH key for staging EC2 available for config review.
+- [x] **Network Access:** AWS Security Groups & Nginx allowlisting authorized.
+- [x] **Application Access:** 5 dedicated test accounts pre-provisioned with mock data.
+- [x] **Documentation:** Postman REST API Collection with sample payloads + architecture diagram.
+- [x] **Logging & Monitoring:** Real-time Winston audit logs and Nginx access logs available.
+- [x] **Test Environment Preparation:** Staging environment configured as exact replica of production.
+- [x] **Temporary Access Period:** Valid for the duration of the agreed testing window.

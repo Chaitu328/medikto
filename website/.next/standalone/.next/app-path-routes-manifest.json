@@ -1,7 +1,9 @@
 {
-  "/sitemap.xml/route": "/sitemap.xml",
   "/robots.txt/route": "/robots.txt",
-  "/_not-found/page": "/_not-found",
+  "/sitemap.xml/route": "/sitemap.xml",
+  "/apple-icon.png/route": "/apple-icon.png",
+  "/icon.png/route": "/icon.png",
   "/api/contact/route": "/api/contact",
+  "/_not-found/page": "/_not-found",
   "/page": "/"
 }
