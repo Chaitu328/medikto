@@ -10,6 +10,7 @@ import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:medikto/features/auth/login_view/otp_screen.dart';
 import 'package:medikto/features/auth/register_view/register_screen.dart';
 import 'package:medikto/features/auth/register_view/google_consent_screen.dart';
+import 'package:medikto/bottom_bar.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
