@@ -45,6 +45,7 @@
     markAsTaken,
     verifyWithSelfie,
     getTodaySchedule,
+    getDoseHistory,
     deleteSelfie,
     recoverSelfie,
     adminDeleteSelfie,
@@ -253,6 +254,7 @@
   router.post("/medications", auth, auth.blockGuardianWrite, addMedication);
   router.get("/medications", auth, getMedications);
   router.get("/today", auth, getTodaySchedule);
+  router.get("/doses/history", auth, getDoseHistory);
   router.put("/medications/:id", auth, auth.blockGuardianWrite, updateMedication);
   router.patch("/medications/:id/status", auth, auth.blockGuardianWrite, updateMedicationStatus);
   router.delete("/medications/:id", auth, auth.blockGuardianWrite, deleteMedication);

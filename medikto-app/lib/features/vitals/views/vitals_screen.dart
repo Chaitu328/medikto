@@ -249,7 +249,7 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Medical Documents Hub",
+                              "Medical Documents & Vitals Hub",
                               style: TextStyle(
                                 color: theme.textPrimary,
                                 fontSize: 16,

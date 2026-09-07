@@ -171,6 +171,65 @@ class MedicationManager {
     }
   }
 
+  Future<ResponseData> getDoseHistory({
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (startDate != null && startDate.isNotEmpty) {
+        queryParams['startDate'] = startDate;
+      }
+      if (endDate != null && endDate.isNotEmpty) {
+        queryParams['endDate'] = endDate;
+      }
+
+      final response = await dioClient.ref!.get(
+        ApiUrls.doseHistory,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+
+      print("DOSE HISTORY RESPONSE ($startDate to $endDate) => ${response.data}");
+
+      if (response.statusCode == 200) {
+        List rawList;
+        final data = response.data;
+        if (data is List) {
+          rawList = data;
+        } else if (data is Map && data['schedules'] != null) {
+          rawList = data['schedules'] as List;
+        } else {
+          rawList = [];
+        }
+
+        final doseList = rawList
+            .map((e) => TodayScheduleModel.fromJson(e))
+            .toList();
+
+        return ResponseData(
+          "Dose history fetched successfully",
+          ResponseStatus.SUCCESS,
+          data: doseList,
+        );
+      } else {
+        return ResponseData(
+          "Failed to fetch dose history",
+          ResponseStatus.FAILED,
+        );
+      }
+    } on DioException catch (e) {
+      print("DOSE HISTORY ERROR => ${e.response?.data}");
+
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      print("DOSE HISTORY ERROR => $e");
+      return ResponseData("Network error", ResponseStatus.FAILED);
+    }
+  }
+
   Future<ResponseData> updateMedication({
     required String id,
     required MedicationModel medication,

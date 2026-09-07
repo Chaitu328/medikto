@@ -297,9 +297,20 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     );
   }
 
+  Map<String, String?> _getHistoryQueryParams() {
+    if (_selectedDateRange != null) {
+      return {
+        'startDate': DateFormat('yyyy-MM-dd').format(_selectedDateRange!.start),
+        'endDate': DateFormat('yyyy-MM-dd').format(_selectedDateRange!.end),
+      };
+    }
+    return {};
+  }
+
   Widget _buildTabContent(String tabName) {
     final colors = context.themeColors;
-    final scheduleAsync = ref.watch(getTodayScheduleProvider);
+    final params = _getHistoryQueryParams();
+    final scheduleAsync = ref.watch(doseHistoryProvider(params));
 
     return scheduleAsync.when(
       loading: () =>
@@ -359,7 +370,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
           color: colors.accentPrimary,
           backgroundColor: colors.surface,
           onRefresh: () async {
-            ref.invalidate(getTodayScheduleProvider);
+            ref.invalidate(doseHistoryProvider(params));
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(
@@ -853,7 +864,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                   );
 
                   if (result == true) {
-                    ref.invalidate(getTodayScheduleProvider);
+                    ref.invalidate(doseHistoryProvider);
                     if (mounted) {
                       setState(() {});
                     }
@@ -1114,8 +1125,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
 
     try {
       final tabNames = ["All Records", "Taken", "Missed", "Pending"];
+      final params = _getHistoryQueryParams();
 
-      final response = await ref.read(getTodayScheduleProvider.future);
+      final response = await ref.read(doseHistoryProvider(params).future);
 
       if (response.status != ResponseStatus.SUCCESS || response.data == null) {
         return;

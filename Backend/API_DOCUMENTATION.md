@@ -2186,6 +2186,7 @@ PUT    /api/subscription
 POST   /api/medications
 GET    /api/medications
 GET    /api/today
+GET    /api/doses/history
 PUT    /api/medications/:id
 DELETE /api/medications/:id
 PUT    /api/dose/:doseId/taken

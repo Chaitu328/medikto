@@ -44,6 +44,17 @@ final getScheduleForDateProvider =
       return ref.watch(medicationProvider).getTodaySchedule(date: date);
     });
 
+final doseHistoryProvider =
+    FutureProvider.family.autoDispose<ResponseData, Map<String, String?>>((
+      ref,
+      params,
+    ) async {
+      return ref.watch(medicationProvider).getDoseHistory(
+            startDate: params['startDate'],
+            endDate: params['endDate'],
+          );
+    });
+
 final updateMedicationProvider =
     FutureProvider.family<ResponseData, Map<String, dynamic>>((
       ref,

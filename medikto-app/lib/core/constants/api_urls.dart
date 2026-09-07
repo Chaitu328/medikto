@@ -26,6 +26,7 @@ class ApiUrls {
   static String markAstaken(String doseId) => "/dose/$doseId/taken";
 
   static String todaySchedule = "/today";
+  static const String doseHistory = "/doses/history";
   static const String addBloodPressure = "/vitals/blood-pressure";
   static const String addHeartRate = "/vitals/heart-rate";
   static const String addTemperature = "/vitals/temperature";

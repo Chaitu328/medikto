@@ -204,11 +204,22 @@ For a dose scheduled at **11:30 AM IST**:
         No take actions              No take actions
 ```
 
-- **Timezone**: `Asia/Kolkata` across all calculations.
+- **Timezone**: `Asia/Kolkata` (IST) across all calculations (medication start/end date, dose date, scheduled time, reminder cron 3-day query window, adherence 7-day window, missed expiration, and notification dispatch).
 - **Status Priority Rule**: `1. Status (taken/missed/cancelled) -> 2. Scheduled Date -> 3. Scheduled Time -> 4. Current Asia/Kolkata Time`.
 - **Taken Doses**: Permanently `taken`, distinct `time` (e.g. `11:30 AM`) and `takenAt` (ISO timestamp).
 - **Missed Doses**: Permanently `missed` after 60 minutes. Server rejects any take action on expired doses.
-### 3. Medication Edit & Delete Actions & Historical Record Preservation
+
+### 3. Date-Scoped Activity History vs. Multi-Day Medical Records
+- **`ActivityHistoryScreen` (Today-Only View)**:
+  - Displays **only today's** dose schedule in `Asia/Kolkata`.
+  - Driven by `getTodayScheduleProvider` (`GET /api/today`).
+  - Yesterday's or older doses **never** mix into today's Activity History or Add New Medication's Recent Activity.
+- **`MedicalRecordsScreen` (Dedicated Multi-Day Historical View)**:
+  - Displays multi-day historical records with custom date-range filtering (defaults to the last 30 days in `Asia/Kolkata`).
+  - Driven by `doseHistoryProvider` (`GET /api/doses/history?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`).
+  - Supports full multi-day PDF export and compliance chart analytics.
+
+### 4. Medication Edit & Delete Actions & Historical Record Preservation
 - **Entity Relationship**: Recent Activity and Activity History display daily `Dose` records, which reference a parent `Medication` template. The **Edit** and **Delete** actions operate on the parent `Medication` entity (`dose.medication`).
 - **Edit Action**:
   - Tapping Edit on a Recent Activity tile or Activity History item opens the Add Medication form pre-populated with existing medication details (Name, Dosage, Unit, Timings, Frequency, Start Date, Duration/Continuous, Notifications toggle, Patient Instructions).

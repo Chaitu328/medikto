@@ -65,6 +65,35 @@ const getLocalTimeDetails = (dateObj, timezone = "Asia/Kolkata") => {
     return { localDate: fallbackDate, hour: dateObj.getUTCHours(), minute: dateObj.getUTCMinutes(), totalMinutes: dateObj.getUTCHours() * 60 + dateObj.getUTCMinutes() };
   }
 };
+
+const getISTDateString = (dateObj, timezone = "Asia/Kolkata") => {
+  if (!dateObj) return null;
+  const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
+  if (isNaN(d.getTime())) return null;
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    const parts = formatter.formatToParts(d);
+    const year = parts.find((p) => p.type === "year")?.value;
+    const month = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    return `${year}-${month}-${day}`;
+  } catch (err) {
+    return d.toISOString().split("T")[0];
+  }
+};
+
+const getISTDayOfWeek = (dateInput, timezone = "Asia/Kolkata") => {
+  const dateStr = typeof dateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)
+    ? dateInput
+    : getISTDateString(dateInput, timezone);
+  if (!dateStr) return 0;
+  return new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+};
 const parseTimeToMinutes = (timeString) => {
   if (!timeString) return null;
   const cleanTime = timeString.replace(/\u202F|\u00A0/g, " ").trim();
@@ -206,8 +235,8 @@ exports.addMedication = async (req, res) => {
     });
 
     const today = getTodayDate();
-    const medStartDateStr = medStartDate.toISOString().split("T")[0];
-    const medEndDateStr = medEndDate ? medEndDate.toISOString().split("T")[0] : null;
+    const medStartDateStr = getISTDateString(medStartDate);
+    const medEndDateStr = medEndDate ? getISTDateString(medEndDate) : null;
 
     // Creation timestamp details in Asia/Kolkata
     const createdTimestamp = medication.createdAt || new Date();
@@ -295,9 +324,9 @@ const ensureDosesExist = async (req, date) => {
           continue;
         }
 
-        // Date range checks
+        // Date range checks using Asia/Kolkata calendar dates
         const medStartDate = med.startDate || med.createdAt || new Date();
-        const medStartDateStr = new Date(medStartDate).toISOString().split("T")[0];
+        const medStartDateStr = getISTDateString(medStartDate);
         
         // If target date is before the medication's start date, skip
         if (date < medStartDateStr) {
@@ -306,8 +335,8 @@ const ensureDosesExist = async (req, date) => {
 
         // If not continuous and end date exists, check if date is past end date
         if (!med.isContinue && med.endDate) {
-          const medEndDateStr = new Date(med.endDate).toISOString().split("T")[0];
-          if (date > medEndDateStr) {
+          const medEndDateStr = getISTDateString(med.endDate);
+          if (medEndDateStr && date > medEndDateStr) {
             // Auto-complete medication if past end date
             const todayStr = getTodayDate();
             if (todayStr > medEndDateStr && med.status === "active") {
@@ -319,8 +348,8 @@ const ensureDosesExist = async (req, date) => {
         }
 
         if (med.frequency === "weekly") {
-          const creationDay = new Date(medStartDate).getDay();
-          const targetDay = new Date(date).getDay();
+          const creationDay = getISTDayOfWeek(medStartDate);
+          const targetDay = getISTDayOfWeek(date);
           if (creationDay !== targetDay) {
             continue; // Skip this medication on this date since it is not the scheduled weekday
           }
@@ -332,38 +361,46 @@ const ensureDosesExist = async (req, date) => {
         const creationDateStr = createdLocal.localDate;
         const creationTimeMinutes = createdLocal.totalMinutes;
 
-        const doseExists = await Dose.exists({
-          user: patientId,
-          medication: med._id,
-          date: date,
-        });
+        // Fetch existing doses for this medication and date to check per-timing slot
+        const existingDoses = await Dose.find(
+          {
+            user: patientId,
+            medication: med._id,
+            date: date,
+          },
+          { time: 1 }
+        ).lean();
 
-        if (!doseExists) {
-          const newDoses = [];
-          for (const t of med.timings) {
-            const scheduledTimeStr = timingToTimeMap[t.toLowerCase()] || t;
-            const scheduledMinutes = parseTimeToMinutes(scheduledTimeStr);
+        const existingTimes = new Set(existingDoses.map((d) => d.time));
 
-            // Rule: On creation date, skip any scheduled time that had already passed before the medication was created.
-            if (date === creationDateStr && scheduledMinutes !== null && scheduledMinutes < creationTimeMinutes) {
-              console.log(`[ensureDosesExist] Skipping past scheduled dose for new medication on creation date. Med=${med._id} Date=${date} Scheduled=${scheduledTimeStr} (${scheduledMinutes}m) CreatedTime=${creationTimeMinutes}m`);
-              continue;
-            }
-
-            newDoses.push({
-              user: patientId,
-              medication: med._id,
-              name: med.name,
-              dosage: `${med.dosage}${med.unit}`,
-              date: date,
-              time: scheduledTimeStr,
-              status: "pending",
-            });
+        const newDoses = [];
+        for (const t of med.timings) {
+          const scheduledTimeStr = timingToTimeMap[t.toLowerCase()] || t;
+          if (existingTimes.has(scheduledTimeStr)) {
+            continue;
           }
 
-          if (newDoses.length > 0) {
-            await Dose.insertMany(newDoses);
+          const scheduledMinutes = parseTimeToMinutes(scheduledTimeStr);
+
+          // Rule: On creation date, skip any scheduled time that had already passed before the medication was created.
+          if (date === creationDateStr && scheduledMinutes !== null && scheduledMinutes < creationTimeMinutes) {
+            console.log(`[ensureDosesExist] Skipping past scheduled dose for new medication on creation date. Med=${med._id} Date=${date} Scheduled=${scheduledTimeStr} (${scheduledMinutes}m) CreatedTime=${creationTimeMinutes}m`);
+            continue;
           }
+
+          newDoses.push({
+            user: patientId,
+            medication: med._id,
+            name: med.name,
+            dosage: `${med.dosage}${med.unit}`,
+            date: date,
+            time: scheduledTimeStr,
+            status: "pending",
+          });
+        }
+
+        if (newDoses.length > 0) {
+          await Dose.insertMany(newDoses);
         }
       }
     }
@@ -948,6 +985,85 @@ exports.recoverSelfie =
     } catch (err) {
 
       res.status(500).json({
+        error: err.message,
+      });
+    }
+  };
+
+  // ================= GET DOSE HISTORY (MULTI-DAY / DATE-RANGE) =================
+  exports.getDoseHistory = async (req, res) => {
+    try {
+      const { startDate, endDate, patientId } = req.query;
+
+      const filter = await buildUserAccessFilter(req, patientId);
+
+      // Build date filter (Asia/Kolkata date strings)
+      let dateFilter = {};
+      if (startDate && endDate) {
+        dateFilter = { $gte: startDate, $lte: endDate };
+      } else if (startDate) {
+        dateFilter = { $gte: startDate };
+      } else if (endDate) {
+        dateFilter = { $lte: endDate };
+      } else {
+        // Default: Last 30 days up to today in Asia/Kolkata
+        const todayIST = getTodayDate();
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgoIST = getISTDateString(thirtyDaysAgo);
+        dateFilter = { $gte: thirtyDaysAgoIST, $lte: todayIST };
+      }
+
+      const query = Dose.find({
+        ...filter,
+        date: dateFilter,
+        isDeleted: { $ne: true }
+      }).sort({ date: -1, time: 1 }).populate("medication");
+
+      if (shouldPopulateUser(req)) {
+        query.populate("user", "firstName phone email profilePic subscription hospitals");
+      }
+
+      const doses = await query;
+
+      // Auto-expire pending doses where 60-min window has passed
+      const defaultTz = "Asia/Kolkata";
+      for (const d of doses) {
+        if (d.status === "pending") {
+          const userTz = (d.user && d.user.timezone) || defaultTz;
+          if (isDoseExpired(d.date, d.time, userTz)) {
+            d.status = "missed";
+            await d.save();
+          }
+        }
+      }
+
+      // Resolve presigned URLs for private proof images and profile pictures
+      const resolvedSchedules = await Promise.all(
+        doses.map(async (d) => {
+          const dObj = d.toObject ? d.toObject() : d;
+          if (dObj.proofImage) {
+            dObj.proofImage = await resolveFileUrl(dObj.proofImage);
+          }
+          if (dObj.user && dObj.user.profilePic) {
+            dObj.user.profilePic = await resolveFileUrl(dObj.user.profilePic);
+          }
+          return dObj;
+        })
+      );
+
+      res.status(200).json({
+        success: true,
+        startDate: typeof dateFilter === "object" ? dateFilter.$gte : undefined,
+        endDate: typeof dateFilter === "object" ? dateFilter.$lte : undefined,
+        totalSchedules: resolvedSchedules.length,
+        schedules: resolvedSchedules,
+      });
+
+    } catch (err) {
+      console.log("DOSE HISTORY ERROR:", err.message);
+      res.status(500).json({
+        success: false,
         error: err.message,
       });
     }

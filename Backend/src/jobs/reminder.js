@@ -55,13 +55,13 @@ const getLocalTimeDetails = (dateObj, timezone = "Asia/Kolkata") => {
 cron.schedule("* * * * *", async () => {
   try {
     const now = new Date();
-    const utcDateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD in UTC
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const todayIST = getLocalTimeDetails(now, "Asia/Kolkata").localDate;
+    const yesterdayIST = getLocalTimeDetails(new Date(now.getTime() - 24 * 60 * 60 * 1000), "Asia/Kolkata").localDate;
+    const tomorrowIST = getLocalTimeDetails(new Date(now.getTime() + 24 * 60 * 60 * 1000), "Asia/Kolkata").localDate;
 
-    // Find pending doses within a 3-day window of UTC now
+    // Find pending doses within a 3-day window of Asia/Kolkata (IST) now
     const pendingDoses = await Dose.find({
-      date: { $in: [yesterday, utcDateStr, tomorrow] },
+      date: { $in: [yesterdayIST, todayIST, tomorrowIST] },
       status: "pending",
       isDeleted: { $ne: true }
     })
