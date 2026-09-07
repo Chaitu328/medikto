@@ -138,7 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (_) => const BaseBottomNavigationPage(),
+              builder: (_) => BaseBottomNavigationPage(),
             ),
             (route) => false,
           );
@@ -267,7 +267,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
-                builder: (_) => const BaseBottomNavigationPage(),
+                builder: (_) => BaseBottomNavigationPage(),
               ),
               (route) => false,
             );

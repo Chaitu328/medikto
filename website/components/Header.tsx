@@ -18,9 +18,8 @@ export const Header: React.FC<Props> = ({
     { label: 'Home', id: 'home' },
     { label: 'Features', id: 'features' },
     { label: 'How It Works', id: 'how-it-works' },
-    { label: 'For Patients', id: 'for-patients' },
+    { label: 'For Hospitals', id: 'for-hospitals' },
     { label: 'For Caretakers', id: 'for-caretakers' },
-    { label: 'About', id: 'about' },
     { label: 'Contact', id: 'contact' },
   ];
 
@@ -100,8 +99,18 @@ export const Header: React.FC<Props> = ({
           })}
         </nav>
 
-        {/* Action Controls: Direct Contact CTA */}
+        {/* Action Controls: Hospital Portal & Contact CTAs */}
         <div className="flex items-center gap-3">
+          <a
+            href="https://admin.medikto.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-full bg-gradient-to-r from-[#006591] to-[#0ea5e9] text-white font-bold text-xs tracking-wide shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95"
+          >
+            <span className="material-symbols-outlined text-[16px]">local_hospital</span>
+            <span>Hospital Portal</span>
+          </a>
+
           <button
             onClick={() => onNavigate('contact')}
             className="hidden sm:inline-flex items-center justify-center h-10 px-5 rounded-full bg-sky-50 hover:bg-sky-100 text-[#006591] font-bold text-xs tracking-wide border border-sky-200/80 transition-all hover:scale-105 active:scale-95 shadow-sm"

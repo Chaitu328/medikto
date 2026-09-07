@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { CaregiverAlert } from '../lib/types';
-import { playChime } from '../lib/audio';
 
 interface Props {
   alerts: CaregiverAlert[];
@@ -16,14 +15,13 @@ export const CaregiverSection: React.FC<Props> = ({ alerts, onAddAlert, onOpenPr
   const handleTestAlert = () => {
     const newAlert: CaregiverAlert = {
       id: `alert-${Date.now()}`,
-      title: 'SMS Sent to Sarah: Arthur verified afternoon Metformin dose',
-      description: 'Dose logged on time with lunch. Automated fallback timer reset.',
+      title: 'Dose Logged: Afternoon Metformin marked as taken',
+      description: 'Timestamped selfie proof uploaded & verified on today\'s schedule feed.',
       type: 'dose_taken',
       timestamp: 'Just now',
       status: 'confirmed',
     };
     onAddAlert(newAlert);
-    playChime('success');
     setTestSent(true);
     setTimeout(() => setTestSent(false), 3000);
   };
@@ -42,10 +40,10 @@ export const CaregiverSection: React.FC<Props> = ({ alerts, onAddAlert, onOpenPr
                 CROSS-GENERATIONAL CARING
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-2 mb-4">
-                Giving Caretakers Peace of Mind, Miles Away
+                Giving Caretakers Peace of Mind with Live Read-Only Access
               </h2>
               <p className="text-base sm:text-lg text-slate-300 mb-6 leading-relaxed">
-                Managing an aging parent's healthcare while juggling work and family shouldn't feel like a constant state of worry. Medikto bridges the gap with quiet, reassuring transparency.
+                Managing a parent's healthcare shouldn't feel like a constant state of worry. Caregivers log in with dedicated credentials to monitor today's dose timeline, view confirmed doses with timestamped selfie proofs, and check logged vitals in real time.
               </p>
 
               {/* Testimonial Quote */}

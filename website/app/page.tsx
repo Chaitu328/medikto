@@ -14,7 +14,6 @@ import {
   CaregiverAlert,
   PatientProfile,
 } from '../lib/types';
-import { playChime } from '../lib/audio';
 
 import { Header } from '../components/Header';
 import { HeroSection } from '../components/HeroSection';
@@ -23,6 +22,7 @@ import { FeaturesGrid } from '../components/FeaturesGrid';
 import { MedicationSection } from '../components/MedicationSection';
 import { VitalsSection } from '../components/VitalsSection';
 import { CaregiverSection } from '../components/CaregiverSection';
+import { HospitalSection } from '../components/HospitalSection';
 import { SeniorsPillars } from '../components/SeniorsPillars';
 import { MobileShowcase } from '../components/MobileShowcase';
 import { ContactSection } from '../components/ContactSection';
@@ -75,8 +75,6 @@ export default function HomePage() {
 
     const targetMed = medications.find((m) => m.id === id);
     const medName = targetMed ? targetMed.name : 'Medication';
-
-    playChime('success');
 
     // Generate automatic caregiver notification alert
     const newAlert: CaregiverAlert = {
@@ -186,7 +184,10 @@ export default function HomePage() {
           onOpenProfile={() => handleNavigate('contact')}
         />
 
-        {/* 7. Built for Seniors. Loved by Families. */}
+        {/* 7. Connected Hospitals & Doctor Admin Portal */}
+        <HospitalSection />
+
+        {/* 8. Built for Seniors. Loved by Families. */}
         <SeniorsPillars />
 
         {/* 8. Smartphone Mockup Showcase */}

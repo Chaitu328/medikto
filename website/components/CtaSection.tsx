@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { trackDownloadApp } from '../lib/analytics';
 
 interface Props {
   onNavigate?: (sectionId: string) => void;
@@ -47,14 +48,20 @@ export const CtaSection: React.FC<Props> = ({ onNavigate }) => {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => alert('Medikto iOS app will be downloaded from Apple App Store.')}
+              onClick={() => {
+                trackDownloadApp('app_store');
+                alert('Medikto iOS app will be downloaded from Apple App Store.');
+              }}
               className="inline-flex items-center gap-2 px-5 py-3.5 rounded-full bg-slate-800/90 hover:bg-slate-700 text-white font-bold text-xs transition-colors border border-slate-700 shadow-sm"
             >
               <span className="material-symbols-outlined text-[18px]">file_download</span>
               <span>App Store</span>
             </button>
             <button
-              onClick={() => alert('Medikto Android app will be downloaded from Google Play Store.')}
+              onClick={() => {
+                trackDownloadApp('google_play');
+                alert('Medikto Android app will be downloaded from Google Play Store.');
+              }}
               className="inline-flex items-center gap-2 px-5 py-3.5 rounded-full bg-slate-800/90 hover:bg-slate-700 text-white font-bold text-xs transition-colors border border-slate-700 shadow-sm"
             >
               <span className="material-symbols-outlined text-[18px]">play_arrow</span>
@@ -64,7 +71,7 @@ export const CtaSection: React.FC<Props> = ({ onNavigate }) => {
         </div>
 
         <p className="text-xs text-slate-400">
-          HIPAA Compliant • Encrypted Health Cloud • 24/7 Caregiver Reassurance
+          Secure Health Data • 24/7 Caregiver Peace of Mind • Smart Adherence
         </p>
       </div>
     </section>

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Medication, VitalMetric } from '../lib/types';
-import { playChime } from '../lib/audio';
 
 interface Props {
   medications: Medication[];
@@ -73,19 +72,19 @@ export const HeroSection: React.FC<Props> = ({
               </button>
             </div>
 
-            {/* Quick Proof Metric Cards */}
+            {/* Real Platform Feature Badges */}
             <div className="w-full grid grid-cols-3 gap-3.5 p-4 rounded-2xl bg-white/80 backdrop-blur-sm border border-slate-200/80 shadow-sm">
               <div className="text-center sm:text-left px-2">
-                <p className="text-2xl sm:text-3xl font-black text-slate-900">60m</p>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Flex Window</p>
+                <p className="text-xl sm:text-2xl font-black text-slate-900">+91 OTP</p>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Phone Sign-In</p>
               </div>
               <div className="text-center sm:text-left px-2 border-x border-slate-200/80">
-                <p className="text-2xl sm:text-3xl font-black text-[#0ea5e9]">100%</p>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Adherence</p>
+                <p className="text-xl sm:text-2xl font-black text-[#0ea5e9]">Selfie Proof</p>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Confirm Your Dose</p>
               </div>
               <div className="text-center sm:text-left px-2">
-                <p className="text-2xl sm:text-3xl font-black text-[#006591]">Live</p>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Family Sync</p>
+                <p className="text-xl sm:text-2xl font-black text-[#006591]">5-Min OTP</p>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Connect to Hospital</p>
               </div>
             </div>
           </div>
@@ -104,7 +103,7 @@ export const HeroSection: React.FC<Props> = ({
                 <div className="flex justify-between items-center mb-4 px-1">
                   <div>
                     <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">TODAY'S SCHEDULE</span>
-                    <h3 className="text-white font-bold text-sm">Sunday, Sep 7</h3>
+                    <h3 className="text-white font-bold text-sm">Today's Schedule</h3>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-emerald-950/80 text-emerald-400 text-[11px] font-bold border border-emerald-800/50 flex items-center gap-1">
                     <span className="material-symbols-outlined text-[13px]">verified</span> 100% Adherence
@@ -120,14 +119,11 @@ export const HeroSection: React.FC<Props> = ({
                     <span className="text-slate-400 text-[11px] font-semibold">08:00 AM</span>
                   </div>
                   <h4 className="text-white text-sm font-bold">Metformin HCl</h4>
-                  <p className="text-slate-400 text-[12px] mb-2">500mg • 1 tablet with food</p>
+                  <p className="text-slate-400 text-[12px] mb-2">500mg • 1 tablet after food</p>
                   <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                    <button
-                      onClick={() => playChime('gentle')}
-                      className="text-slate-400 hover:text-cyan-300 text-[11px] flex items-center gap-1 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[13px] text-cyan-400">volume_up</span> Gentle chime
-                    </button>
+                    <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px] text-emerald-400">photo_camera</span> Selfie Verified
+                    </span>
                     <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
                       <span className="material-symbols-outlined text-[14px]">done</span>
                     </span>

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Medication } from '../lib/types';
-import { playChime } from '../lib/audio';
 
 interface Props {
   medications: Medication[];
@@ -21,8 +20,7 @@ export const MedicationSection: React.FC<Props> = ({
 
   const handleSnoozeWithNotice = (id: string, name: string) => {
     onSnooze(id);
-    playChime('alert');
-    setSnoozeNotif(`Snoozed ${name} for 15 minutes. A gentle chime will remind you then.`);
+    setSnoozeNotif(`Snoozed ${name} for 15 minutes.`);
     setTimeout(() => setSnoozeNotif(null), 4000);
   };
 

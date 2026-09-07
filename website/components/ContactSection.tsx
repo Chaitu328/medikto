@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { trackContactSubmit } from '../lib/analytics';
 
 export const ContactSection: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -39,6 +40,7 @@ export const ContactSection: React.FC = () => {
       }
 
       setStatus('success');
+      trackContactSubmit('Public Contact Form');
       setFormData({
         name: '',
         phone: '',
@@ -76,7 +78,7 @@ export const ContactSection: React.FC = () => {
             </h2>
 
             <p className="text-lg text-slate-600 leading-relaxed mb-8">
-              Have questions about family care plans, physician summaries, hospital integrations, or need personalized onboarding assistance? Send us a message and our healthcare support specialists will respond promptly.
+              Have a question about the Medikto app, hospital portal access, or caregiver setup? Fill in the form and our support team will get back to you within 24 hours.
             </p>
 
             <div className="space-y-4">
@@ -86,8 +88,8 @@ export const ContactSection: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Official Email</p>
-                  <a href="mailto:shahmedikto@gmail.com" className="text-base font-bold text-slate-900 hover:text-[#006591] transition-colors">
-                    shahmedikto@gmail.com
+                  <a href="mailto:info@medikto.com" className="text-base font-bold text-slate-900 hover:text-[#006591] transition-colors">
+                    info@medikto.com
                   </a>
                 </div>
               </div>
@@ -98,7 +100,7 @@ export const ContactSection: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Data Privacy & Security</p>
-                  <p className="text-sm font-bold text-slate-800">HIPAA & Encrypted Telemetry Standards</p>
+                  <p className="text-sm font-bold text-slate-800">Patient data is securely stored and protected</p>
                 </div>
               </div>
 
@@ -107,8 +109,8 @@ export const ContactSection: React.FC = () => {
                   <span className="material-symbols-outlined text-[24px]">headset_mic</span>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Response Window</p>
-                  <p className="text-sm font-bold text-slate-800">Within 24 Hours • Dedicated Support</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Support Hours</p>
+                  <p className="text-sm font-bold text-slate-800">Reply within 24 hours — Mon to Sat</p>
                 </div>
               </div>
             </div>

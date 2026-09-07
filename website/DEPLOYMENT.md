@@ -53,9 +53,26 @@ cd website
 
 ---
 
-### Step 3: Build & Start the Website Container
+### Step 3: Configure Environment Variables (Optional Google Analytics)
+Create or edit `.env.local` inside `/home/ubuntu/medikto/website/.env.local`:
 ```bash
-# 1. Build and run in detached mode
+nano .env.local
+```
+Add your configurations:
+```env
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_SITE_URL=https://medikto.health
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=healthreportsapp7@gmail.com
+SMTP_PASS=cqvxqlydhbgteeau
+```
+
+---
+
+### Step 4: Build & Start the Website Container
+```bash
+# 1. Build and run in detached mode (build args automatically read from .env.local / env)
 docker compose up -d --build
 
 # 2. Check running container status and health
