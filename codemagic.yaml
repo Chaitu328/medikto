@@ -11,16 +11,23 @@ workflows:
       xcode: latest
       cocoapods: default
 
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.example.medikto
+
     scripts:
       - name: Get Flutter packages
         script: |
           flutter pub get
 
-
-      - name: Build iOS
+      - name: Set up code signing
         script: |
-          flutter build ios --debug --no-codesign
+          xcode-project use-profiles
+
+      - name: Build IPA
+        script: |
+          flutter build ipa --release
 
     artifacts:
-      - build/ios/iphoneos/**/*.app
-      - medikto-app/build/ios/iphoneos/**/*.app
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log

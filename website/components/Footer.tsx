@@ -14,26 +14,23 @@ export const Footer: React.FC<Props> = ({ onNavigate }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 pb-12">
           {/* Brand Col */}
           <div className="lg:col-span-4 flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#006591] to-[#0ea5e9] p-[2px] shadow-sm">
-                <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center p-1">
-                  <Image
-                    src="/images/medikto_icon.png"
-                    alt="Medikto Icon"
-                    width={26}
-                    height={26}
-                    className="object-contain"
-                  />
-                </div>
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center shrink-0">
+                <Image
+                  src="/images/medikto_icon_trimmed.png"
+                  alt="Medikto Icon"
+                  width={36}
+                  height={36}
+                  className="h-8 w-8 sm:h-9 sm:w-9 object-contain"
+                />
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center shrink-0">
                 <Image
                   src="/images/medikto_title_trimmed.png"
                   alt="Medikto"
                   width={130}
-                  height={22}
-                  className="h-5.5 sm:h-6 w-auto object-contain"
-                  priority
+                  height={24}
+                  className="h-5 sm:h-6 w-auto object-contain"
                 />
               </div>
             </div>

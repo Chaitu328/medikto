@@ -45,19 +45,19 @@ export const Header: React.FC<Props> = ({
                 alt="Medikto Icon"
                 width={36}
                 height={36}
-                className="h-9 w-9 object-contain"
+                className="h-8 w-8 sm:h-9 sm:w-9 object-contain"
                 priority
               />
             </div>
 
             {/* Official Brand Wordmark */}
-            <div className="flex items-center">
+            <div className="flex items-center shrink-0">
               <Image
                 src="/images/medikto_title_trimmed.png"
                 alt="Medikto"
                 width={130}
-                height={22}
-                className="h-5.5 sm:h-6 w-auto object-contain"
+                height={24}
+                className="h-5 sm:h-6 w-auto object-contain"
                 priority
               />
             </div>
