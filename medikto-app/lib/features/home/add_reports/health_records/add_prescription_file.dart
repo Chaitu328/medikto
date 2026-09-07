@@ -27,73 +27,8 @@ class _AddPrescriptionFileScreenState
   final TextEditingController dosageController = TextEditingController();
 
   File? selectedFile;
-  List<Map<String, dynamic>> reminders = [];
   bool isLoading = false;
   final ImagePicker _picker = ImagePicker();
-
-  Future<void> addReminderTime() async {
-    final themeColors = context.themeColors;
-    final isDark = context.isDarkMode;
-    final TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      initialEntryMode: TimePickerEntryMode.input,
-      builder: (context, child) {
-        return Theme(
-          data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
-            scaffoldBackgroundColor: themeColors.bg,
-            colorScheme: ColorScheme(
-              brightness: isDark ? Brightness.dark : Brightness.light,
-              primary: themeColors.accentPrimary,
-              onPrimary: themeColors.onAccentPrimary,
-              secondary: themeColors.accentPrimary,
-              onSecondary: themeColors.onAccentPrimary,
-              error: AppColors.missedRed,
-              onError: Colors.white,
-              surface: themeColors.surface,
-              onSurface: themeColors.textPrimary,
-            ),
-            timePickerTheme: TimePickerThemeData(
-              backgroundColor: themeColors.surface,
-              hourMinuteTextColor: themeColors.textPrimary,
-              hourMinuteColor: themeColors.cardSecondary,
-              dialHandColor: themeColors.accentPrimary,
-              dialBackgroundColor: themeColors.cardSecondary,
-              entryModeIconColor: themeColors.accentPrimary,
-            ),
-            dialogTheme: DialogThemeData(
-              backgroundColor: themeColors.surface,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (pickedTime != null) {
-      final now = DateTime.now();
-
-      final dateTime = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
-
-      final formattedTime = TimeOfDay.fromDateTime(dateTime).format(context);
-
-      setState(() {
-        reminders.add({"time": formattedTime, "enabled": true});
-      });
-    }
-  }
-
-  void removeReminder(int index) {
-    setState(() {
-      reminders.removeAt(index);
-    });
-  }
 
   Future<void> pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -190,6 +125,8 @@ class _AddPrescriptionFileScreenState
     setState(() {
       isLoading = false;
     });
+
+    if (!mounted) return;
 
     if (response.status == ResponseStatus.SUCCESS) {
       AppToasts.showSuccess(context, response.message);

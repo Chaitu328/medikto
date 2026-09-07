@@ -48,7 +48,6 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   String _selectedVitalFilter = "All"; // All, bloodPressure, heartRate, sugar, temperature
   String _selectedReportCondition = "All"; // All, Critical, Moderate, Normal
   String _selectedReportType = "All"; // All, Medical, Lab, Vaccination, Prescription
-  String _selectedPrescriptionReminder = "All"; // All, Active, Disabled
   bool _showTrendChart = true;
 
   @override
@@ -1048,8 +1047,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
           "Search by medicine or instructions...",
         ),
 
-        // Filter chips
-        _buildPrescriptionFilterChips(),
+        const SizedBox(height: 8),
 
         Expanded(
           child: RefreshIndicator(
@@ -1065,22 +1063,13 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
                 // Filter logic
                 final filteredPrescriptions = prescriptions.where((p) {
-                  final matchesQuery = p.medicineName
+                  return p.medicineName
                           .toLowerCase()
                           .contains(_prescriptionQuery) ||
                       (p.dosageInstructions
                               ?.toLowerCase()
                               .contains(_prescriptionQuery) ??
                           false);
-
-                  final hasReminders = p.reminders.any((r) => r.enabled);
-                  final matchesReminder = _selectedPrescriptionReminder == "All" ||
-                      (_selectedPrescriptionReminder == "Active" &&
-                          hasReminders) ||
-                      (_selectedPrescriptionReminder == "Disabled" &&
-                          !hasReminders);
-
-                  return matchesQuery && matchesReminder;
                 }).toList();
 
                 if (filteredPrescriptions.isEmpty) {
@@ -1167,53 +1156,6 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               onSelected: (val) {
                 if (val) {
                   setState(() => _selectedReportCondition = cond);
-                }
-              },
-              backgroundColor: themeColors.surface,
-              selectedColor: themeColors.accentSubtle,
-              checkmarkColor: themeColors.accentPrimary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(
-                  color: isSelected
-                      ? themeColors.accentBorder
-                      : themeColors.border,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildPrescriptionFilterChips() {
-    final themeColors = context.themeColors;
-    final filters = ["All", "Active", "Disabled"];
-    return SizedBox(
-      height: 44,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: filters.length,
-        itemBuilder: (context, index) {
-          final filterName = filters[index];
-          final isSelected = _selectedPrescriptionReminder == filterName;
-          final displayName =
-              filterName == "All" ? "All Reminders" : "$filterName Reminders";
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ChoiceChip(
-              label: Text(displayName),
-              labelStyle: TextStyle(
-                color: isSelected ? themeColors.accentPrimary : themeColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12,
-              ),
-              selected: isSelected,
-              onSelected: (val) {
-                if (val) {
-                  setState(() => _selectedPrescriptionReminder = filterName);
                 }
               },
               backgroundColor: themeColors.surface,
@@ -1353,11 +1295,12 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
   Widget _buildPrescriptionCard(PrescriptionModel prescription) {
     final themeColors = context.themeColors;
-    final activeReminders =
-        prescription.reminders.where((r) => r.enabled).toList();
-    final timesStr = activeReminders.map((r) => r.time).join(", ");
     final hasAttachment =
         prescription.fileUrl != null && prescription.fileUrl!.isNotEmpty;
+    final dosageText = (prescription.dosageInstructions != null &&
+            prescription.dosageInstructions!.trim().isNotEmpty)
+        ? prescription.dosageInstructions!.trim()
+        : "No instructions provided";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1411,12 +1354,9 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      timesStr.isNotEmpty
-                          ? "Reminders: $timesStr"
-                          : "No reminders scheduled",
+                      dosageText,
                       style: TextStyle(
-                        color:
-                            timesStr.isNotEmpty ? themeColors.textSecondary : themeColors.textMuted,
+                        color: themeColors.textSecondary,
                         fontSize: 12,
                       ),
                       maxLines: 1,

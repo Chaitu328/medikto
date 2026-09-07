@@ -26,7 +26,11 @@ class _AddMedicalMedicationsScreenState
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController dateController = TextEditingController();
-  final TextEditingController conditionController = TextEditingController();
+  final TextEditingController conditionController =
+      TextEditingController(text: "Normal");
+
+  String selectedCondition = "Normal";
+  final List<String> conditionOptions = ["Normal", "Moderate", "Critical"];
 
   File? selectedFile;
   bool isLoading = false;
@@ -272,15 +276,7 @@ class _AddMedicalMedicationsScreenState
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildTextField(
-                            controller: conditionController,
-                            title: "Condition",
-                            hint: "Critical",
-                            suffix: Icon(
-                              Icons.keyboard_arrow_down_sharp,
-                              color: themeColors.accentPrimary,
-                            ),
-                          ),
+                          child: _buildConditionDropdown(),
                         ),
                       ],
                     ),
@@ -300,7 +296,7 @@ class _AddMedicalMedicationsScreenState
                           color: themeColors.surface,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: themeColors.accentPrimary.withOpacity(0.3),
+                            color: themeColors.accentPrimary.withValues(alpha: 0.3),
                             width: 1.5,
                             style: BorderStyle.solid,
                           ),
@@ -394,6 +390,74 @@ class _AddMedicalMedicationsScreenState
             SizedBox(height: size.height * 0.03),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildConditionDropdown() {
+    final themeColors = context.themeColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Condition",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: themeColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: themeColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: themeColors.border),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedCondition,
+                dropdownColor: themeColors.surface,
+                isExpanded: true,
+                icon: Icon(
+                  Icons.keyboard_arrow_down_sharp,
+                  color: themeColors.accentPrimary,
+                ),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: themeColors.textPrimary,
+                ),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      selectedCondition = newValue;
+                      conditionController.text = newValue;
+                    });
+                  }
+                },
+                items: conditionOptions
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: themeColors.textPrimary,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

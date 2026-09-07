@@ -50,10 +50,53 @@ exports.reportIssue = async (req, res) => {
 
   } catch (err) {
     console.error("Report Issue Controller Error:", err.message);
+/**
+ * Handle public contact inquiries from website
+ * POST /api/public/contact
+ */
+exports.publicContact = async (req, res) => {
+  try {
+    const { name, phone, email, description } = req.body;
+
+    if (!name || !phone || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, contact number, and email are required."
+      });
+    }
+
+    const emailResult = await sendIssueReportEmail({
+      userId: "Website Lead",
+      userName: name.trim(),
+      userEmail: email.trim(),
+      userPhone: phone.trim(),
+      userRole: "Public Lead / Family Inquirer",
+      category: "Public Website Contact Inquiry",
+      description: description && description.trim() ? description.trim() : "No additional description provided.",
+      appVersion: "1.0.0",
+      platform: "Medikto Web Landing"
+    });
+
+    if (!emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Unable to send your inquiry at this moment. Please try again later.",
+        error: emailResult.error
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Thank you! Your message has been sent successfully."
+    });
+
+  } catch (err) {
+    console.error("Public Contact Controller Error:", err.message);
     return res.status(500).json({
       success: false,
-      message: "Unable to submit your issue. Please try again.",
+      message: "Unable to process your inquiry. Please try again.",
       error: err.message
     });
   }
 };
+

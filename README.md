@@ -11,6 +11,7 @@ medikto/
 ├── Backend/          # Node.js + Express REST API (MongoDB/DocumentDB, AWS S3, Nodemailer, Firebase Admin)
 ├── Frontend/         # React + Vite Admin & Super Admin Panel
 ├── medikto-app/      # Flutter Mobile Application (Android & iOS)
+├── website/          # Next.js 15 Marketing Website (App Router, Tailwind CSS, TypeScript)
 └── README.md
 ```
 
@@ -145,6 +146,13 @@ flutter run
 ### 3. Admin Panel Setup
 ```bash
 cd Frontend/Admin-panel
+npm install
+npm run dev
+```
+
+### 4. Marketing Website Setup
+```bash
+cd website
 npm install
 npm run dev
 ```

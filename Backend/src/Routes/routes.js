@@ -80,7 +80,8 @@
   } = require("../controllers/authContoller");
 
   const {
-    reportIssue
+    reportIssue,
+    publicContact,
   } = require("../controllers/supportController");
 
   const {
@@ -137,6 +138,7 @@
 
   // ================= SUPPORT & ISSUE REPORTING =================
   router.post("/support/report-issue", auth, reportIssue);
+  router.post("/public/contact", publicContact);
 
   // ================= ADMIN AUTH (HOSPITAL ADMINS) =================
   router.post("/admin/login", adminLogin);
