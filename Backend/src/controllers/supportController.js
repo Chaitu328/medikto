@@ -50,6 +50,14 @@ exports.reportIssue = async (req, res) => {
 
   } catch (err) {
     console.error("Report Issue Controller Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error occurred while reporting issue.",
+      error: err.message
+    });
+  }
+};
+
 /**
  * Handle public contact inquiries from website
  * POST /api/public/contact

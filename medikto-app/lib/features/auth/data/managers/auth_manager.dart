@@ -30,30 +30,41 @@ Future<String> get token async {
   return t;
 }
 
-Future<ResponseData> checkIfPhoneRegistered(String phone) async {
-  try {
-    final response = await dioClient.tokenRef!.post(
-      ApiUrls.checkPhone,
-      data: {"phone": phone},
-      options: Options(headers: {"Content-Type": "application/json"}),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final bool exists = response.data['exists'] ?? false;
-      final String msg = response.data['message'] ?? "";
-      return ResponseData(msg, ResponseStatus.SUCCESS, data: exists);
-    } else {
-      return ResponseData(
-        response.data['error'] ?? response.data['message'] ?? "Failed to check registration status",
-        ResponseStatus.FAILED,
-      );
+  String _extractErrorMessage(dynamic data, String fallback) {
+    if (data is Map) {
+      return (data['error'] ?? data['message'] ?? fallback).toString();
+    } else if (data is String && data.trim().isNotEmpty) {
+      // If it's HTML, provide clean fallback
+      if (data.contains("<html") || data.contains("<HTML")) {
+        return fallback;
+      }
+      return data;
     }
-  } on DioException catch (e) {
-    final message = e.response?.data?["error"] ?? e.response?.data?["message"] ?? "Server Connection Error";
-    return ResponseData(message, ResponseStatus.FAILED);
-  } catch (e) {
-    return ResponseData("An unexpected error occurred: $e", ResponseStatus.FAILED);
+    return fallback;
   }
-}
+
+  Future<ResponseData> checkIfPhoneRegistered(String phone) async {
+    try {
+      final response = await dioClient.tokenRef!.post(
+        ApiUrls.checkPhone,
+        data: {"phone": phone},
+        options: Options(headers: {"Content-Type": "application/json"}),
+      );
+      if ((response.statusCode == 200 || response.statusCode == 201) && response.data is Map) {
+        final bool exists = response.data['exists'] == true;
+        final String msg = response.data['message']?.toString() ?? "";
+        return ResponseData(msg, ResponseStatus.SUCCESS, data: exists);
+      } else {
+        final msg = _extractErrorMessage(response.data, "Failed to check registration status");
+        return ResponseData(msg, ResponseStatus.FAILED);
+      }
+    } on DioException catch (e) {
+      final message = _extractErrorMessage(e.response?.data, e.message ?? "Server Connection Error");
+      return ResponseData(message, ResponseStatus.FAILED);
+    } catch (e) {
+      return ResponseData("An unexpected error occurred: $e", ResponseStatus.FAILED);
+    }
+  }
 
 Future<void> sendFirebaseOTP({
   required String phone,
@@ -114,16 +125,18 @@ Future<ResponseData> verifyFirebaseOTP({
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(StorageKeys.token, response.data['token']);
+      if (response.data is Map && response.data['token'] != null) {
+        await prefs.setString(StorageKeys.token, response.data['token']);
+      }
 
       return ResponseData(
-        response.data['message'] ?? "Login successful",
+        response.data is Map ? (response.data['message'] ?? "Login successful") : "Login successful",
         ResponseStatus.SUCCESS,
         data: response.data,
       );
     } else {
       return ResponseData(
-        response.data['error'] ?? response.data['message'] ?? "Verification Failed",
+        _extractErrorMessage(response.data, "Verification Failed"),
         ResponseStatus.FAILED,
       );
     }
@@ -165,7 +178,7 @@ Future<ResponseData> signInWithGoogle() async {
       options: Options(headers: {"Content-Type": "application/json"}),
     );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
+    if ((response.statusCode == 200 || response.statusCode == 201) && response.data is Map) {
       final isNewUser = response.data['isNewUser'] == true;
 
       if (isNewUser) {
@@ -184,7 +197,9 @@ Future<ResponseData> signInWithGoogle() async {
       } else {
         // Existing user: Store JWT session token
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(StorageKeys.token, response.data['token']);
+        if (response.data['token'] != null) {
+          await prefs.setString(StorageKeys.token, response.data['token']);
+        }
 
         return ResponseData(
           response.data['message'] ?? "Login successful",
@@ -197,7 +212,7 @@ Future<ResponseData> signInWithGoogle() async {
         );
       }
     } else {
-      final msg = response.data?["message"] ?? "Unable to sign in with Google. Please try again.";
+      final msg = _extractErrorMessage(response.data, "Unable to sign in with Google. Please try again.");
       return ResponseData(msg, ResponseStatus.FAILED);
     }
     } on FirebaseAuthException catch (e) {
@@ -205,7 +220,7 @@ Future<ResponseData> signInWithGoogle() async {
       return ResponseData(e.message ?? "Unable to sign in with Google. Please try again.", ResponseStatus.FAILED);
     } on DioException catch (e) {
       debugPrint("GOOGLE AUTH BACKEND DIO ERROR: ${e.response?.statusCode} - ${e.response?.data}");
-      final msg = e.response?.data?["message"] ?? e.response?.data?["error"] ?? "Unable to connect to server. Please try again.";
+      final msg = _extractErrorMessage(e.response?.data, e.message ?? "Unable to connect to server. Please try again.");
       return ResponseData(msg, ResponseStatus.FAILED);
     } catch (e) {
       debugPrint("GOOGLE SIGN-IN GENERAL ERROR: $e");
@@ -238,20 +253,22 @@ Future<ResponseData> completeGoogleRegistration({
       options: Options(headers: {"Content-Type": "application/json"}),
     );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
+    if ((response.statusCode == 200 || response.statusCode == 201) && response.data is Map) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(StorageKeys.token, response.data['token']);
+      if (response.data['token'] != null) {
+        await prefs.setString(StorageKeys.token, response.data['token']);
+      }
       return ResponseData(
         response.data['message'] ?? "Registration successful",
         ResponseStatus.SUCCESS,
         data: response.data,
       );
     } else {
-      final msg = response.data?["message"] ?? "Unable to create your account. Please try again.";
+      final msg = _extractErrorMessage(response.data, "Unable to create your account. Please try again.");
       return ResponseData(msg, ResponseStatus.FAILED);
     }
   } on DioException catch (e) {
-    final msg = e.response?.data?["message"] ?? e.response?.data?["error"] ?? "Unable to create your account. Please try again.";
+    final msg = _extractErrorMessage(e.response?.data, e.message ?? "Unable to create your account. Please try again.");
     return ResponseData(msg, ResponseStatus.FAILED);
   } catch (e) {
     return ResponseData("Unable to create your account. Please try again.", ResponseStatus.FAILED);
@@ -265,16 +282,18 @@ Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) asyn
       data: registrationData,
     );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
+    if ((response.statusCode == 200 || response.statusCode == 201) && response.data is Map) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(StorageKeys.token, response.data['token']);
+      if (response.data['token'] != null) {
+        await prefs.setString(StorageKeys.token, response.data['token']);
+      }
       return ResponseData("Account created successfully", ResponseStatus.SUCCESS, data: response.data);
     } else {
-      final message = response.data?["error"] ?? response.data?["message"] ?? "Registration failed";
+      final message = _extractErrorMessage(response.data, "Registration failed");
       return ResponseData(message, ResponseStatus.FAILED);
     }
   } on DioException catch (e) {
-    final message = e.response?.data?["error"] ?? e.response?.data?["message"] ?? "Server Error";
+    final message = _extractErrorMessage(e.response?.data, e.message ?? "Server Error");
     return ResponseData(message, ResponseStatus.FAILED);
   } catch (e) {
     return ResponseData("An unexpected error occurred", ResponseStatus.FAILED);
@@ -300,22 +319,26 @@ Future<ResponseData> registerProfile(Map<String, dynamic> registrationData) asyn
         options: Options(headers: {"Content-Type": "application/json"}),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if ((response.statusCode == 200 || response.statusCode == 201) && response.data is Map) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(StorageKeys.token, response.data['token']);
+        if (response.data['token'] != null) {
+          await prefs.setString(StorageKeys.token, response.data['token']);
+        }
         return ResponseData(
           response.data['message'] ?? "Login successful",
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       } else {
+        final msg = _extractErrorMessage(response.data, "Login Failed");
         return ResponseData(
-          response.data['message'] ?? "Login Failed",
+          msg,
           ResponseStatus.FAILED,
         );
       }
     } on DioException catch (e) {
-      return ResponseData(e.response?.data?["message"] ?? "Server Error", ResponseStatus.FAILED);
+      final msg = _extractErrorMessage(e.response?.data, e.message ?? "Server Error");
+      return ResponseData(msg, ResponseStatus.FAILED);
     } catch (e) {
       return ResponseData("An unexpected error occurred", ResponseStatus.FAILED);
     }

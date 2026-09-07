@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,9 +10,6 @@ import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:medikto/features/auth/login_view/otp_screen.dart';
 import 'package:medikto/features/auth/register_view/register_screen.dart';
 import 'package:medikto/features/auth/register_view/google_consent_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:medikto/core/utils/storage_keys.dart';
-import 'package:medikto/bottom_bar.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -186,7 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
-      final bool exists = checkResponse.data as bool;
+      final bool exists = checkResponse.data == true;
       if (!exists) {
         if (mounted) {
           Navigator.pop(context);
@@ -689,35 +685,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                ),
-              ],
-
-              if (kDebugMode) ...[
-                const SizedBox(height: 15),
-                Center(
-                  child: TextButton(
-                    onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString(StorageKeys.token, "mock_dev_token");
-                      if (mounted) {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const BaseBottomNavigationPage(),
-                          ),
-                          (route) => false,
-                        );
-                      }
-                    },
-                    child: Text(
-                      "Bypass Authentication (Dev Mode)",
-                      style: TextStyle(
-                        color: colors.accentPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
                     ),
                   ),
                 ),
