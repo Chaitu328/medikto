@@ -1,0 +1,377 @@
+==============================================
+FILE: 1_VAPT_Questionnaire_Business.pdf
+==============================================
+
+--- PAGE 1 ---
+CONFIDENTIAL   ·   Document 1 of 2   ·   Business   ·   v1.2
+VAPT Questionnaire — Business
+Document 1 of 2  ·  For a Super Admin / business owner  ·  ~15 minutes
+No technical background needed — your best guess is fine
+No technical knowledge needed. Guesses are fine. Yellow boxes = your answer.
+Screenshots of the Super Admin menu, the Android home/menu, and the iPhone home/menu are worth more than exact page 
+counts.
+Prefer a call? Write “please book a 20-minute screen-share” in 1.4 and skip the rest.
+If you have a developer, please also send them Document 2 (Technical).
+1. You
+1.1 Organization, your name, role, email, 
+phone
+1.2 Deadline for quote or test (if any) Or “no rush”
+1.3 What to include in this price  Super Admin website    Android app   ☐ ☐
+ iPhone app    Retest after fixes☐ ☐
+1.4 What to leave out, or “please book a call 
+instead”
+e.g. marketing site, live system, third-party 
+payment page
+1.5 Roughly how many people use this 
+system in total?
+ Under 100    100–1,000    1,000–☐ ☐ ☐
+10,000    10,000+    Not sure☐ ☐
+
+--- PAGE 2 ---
+2. Super Admin website — size
+2.1 In one sentence: what is this portal for? e.g. Staff manage users, orders and 
+settings
+2.2 Link (if you can share) + practice copy 
+besides live?
+https://    We have a UAT/copy    Live ☐ ☐
+only    Not sure☐
+2.3 List every menu item you can see (or 
+write “see screenshot”)
+Dashboard, Users, Roles, Billing, Reports, 
+Settings…
+2.4 Types of people who log in (name them) e.g. Super Admin, Admin, Finance, Viewer 
+Count:  1–2    3–5    6+☐ ☐ ☐
+2.5 One company, or many 
+companies/branches in the same portal?
+ Only us    Many companies inside one ☐ ☐
+portal    Not sure☐
+2.6 Second step at login (OTP / app / email 
+code)? Company Google/Microsoft login?
+ OTP/MFA    Company SSO    ☐ ☐ ☐
+Password only    Not sure☐
+Tick the closest size. Count unique screens (list + add + edit = 3). Do not count Privacy pages. 50 customers with the same profile = 1 screen.
+Tick one → Small Typical Large
+Super Admin Up to 15 screens, simple forms 16–60 screens, a few user types 60+ screens, or money / files / 
+many companies
+What a Super Admin actually did yesterday (5 bullets). This catches work the ticks miss.
+e.g. add staff → reset password → approve request → refund → download report → change a setting
+
+--- PAGE 3 ---
+3. Super Admin — what changes the price (tick all Yes)
+3.1 Different access per person — some 
+people see more menus than others
+ Yes    No    Not sure☐ ☐ ☐
+3.2 Create / approve / reject work — 
+someone must say yes before a change
+ Yes    No    Not sure☐ ☐ ☐
+3.3 Upload or download files / Excel — 
+documents, IDs, bulk import or export
+ Yes    No    Not sure☐ ☐ ☐
+3.4 Money (pay, refund, invoice, wallet) — 
+any fees, payouts or payment gateway
+ Yes    No    Not sure☐ ☐ ☐
+3.5 “Login as” another user — Super Admin 
+can see the system as someone else
+ Yes    No    Not sure☐ ☐ ☐
+3.6 Connected to other tools — WhatsApp, 
+SMS, payments, KYC, GST, CRM
+How many? ____    Yes    No    Not ☐ ☐ ☐
+sure
+
+--- PAGE 4 ---
+4. Android app (fill even if iPhone is similar)
+If Android is not in this quote, write N/A in 4.1 and skip to section 5.
+4.1 Android app name + Play Store link (or 
+“not published”)
+4.2 Who is this Android app for? How do 
+they sign in?
+ Customer    Staff    Both    ☐ ☐ ☐ ☐
+Partners   Login:  OTP    Password    ☐ ☐ ☐
+Fingerprint
+4.3 Types of user in the Android app e.g. customer, driver, staff — or “only one 
+type”
+4.4 Same system behind this app as Super 
+Admin?
+ Yes    Partly    Separate Android ☐ ☐ ☐
+backend    Not sure☐
+4.5 Can you later give us the Android file 
+(APK) for testing?
+ Yes    Not sure — we will ask our ☐ ☐
+developer
+Count unique Android screens (bottom bar + menu + forms). List + add + edit = 3 screens.
+Tick one → Small Typical Large
+Android size Up to 15 screens 16–40 screens 40+ screens, or pay / KYC / chat / 
+maps
+Android user journey — tap icon to finishing the main job.
+e.g. open → OTP → home → search → details → pay → receipt
+Android — tick all Yes (do not copy iPhone answers; they can differ).
+Pay / wallet / subscriptions — cards, UPI, 
+Play Billing, points
+ Yes    No    Not sure☐ ☐ ☐
+KYC / camera / ID photos — document 
+capture or liveness
+ Yes    No    Not sure☐ ☐ ☐
+Chat or in-app messages — support or 
+user-to-user
+ Yes    No    Not sure☐ ☐ ☐
+Maps or live location — tracking people 
+or places
+ Yes    No    Not sure☐ ☐ ☐
+Works partly offline / data on phone — 
+some info on aeroplane mode
+ Yes    No    Not sure☐ ☐ ☐
+Notifications / QR / other heavy feature 
+— name it if Yes
+ Yes    No    Not sure☐ ☐ ☐
+
+--- PAGE 5 ---
+5. iPhone / iOS app (fill separately — do not write “same as Android”)
+If iPhone is not in this quote, write N/A in 5.1 and skip to section 6.
+5.1 iPhone app name + App Store link (or 
+TestFlight / not published)
+5.2 Who is this iPhone app for? How do they 
+sign in?
+ Customer    Staff    Both    ☐ ☐ ☐ ☐
+Partners   Login:  OTP    Password    ☐ ☐ ☐
+Face ID
+5.3 Types of user in the iPhone app List them even if you think they match 
+Android
+5.4 Same system behind this app as Super 
+Admin?
+ Yes    Partly    Separate iOS backend☐ ☐ ☐  
+ Not sure☐
+5.5 Can you later give us TestFlight access or 
+an IPA file?
+ TestFlight    IPA    Not sure☐ ☐ ☐
+5.6 Anything iPhone cannot do that Android 
+can (or extra on iPhone)
+Write “none” only after you have 
+compared — do not assume they match
+Count unique iPhone screens on their own. Do not reuse the Android number unless you opened iPhone and counted.
+Tick one → Small Typical Large
+iPhone size Up to 15 screens 16–40 screens 40+ screens, or pay / KYC / chat / 
+maps
+iPhone user journey — tap icon to finishing the main job (write it out, even if it looks like Android).
+e.g. open → OTP → home → search → details → pay → receipt
+iPhone — tick all Yes for iOS only.
+Pay / wallet / subscriptions — cards, UPI, 
+App Store / StoreKit, points
+ Yes    No    Not sure☐ ☐ ☐
+KYC / camera / ID photos — document 
+capture or liveness
+ Yes    No    Not sure☐ ☐ ☐
+Chat or in-app messages — support or 
+user-to-user
+ Yes    No    Not sure☐ ☐ ☐
+Maps or live location — tracking people 
+or places
+ Yes    No    Not sure☐ ☐ ☐
+Works partly offline / data on phone — 
+some info on aeroplane mode
+ Yes    No    Not sure☐ ☐ ☐
+Notifications / QR / other heavy feature 
+— name it if Yes
+ Yes    No    Not sure☐ ☐ ☐
+
+--- PAGE 6 ---
+6. Test setup & logistics
+6.1 Where should we test?  Practice/UAT copy (recommended)    ☐ ☐
+Live only    Both☐
+6.2 If this leaked, what would hurt most? e.g. phones + KYC photos, payments, staff 
+data
+6.3 I will attach (tick) / or book a call
+ Super Admin menu    Android ☐ ☐
+home+menu    iPhone home+menu    ☐ ☐
+Store links    Please call me☐
+6.4
+Has this system been security-tested 
+before? When, and were the issues 
+fixed?
+e.g. “Yes, March 2025, all fixed” or “Never 
+tested”
+6.5
+Do you need this for a specific certificate 
+or approval? (e.g. RBI, PCI-DSS, ISO, a 
+client's requirement)
+Name it, and the deadline if any — this 
+decides the report format
+6.6 Any dates we should avoid? (releases, 
+festive/peak season, freeze periods)
+e.g. “no testing 20–31 Dec” or “none”
+7. Anything we would get wrong if we skipped it
+e.g. two admin portals not one; new payments module next month; iPhone is much simpler.
+I confirm this is accurate enough to prepare a price. Access comes later if we proceed.
+Name / role Date
+==============================================
+FILE: 2_VAPT_Questionnaire_Technical.pdf
+==============================================
+
+--- PAGE 1 ---
+CONFIDENTIAL   ·   Document 2 of 2   ·   Technical   ·   v1.2
+VAPT Questionnaire — Technical
+Document 2 of 2  ·  For a developer / architect  ·  ~15 minutes
+Quoting only — credentials and ROE follow after the proposal is accepted
+Integers beat adjectives. Unknown is better than blank. Yellow boxes = your answer.
+Highest-value attachments: OpenAPI/Swagger, admin nav, separate Android and iOS screenshots, architecture one-pager.
+Quoting only — credentials and Rules of Engagement (ROE) are shared after the proposal is accepted.
+1. Context
+1.1 Organization + technical contact (name, 
+role, email, phone)
+1.2 Include in this quote  Admin UI    Portal APIs    Android   ☐ ☐ ☐
+ iOS    Mobile-only APIs    Retest☐ ☐ ☐
+1.3 Testing type + environment to quote
+ Gray box (recommended)    Black box☐ ☐  
+ White box (source)     Env:  Staging ☐ ☐
+only    Staging+prod    Prod only☐ ☐
+1.4 Hard exclusions / deadline e.g. no production, no DoS, go-live date
+
+--- PAGE 2 ---
+2. Architecture (four facts)
+2.1 One-line architecture e.g. React SPA + NestJS + Postgres on 
+AWS; Flutter apps call the same API
+2.2 Admin vs mobile backend  Same API    Same backend, different ☐ ☐
+API    Separate stacks☐
+2.3 Cloud / tenancy / how admin is reached
+ AWS/Azure/GCP/on-prem      Single ☐ ☐
+tenant    Multi-tenant      Public    ☐ ☐ ☐
+VPN/allowlist
+2.4 Staging ≈ production (features + auth + 
+integrations)?
+ Yes     No — missing: ____☐ ☐
+2.5 Backend language / framework + 
+database
+e.g. Node.js/NestJS, PostgreSQL 15, Redis 
+cache
+3. Admin + API numbers we price from
+3.1 Admin: modules + unique authenticated 
+UI routes/pages
+Modules: ____     Pages/routes: ____     (1 
+template ≠ N records)
+3.2 Admin RBAC: role count + names
+Count: ____     Names: Super Admin, …     
+Model:  simple roles    fine-grained   ☐ ☐ ☐  
+ABAC
+3.3 Admin auth + session / API token
+ Password    MFA    SAML    OIDC ☐ ☐ ☐ ☐
+(IdP: ____)    Impersonation     Token:  ☐ ☐
+cookie    JWT    OAuth2    API key☐ ☐ ☐
+3.4 API: style + authenticated routes + public 
+routes + docs
+ REST    GraphQL     AuthN: ____     ☐ ☐
+Public: ____      Swagger    Postman   ☐ ☐
+ None☐
+3.5 Web price drivers present?
+ SSO    Payments    File/CSV    ☐ ☐ ☐ ☐
+Multi-tenant    Approvals    WAF ☐ ☐
+(name: ____, allowlist IPs? )☐
+
+--- PAGE 3 ---
+4. Android application (complete fully — do not point at iOS)
+If Android is out of scope, write N/A in 4.1 and skip to section 5.
+4.1 applicationId + version + Play Store / 
+sideload
+com.company.app     v____      Play    ☐ ☐
+Sideload/MDM    Can supply APK/AAB☐
+4.2 Android framework  Native Kotlin/Java    Flutter    React ☐ ☐ ☐
+Native    Other: ____☐
+4.3 Unique Android screens + roles Screens: ____     Roles: ____ (names)
+4.4 Android auth + token storage
+ OTP    Password    Refresh    ☐ ☐ ☐ ☐
+Biometric    Social     Store:  Keystore   ☐ ☐
+ Encrypted prefs    Plain    Unknown☐ ☐ ☐
+4.5 Android API surface vs admin API
+ Same API    Subset    Extra Android-☐ ☐ ☐
+only routes (count: ____)    Separate ☐
+service
+TLS pinning (Android) — can you ship an 
+unpin/debug APK?
+ Yes    No    Partial☐ ☐ ☐
+Root detection / RASP / obfuscation (R8) 
+— name product if known
+ Yes    No    Partial☐ ☐ ☐
+Payments / Play Billing / wallet  Yes    No    Partial☐ ☐ ☐
+KYC / camera / file pickers  Yes    No    Partial☐ ☐ ☐
+Chat, maps/live location, or offline+local 
+PII — tick Yes if any one applies, note 
+which
+ Yes    No    Partial☐ ☐ ☐
+Deep links, WebView hybrid, or staff 
+flavour — note which
+ Yes    No    Partial☐ ☐ ☐
+
+--- PAGE 4 ---
+5. iOS application (complete fully — do not write “same as Android”)
+If iOS is out of scope, write N/A in 5.1 and skip to section 6. Count screens on an iPhone/simulator, not by copying section 4.
+5.1 Bundle ID + version + App Store / 
+TestFlight / enterprise
+com.company.app     v____      Store    ☐ ☐
+TestFlight    Enterprise IPA☐
+5.2 iOS framework  Native Swift/Obj-C    Flutter    React☐ ☐ ☐  
+Native    Other: ____☐
+5.3 Unique iOS screens + roles (do not reuse 
+Android counts)
+Screens: ____     Roles: ____ (names)
+5.4 iOS auth + token storage
+ OTP    Password    Refresh    Face ☐ ☐ ☐ ☐
+ID/Touch ID    Social     Store:  ☐ ☐
+Keychain    Other    Unknown☐ ☐
+5.5 iOS API surface vs admin API  Same API    Subset    Extra iOS-only ☐ ☐ ☐
+routes (count: ____)    Separate service☐
+5.6 Deltas vs Android (required) Features iOS lacks or has extra. Write 
+“compared, none” only after a real check.
+ATS / TLS pinning (iOS) — can you ship an 
+unpin/debug IPA or TestFlight?
+ Yes    No    Partial☐ ☐ ☐
+Jailbreak detection / RASP / obfuscation 
+— name product if known
+ Yes    No    Partial☐ ☐ ☐
+Payments / StoreKit / wallet  Yes    No    Partial☐ ☐ ☐
+KYC / camera / file pickers  Yes    No    Partial☐ ☐ ☐
+Chat, maps/live location, or offline+local 
+PII — tick Yes if any one applies, note 
+which
+ Yes    No    Partial☐ ☐ ☐
+Universal Links, WebView hybrid, or 
+MDM-only — note which
+ Yes    No    Partial☐ ☐ ☐
+
+--- PAGE 5 ---
+6. Testing logistics & prior assessments
+6.1
+Has this system been pen-tested before? 
+When, by whom, and were findings 
+fixed?
+e.g. “Yes, Q1 2025, all High/Critical closed” 
+or “Never tested”
+6.2
+Is a compliance certificate or approval 
+driving this test? (e.g. RBI, PCI-DSS, ISO 
+27001, SOC2, client mandate)
+Name it + deadline, if any — this decides 
+the report format we prepare
+6.3
+Any WAF / IPS / bot-protection / rate-
+limiting active that could block or flag our 
+scans?
+Name product: ____      Will allowlist ☐
+tester IPs    Not sure    None☐ ☐
+6.4
+Will test accounts (one per role) and 
+sample data be ready before testing 
+starts?
+ Yes, will provision    Need help ☐ ☐
+deciding    Not sure☐
+6.5 Blackout dates / freeze windows to avoid 
+(releases, peak load, change freeze)
+e.g. “no testing 20–31 Dec” or “none”
+7. Attach + leftovers
+7.1 Attaching now
+ Diagram    OpenAPI    Admin nav   ☐ ☐ ☐
+ Android screenshots    iOS ☐ ☐
+screenshots    RBAC matrix☐
+7.2 Anything that would change effort if we 
+missed it
+New module, white-label skins, iOS behind 
+Android, GraphQL introspection off
+Accurate enough to quote. Access and signed authorisation follow acceptance.
+Name / role Date
