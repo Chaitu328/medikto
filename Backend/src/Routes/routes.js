@@ -303,7 +303,7 @@
 
 
   // ================= DASHBOARD =================
-  router.get("/adherence", getAdherence);
+  router.get("/adherence", auth, getAdherence);
 
   // ================= NOTIFICATIONS =================
   router.get("/notifications", auth, getNotifications);

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/medications/data/medications_manager.dart';
+import 'package:medikto/features/medications/models/dose_history_model.dart';
 import 'package:medikto/features/medications/models/medication_model.dart';
 
 final medicationProvider = Provider<MedicationManager>(
@@ -45,13 +46,15 @@ final getScheduleForDateProvider =
     });
 
 final doseHistoryProvider =
-    FutureProvider.family.autoDispose<ResponseData, Map<String, String?>>((
+    FutureProvider.family.autoDispose<ResponseData, DoseHistoryQuery>((
       ref,
-      params,
+      query,
     ) async {
       return ref.watch(medicationProvider).getDoseHistory(
-            startDate: params['startDate'],
-            endDate: params['endDate'],
+            startDate: query.startDate,
+            endDate: query.endDate,
+            timeframe: query.timeframe,
+            patientId: query.patientId,
           );
     });
 

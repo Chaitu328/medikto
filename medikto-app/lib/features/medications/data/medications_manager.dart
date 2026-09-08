@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:medikto/core/cache/secure_history_cache.dart';
 import 'package:medikto/core/constants/api_urls.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/dio_client.dart';
 import 'package:medikto/features/medications/models/adherence_model.dart';
+import 'package:medikto/features/medications/models/dose_history_model.dart';
 import 'package:medikto/features/medications/models/medication_model.dart';
 import 'package:medikto/features/medications/models/today_scheduled_model.dart';
 
@@ -31,6 +33,7 @@ class MedicationManager {
       print("ADD MEDICATION RESPONSE => ${response.data}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        SecureHistoryCache.instance.clearAll();
         final medicationData = MedicationModel.fromJson(response.data);
 
         return ResponseData(
@@ -105,6 +108,7 @@ class MedicationManager {
       print("MARK DOSE RESPONSE => ${response.data}");
 
       if (response.statusCode == 200) {
+        SecureHistoryCache.instance.clearAll();
         return ResponseData(
           "Dose marked as taken",
           ResponseStatus.SUCCESS,
@@ -174,8 +178,25 @@ class MedicationManager {
   Future<ResponseData> getDoseHistory({
     String? startDate,
     String? endDate,
+    String? timeframe,
+    String? patientId,
+    bool forceRefresh = false,
   }) async {
     try {
+      final activePId = patientId ?? DioClient.activePatientId ?? 'self';
+      final cacheKey = 'history:$activePId:${startDate ?? ""}:${endDate ?? ""}:${timeframe ?? "custom"}';
+
+      if (!forceRefresh) {
+        final cached = SecureHistoryCache.instance.get(cacheKey);
+        if (cached is DoseHistoryResponse) {
+          return ResponseData(
+            "Dose history fetched from cache",
+            ResponseStatus.SUCCESS,
+            data: cached,
+          );
+        }
+      }
+
       final queryParams = <String, dynamic>{};
       if (startDate != null && startDate.isNotEmpty) {
         queryParams['startDate'] = startDate;
@@ -183,33 +204,44 @@ class MedicationManager {
       if (endDate != null && endDate.isNotEmpty) {
         queryParams['endDate'] = endDate;
       }
+      if (timeframe != null && timeframe.isNotEmpty) {
+        queryParams['timeframe'] = timeframe;
+      }
+      if (patientId != null && patientId.isNotEmpty) {
+        queryParams['patientId'] = patientId;
+      }
 
       final response = await dioClient.ref!.get(
         ApiUrls.doseHistory,
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
 
-      print("DOSE HISTORY RESPONSE ($startDate to $endDate) => ${response.data}");
+      print("DOSE HISTORY RESPONSE ($startDate to $endDate, tf=$timeframe) => ${response.data}");
 
       if (response.statusCode == 200) {
-        List rawList;
-        final data = response.data;
-        if (data is List) {
-          rawList = data;
-        } else if (data is Map && data['schedules'] != null) {
-          rawList = data['schedules'] as List;
+        final dynamic data = response.data;
+        final DoseHistoryResponse historyResponse;
+        if (data is Map<String, dynamic>) {
+          historyResponse = DoseHistoryResponse.fromJson(data);
+        } else if (data is Map) {
+          historyResponse = DoseHistoryResponse.fromJson(Map<String, dynamic>.from(data));
+        } else if (data is List) {
+          final list = data.map((e) => TodayScheduleModel.fromJson(e)).toList();
+          historyResponse = DoseHistoryResponse(
+            summary: DoseHistorySummary(total: list.length),
+            schedules: list,
+          );
         } else {
-          rawList = [];
+          historyResponse = DoseHistoryResponse(summary: DoseHistorySummary());
         }
 
-        final doseList = rawList
-            .map((e) => TodayScheduleModel.fromJson(e))
-            .toList();
+        // Cache response
+        SecureHistoryCache.instance.set(cacheKey, historyResponse, ttl: const Duration(minutes: 2));
 
         return ResponseData(
           "Dose history fetched successfully",
           ResponseStatus.SUCCESS,
-          data: doseList,
+          data: historyResponse,
         );
       } else {
         return ResponseData(
@@ -245,6 +277,7 @@ class MedicationManager {
       print("UPDATE MEDICATION RESPONSE => ${response.data}");
 
       if (response.statusCode == 200) {
+        SecureHistoryCache.instance.clearAll();
         final medicationData = MedicationModel.fromJson(response.data);
 
         return ResponseData(
@@ -292,6 +325,7 @@ class MedicationManager {
       print("VERIFY DOSE SELFIE RESPONSE => ${response.data}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        SecureHistoryCache.instance.clearAll();
         return ResponseData(
           response.data['message'] ?? "Verification successful",
           ResponseStatus.SUCCESS,
@@ -361,6 +395,7 @@ class MedicationManager {
       print("UPDATE MEDICATION STATUS RESPONSE => ${response.data}");
 
       if (response.statusCode == 200) {
+        SecureHistoryCache.instance.clearAll();
         return ResponseData(
           response.data['message'] ?? "Status updated successfully",
           ResponseStatus.SUCCESS,
@@ -393,6 +428,7 @@ class MedicationManager {
       print("DELETE MEDICATION RESPONSE => ${response.data}");
 
       if (response.statusCode == 200) {
+        SecureHistoryCache.instance.clearAll();
         return ResponseData(
           response.data['message'] ?? "Medication deleted successfully",
           ResponseStatus.SUCCESS,

@@ -4,7 +4,7 @@ const {
   shouldPopulateUser,
 } = require("../utils/accessControl");
 
-const getISTDateStr = (dateObj) => {
+const getISTDateStr = (dateObj = new Date()) => {
   try {
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: "Asia/Kolkata",
@@ -18,7 +18,9 @@ const getISTDateStr = (dateObj) => {
     const day = parts.find((p) => p.type === "day")?.value;
     return `${year}-${month}-${day}`;
   } catch (err) {
-    return dateObj.toISOString().split("T")[0];
+    const tzOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(dateObj.getTime() + tzOffset);
+    return istTime.toISOString().split("T")[0];
   }
 };
 
@@ -29,9 +31,7 @@ exports.getAdherence = async (req, res) => {
     const sevenDaysAgoIST = getISTDateStr(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000));
 
     // Filter for last 7 days using Asia/Kolkata date strings
-    const accessFilter = req.user
-      ? await buildUserAccessFilter(req, req.query.patientId)
-      : {};
+    const accessFilter = await buildUserAccessFilter(req, req.query.patientId);
 
     const filter = {
       ...accessFilter,

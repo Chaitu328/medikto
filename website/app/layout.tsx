@@ -188,9 +188,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <head>
-        <link rel="icon" type="image/png" href="/images/medikto_icon.png" />
-        <link rel="shortcut icon" href="/images/medikto_icon.png" />
-        <link rel="apple-touch-icon" href="/images/medikto_icon.png" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"

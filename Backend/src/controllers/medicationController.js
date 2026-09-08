@@ -15,6 +15,11 @@ const {
   shouldPopulateUser,
   getAccessiblePatientIds,
 } = require("../utils/accessControl");
+const {
+  getCache,
+  setCache,
+  invalidateUserDoseCache,
+} = require("../utils/cache");
 
 const timingToTimeMap = {
   morning: "08:30 AM",
@@ -36,7 +41,9 @@ const getTodayDate = (timezone = "Asia/Kolkata") => {
     const day = parts.find(p => p.type === "day").value;
     return `${year}-${month}-${day}`;
   } catch (_) {
-    return new Date().toISOString().split("T")[0];
+    const tzOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(Date.now() + tzOffset);
+    return istTime.toISOString().split("T")[0];
   }
 };
 
@@ -61,8 +68,12 @@ const getLocalTimeDetails = (dateObj, timezone = "Asia/Kolkata") => {
     const totalMinutes = hour * 60 + minute;
     return { localDate, hour, minute, totalMinutes };
   } catch (err) {
-    const fallbackDate = dateObj.toISOString().split("T")[0];
-    return { localDate: fallbackDate, hour: dateObj.getUTCHours(), minute: dateObj.getUTCMinutes(), totalMinutes: dateObj.getUTCHours() * 60 + dateObj.getUTCMinutes() };
+    const tzOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(dateObj.getTime() + tzOffset);
+    const fallbackDate = istTime.toISOString().split("T")[0];
+    const hour = istTime.getUTCHours();
+    const minute = istTime.getUTCMinutes();
+    return { localDate: fallbackDate, hour, minute, totalMinutes: hour * 60 + minute };
   }
 };
 
@@ -83,7 +94,9 @@ const getISTDateString = (dateObj, timezone = "Asia/Kolkata") => {
     const day = parts.find((p) => p.type === "day")?.value;
     return `${year}-${month}-${day}`;
   } catch (err) {
-    return d.toISOString().split("T")[0];
+    const tzOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(d.getTime() + tzOffset);
+    return istTime.toISOString().split("T")[0];
   }
 };
 
@@ -276,6 +289,9 @@ exports.addMedication = async (req, res) => {
       }
     }
 
+    // Invalidate user cache on new medication creation
+    await invalidateUserDoseCache(req.user.id);
+
     res.status(201).json({
       message: "Medication added",
       medication
@@ -309,100 +325,227 @@ exports.getMedications = async (req, res) => {
   }
 };
 
-const ensureDosesExist = async (req, date) => {
+// Helper to iterate every date from startDate (YYYY-MM-DD) to endDate (YYYY-MM-DD) in IST
+const getDateRangeList = (startDate, endDate) => {
+  const dates = [];
   try {
-    const patientIds = await getAccessiblePatientIds(req, req.query.patientId);
-    if (!patientIds || patientIds.length === 0) return;
+    const curr = new Date(`${startDate}T12:00:00Z`);
+    const end = new Date(`${endDate}T12:00:00Z`);
+    while (curr <= end) {
+      const y = curr.getUTCFullYear();
+      const m = String(curr.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(curr.getUTCDate()).padStart(2, "0");
+      dates.push(`${y}-${m}-${d}`);
+      curr.setUTCDate(curr.getUTCDate() + 1);
+    }
+  } catch (_) {}
+  return dates;
+};
 
-    for (const patientId of patientIds) {
-      const medications = await Medication.find({ user: patientId });
-      if (!medications || medications.length === 0) continue;
+// Continuous Zero-Filled Timeline Builder
+const buildContinuousTimeline = (schedules, startDate, endDate, timeframe) => {
+  const tf = (timeframe || "custom").toLowerCase();
+  
+  if (tf === "day" || tf === "1d" || startDate === endDate) {
+    const slots = [
+      { key: "Morning", label: "Morning (8:30 AM)", taken: 0, missed: 0, pending: 0 },
+      { key: "Afternoon", label: "Afternoon (12:00 PM)", taken: 0, missed: 0, pending: 0 },
+      { key: "Evening", label: "Evening (6:00 PM)", taken: 0, missed: 0, pending: 0 },
+      { key: "Night", label: "Night (9:00 PM)", taken: 0, missed: 0, pending: 0 },
+    ];
+    for (const d of schedules) {
+      const t = (d.time || "").toLowerCase();
+      let slotIdx = 0;
+      if (t.includes("12:") || t.includes("afternoon") || t.includes("01:") || t.includes("02:")) slotIdx = 1;
+      else if (t.includes("06:") || t.includes("evening") || t.includes("05:") || t.includes("07:")) slotIdx = 2;
+      else if (t.includes("09:") || t.includes("night") || (t.includes("08:") && t.includes("pm")) || t.includes("10:")) slotIdx = 3;
+      
+      const st = (d.status || "").toLowerCase();
+      if (st === "taken") slots[slotIdx].taken++;
+      else if (st === "missed") slots[slotIdx].missed++;
+      else slots[slotIdx].pending++;
+    }
+    return slots.map(s => ({
+      date: s.key,
+      dayLabel: s.key,
+      taken: s.taken,
+      missed: s.missed,
+      pending: s.pending,
+    }));
+  }
 
-      for (const med of medications) {
-        // Skip inactive, stopped, completed, or cancelled medications
-        if (med.status && med.status !== "active") {
-          continue;
-        }
-
-        // Date range checks using Asia/Kolkata calendar dates
-        const medStartDate = med.startDate || med.createdAt || new Date();
-        const medStartDateStr = getISTDateString(medStartDate);
-        
-        // If target date is before the medication's start date, skip
-        if (date < medStartDateStr) {
-          continue;
-        }
-
-        // If not continuous and end date exists, check if date is past end date
-        if (!med.isContinue && med.endDate) {
-          const medEndDateStr = getISTDateString(med.endDate);
-          if (medEndDateStr && date > medEndDateStr) {
-            // Auto-complete medication if past end date
-            const todayStr = getTodayDate();
-            if (todayStr > medEndDateStr && med.status === "active") {
-              med.status = "completed";
-              await med.save();
-            }
-            continue;
+  if (tf === "year" || tf === "1y") {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthBuckets = {};
+    
+    try {
+      const startY = parseInt(startDate.split("-")[0], 10);
+      const endY = parseInt(endDate.split("-")[0], 10);
+      
+      for (let y = startY; y <= endY; y++) {
+        for (let m = 0; m < 12; m++) {
+          const mKey = `${y}-${String(m + 1).padStart(2, "0")}`;
+          if (mKey >= startDate.substring(0, 7) && mKey <= endDate.substring(0, 7)) {
+            monthBuckets[mKey] = {
+              date: mKey,
+              dayLabel: monthNames[m],
+              taken: 0,
+              missed: 0,
+              pending: 0,
+            };
           }
         }
+      }
+    } catch (_) {}
+    
+    for (const d of schedules) {
+      const mKey = (d.date || "").substring(0, 7);
+      if (monthBuckets[mKey]) {
+        const st = (d.status || "").toLowerCase();
+        if (st === "taken") monthBuckets[mKey].taken++;
+        else if (st === "missed") monthBuckets[mKey].missed++;
+        else monthBuckets[mKey].pending++;
+      }
+    }
+    return Object.values(monthBuckets);
+  }
 
+  const allDates = getDateRangeList(startDate, endDate);
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dateMap = {};
+  
+  for (const dt of allDates) {
+    const dayOfWeek = getISTDayOfWeek(dt);
+    dateMap[dt] = {
+      date: dt,
+      dayLabel: dayNames[dayOfWeek],
+      taken: 0,
+      missed: 0,
+      pending: 0,
+    };
+  }
+
+  for (const d of schedules) {
+    const dt = d.date;
+    if (dateMap[dt]) {
+      const st = (d.status || "").toLowerCase();
+      if (st === "taken") dateMap[dt].taken++;
+      else if (st === "missed") dateMap[dt].missed++;
+      else dateMap[dt].pending++;
+    }
+  }
+
+  return Object.values(dateMap);
+};
+
+// ================= IDEMPOTENT DOSE RANGE BACKFILL =================
+const ensureDosesExistForRange = async (userId, startDate, endDate) => {
+  try {
+    if (!userId || !startDate || !endDate) return { created: 0, skipped: 0 };
+
+    const medications = await Medication.find({
+      user: userId,
+      status: { $in: ["active", "completed", "stopped", "cancelled"] }
+    });
+    if (!medications || medications.length === 0) return { created: 0, skipped: 0 };
+
+    const dates = getDateRangeList(startDate, endDate);
+    if (dates.length === 0) return { created: 0, skipped: 0 };
+
+    // Fetch existing doses for this user in range
+    const existingDoses = await Dose.find(
+      {
+        user: userId,
+        date: { $gte: startDate, $lte: endDate },
+      },
+      { medication: 1, date: 1, time: 1 }
+    ).lean();
+
+    const existingKeySet = new Set(
+      existingDoses.map((d) => `${d.medication?.toString()}_${d.date}_${(d.time || '').trim().toLowerCase()}`)
+    );
+
+    const todayIST = getTodayDate();
+    const newDoses = [];
+
+    for (const med of medications) {
+      const medStartDate = med.startDate || med.createdAt || new Date();
+      const medStartDateStr = getISTDateString(medStartDate);
+      const medEndDateStr = (!med.isContinue && med.endDate) ? getISTDateString(med.endDate) : null;
+
+      const medCreationDate = med.createdAt || med.startDate || new Date();
+      const createdLocal = getLocalTimeDetails(medCreationDate, "Asia/Kolkata");
+      const creationDateStr = createdLocal.localDate;
+      const creationTimeMinutes = createdLocal.totalMinutes;
+
+      for (const date of dates) {
+        // If date is before medication start date, skip
+        if (date < medStartDateStr) continue;
+
+        // If date is after medication end date, skip
+        if (medEndDateStr && date > medEndDateStr) continue;
+
+        // If weekly frequency, match weekday
         if (med.frequency === "weekly") {
           const creationDay = getISTDayOfWeek(medStartDate);
           const targetDay = getISTDayOfWeek(date);
-          if (creationDay !== targetDay) {
-            continue; // Skip this medication on this date since it is not the scheduled weekday
-          }
+          if (creationDay !== targetDay) continue;
         }
 
-        // Determine medication creation timestamp in Asia/Kolkata
-        const medCreationDate = med.createdAt || med.startDate || new Date();
-        const createdLocal = getLocalTimeDetails(medCreationDate, "Asia/Kolkata");
-        const creationDateStr = createdLocal.localDate;
-        const creationTimeMinutes = createdLocal.totalMinutes;
-
-        // Fetch existing doses for this medication and date to check per-timing slot
-        const existingDoses = await Dose.find(
-          {
-            user: patientId,
-            medication: med._id,
-            date: date,
-          },
-          { time: 1 }
-        ).lean();
-
-        const existingTimes = new Set(existingDoses.map((d) => d.time));
-
-        const newDoses = [];
         for (const t of med.timings) {
           const scheduledTimeStr = timingToTimeMap[t.toLowerCase()] || t;
-          if (existingTimes.has(scheduledTimeStr)) {
-            continue;
-          }
+          const key = `${med._id.toString()}_${date}_${scheduledTimeStr.trim().toLowerCase()}`;
+          if (existingKeySet.has(key)) continue;
 
           const scheduledMinutes = parseTimeToMinutes(scheduledTimeStr);
 
-          // Rule: On creation date, skip any scheduled time that had already passed before the medication was created.
+          // On creation date, skip scheduled times that had already passed before medication creation
           if (date === creationDateStr && scheduledMinutes !== null && scheduledMinutes < creationTimeMinutes) {
-            console.log(`[ensureDosesExist] Skipping past scheduled dose for new medication on creation date. Med=${med._id} Date=${date} Scheduled=${scheduledTimeStr} (${scheduledMinutes}m) CreatedTime=${creationTimeMinutes}m`);
             continue;
           }
 
+          // Initial status:
+          // Past date or expired today -> "missed"
+          // Future/current window -> "pending"
+          let initialStatus = "pending";
+          if (date < todayIST || (date === todayIST && isDoseExpired(date, scheduledTimeStr))) {
+            initialStatus = "missed";
+          }
+
           newDoses.push({
-            user: patientId,
+            user: userId,
             medication: med._id,
             name: med.name,
             dosage: `${med.dosage}${med.unit}`,
             date: date,
             time: scheduledTimeStr,
-            status: "pending",
+            status: initialStatus,
           });
-        }
 
-        if (newDoses.length > 0) {
-          await Dose.insertMany(newDoses);
+          existingKeySet.add(key);
         }
       }
+    }
+
+    if (newDoses.length > 0) {
+      await Dose.insertMany(newDoses, { ordered: false });
+    }
+
+    return { created: newDoses.length, skipped: existingDoses.length };
+  } catch (err) {
+    console.log("Error in ensureDosesExistForRange:", err.message);
+    return { created: 0, error: err.message };
+  }
+};
+
+exports.ensureDosesExistForRange = ensureDosesExistForRange;
+
+const ensureDosesExist = async (req, date) => {
+  try {
+    const patientIds = await getAccessiblePatientIds(req, req.query.patientId);
+    if (!patientIds || patientIds.length === 0) return;
+    for (const patientId of patientIds) {
+      await ensureDosesExistForRange(patientId, date, date);
     }
   } catch (err) {
     console.log("Error in ensureDosesExist:", err.message);
@@ -536,6 +679,9 @@ exports.markAsTaken = async (req, res) => {
 
     await dose.save();
 
+    // Invalidate user cache on dose status change
+    await invalidateUserDoseCache(dose.user?._id?.toString() || req.user.id);
+
     const doseObj = dose.toObject();
     if (doseObj.proofImage) {
       doseObj.proofImage = await resolveFileUrl(doseObj.proofImage);
@@ -606,6 +752,7 @@ exports.verifyWithSelfie = async (req, res) => {
     if (isDoseExpired(dose.date, dose.time, tz)) {
       dose.status = "missed";
       await dose.save();
+      await invalidateUserDoseCache(dose.user?._id?.toString() || req.user.id);
       return res.status(400).json({
         message: "Dose action window has expired (60 minutes exceeded). This dose is marked as missed."
       });
@@ -638,6 +785,9 @@ exports.verifyWithSelfie = async (req, res) => {
     dose.planType = plan;
 
     await dose.save();
+
+    // Invalidate user cache on dose verification
+    await invalidateUserDoseCache(patientId);
 
     res.json({
       message: "Verification successful",
@@ -687,6 +837,8 @@ exports.deleteSelfie = async (req, res) => {
     dose.canRecoverUntil = recoverDate;
 
     await dose.save();
+
+    await invalidateUserDoseCache(dose.user?._id?.toString() || req.user.id);
 
     res.json({
       message: "Selfie deleted successfully"
@@ -770,6 +922,8 @@ exports.updateMedication = async (req, res) => {
       );
     }
 
+    await invalidateUserDoseCache(req.user.id);
+
     res.json(med);
 
   } catch (err) {
@@ -818,6 +972,8 @@ exports.updateMedicationStatus = async (req, res) => {
       );
     }
 
+    await invalidateUserDoseCache(req.user.id);
+
     res.json({
       success: true,
       message: `Medication status updated to ${status}`,
@@ -852,6 +1008,8 @@ exports.deleteMedication = async (req, res) => {
       { medication: id, date: { $gte: today }, status: "pending" },
       { status: "cancelled", isDeleted: true }
     );
+
+    await invalidateUserDoseCache(req.user.id);
 
     res.json({
       success: true,
@@ -890,6 +1048,8 @@ exports.recoverSelfie =
       dose.deletionReason = null;
 
       await dose.save();
+
+      await invalidateUserDoseCache(dose.user?.toString());
 
       res.json({
         success: true,
@@ -944,6 +1104,8 @@ exports.recoverSelfie =
 
       await dose.save();
 
+      await invalidateUserDoseCache(dose.user?.toString());
+
       res.json({
         success: true,
         message:
@@ -993,30 +1155,77 @@ exports.recoverSelfie =
   // ================= GET DOSE HISTORY (MULTI-DAY / DATE-RANGE) =================
   exports.getDoseHistory = async (req, res) => {
     try {
-      const { startDate, endDate, patientId } = req.query;
+      let { startDate, endDate, timeframe, patientId } = req.query;
+
+      const now = new Date();
+      const todayIST = getTodayDate();
+
+      // Resolve date range based on timeframe if not explicitly supplied
+      if (timeframe && (!startDate || !endDate)) {
+        const tf = timeframe.toLowerCase();
+        if (tf === "day" || tf === "1d") {
+          startDate = todayIST;
+          endDate = todayIST;
+        } else if (tf === "week" || tf === "1w") {
+          const d = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+          startDate = getISTDateString(d);
+          endDate = todayIST;
+        } else if (tf === "month" || tf === "1m") {
+          const d = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+          startDate = getISTDateString(d);
+          endDate = todayIST;
+        } else if (tf === "year" || tf === "1y") {
+          const d = new Date(now.getTime() - 364 * 24 * 60 * 60 * 1000);
+          startDate = getISTDateString(d);
+          endDate = todayIST;
+        }
+      }
+
+      if (!startDate || !endDate) {
+        // Default: Last 30 days up to today
+        const d = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+        startDate = startDate || getISTDateString(d);
+        endDate = endDate || todayIST;
+      }
+
+      // Ensure chronological ordering
+      if (startDate > endDate) {
+        const tmp = startDate;
+        startDate = endDate;
+        endDate = tmp;
+      }
+
+      const cacheKey = `dosehistory:${req.user.id}:${patientId || 'self'}:${startDate}:${endDate}:${timeframe || 'custom'}`;
+      const cached = await getCache(cacheKey);
+      if (cached) {
+        return res.status(200).json(cached);
+      }
+
+      const patientIds = await getAccessiblePatientIds(req, patientId);
+      if (!patientIds || patientIds.length === 0) {
+        const emptyResponse = {
+          success: true,
+          timeframe: timeframe || "custom",
+          startDate,
+          endDate,
+          summary: { total: 0, taken: 0, missed: 0, pending: 0, adherencePercentage: 0 },
+          timeline: [],
+          totalSchedules: 0,
+          schedules: []
+        };
+        return res.status(200).json(emptyResponse);
+      }
+
+      // Run idempotent backfill for each accessible patient across the requested range
+      for (const pId of patientIds) {
+        await ensureDosesExistForRange(pId, startDate, endDate);
+      }
 
       const filter = await buildUserAccessFilter(req, patientId);
 
-      // Build date filter (Asia/Kolkata date strings)
-      let dateFilter = {};
-      if (startDate && endDate) {
-        dateFilter = { $gte: startDate, $lte: endDate };
-      } else if (startDate) {
-        dateFilter = { $gte: startDate };
-      } else if (endDate) {
-        dateFilter = { $lte: endDate };
-      } else {
-        // Default: Last 30 days up to today in Asia/Kolkata
-        const todayIST = getTodayDate();
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        const thirtyDaysAgoIST = getISTDateString(thirtyDaysAgo);
-        dateFilter = { $gte: thirtyDaysAgoIST, $lte: todayIST };
-      }
-
       const query = Dose.find({
         ...filter,
-        date: dateFilter,
+        date: { $gte: startDate, $lte: endDate },
         isDeleted: { $ne: true }
       }).sort({ date: -1, time: 1 }).populate("medication");
 
@@ -1052,13 +1261,44 @@ exports.recoverSelfie =
         })
       );
 
-      res.status(200).json({
+      // Calculate Summary Counts
+      let takenCount = 0;
+      let missedCount = 0;
+      let pendingCount = 0;
+      for (const d of resolvedSchedules) {
+        const st = (d.status || "").toLowerCase();
+        if (st === "taken") takenCount++;
+        else if (st === "missed") missedCount++;
+        else pendingCount++;
+      }
+      const totalCount = resolvedSchedules.length;
+      const adherencePercentage = totalCount > 0 ? Math.round((takenCount / totalCount) * 100) : 0;
+
+      // Build Continuous Zero-Filled Timeline
+      const timeline = buildContinuousTimeline(resolvedSchedules, startDate, endDate, timeframe);
+
+      const responseData = {
         success: true,
-        startDate: typeof dateFilter === "object" ? dateFilter.$gte : undefined,
-        endDate: typeof dateFilter === "object" ? dateFilter.$lte : undefined,
+        timeframe: timeframe || "custom",
+        startDate,
+        endDate,
+        summary: {
+          total: totalCount,
+          taken: takenCount,
+          missed: missedCount,
+          pending: pendingCount,
+          adherencePercentage
+        },
+        timeline,
         totalSchedules: resolvedSchedules.length,
         schedules: resolvedSchedules,
-      });
+      };
+
+      // Set cache (TTL: 60s if range includes today, 15m if completely in the past)
+      const ttl = endDate >= todayIST ? 60 : 900;
+      await setCache(cacheKey, responseData, ttl);
+
+      res.status(200).json(responseData);
 
     } catch (err) {
       console.log("DOSE HISTORY ERROR:", err.message);
@@ -1068,3 +1308,4 @@ exports.recoverSelfie =
       });
     }
   };
+

@@ -1,6 +1,11 @@
 const cron = require("node-cron");
 const Dose = require("../models/doseModel");
+const Medication = require("../models/medicationModel");
+const { ensureDosesExistForRange } = require("../controllers/medicationController");
 const { sendPushNotification } = require("../utils/notificationHelper");
+
+let lastBackfillHour = -1;
+let lastBackfillDate = null;
 
 const parseTimeToMinutes = (timeString) => {
   if (!timeString) return null;
@@ -55,9 +60,24 @@ const getLocalTimeDetails = (dateObj, timezone = "Asia/Kolkata") => {
 cron.schedule("* * * * *", async () => {
   try {
     const now = new Date();
-    const todayIST = getLocalTimeDetails(now, "Asia/Kolkata").localDate;
+    const todayDetails = getLocalTimeDetails(now, "Asia/Kolkata");
+    const todayIST = todayDetails.localDate;
     const yesterdayIST = getLocalTimeDetails(new Date(now.getTime() - 24 * 60 * 60 * 1000), "Asia/Kolkata").localDate;
     const tomorrowIST = getLocalTimeDetails(new Date(now.getTime() + 24 * 60 * 60 * 1000), "Asia/Kolkata").localDate;
+
+    // Periodically ensure doses exist for active users (once per hour or when date changes)
+    if (lastBackfillDate !== todayIST || lastBackfillHour !== todayDetails.hour) {
+      lastBackfillDate = todayIST;
+      lastBackfillHour = todayDetails.hour;
+      try {
+        const activeUsers = await Medication.distinct("user", { status: "active", isDeleted: { $ne: true } });
+        for (const uId of activeUsers) {
+          await ensureDosesExistForRange(uId, yesterdayIST, tomorrowIST);
+        }
+      } catch (backfillErr) {
+        console.error("[Reminder:BackfillError]", backfillErr.message);
+      }
+    }
 
     // Find pending doses within a 3-day window of Asia/Kolkata (IST) now
     const pendingDoses = await Dose.find({

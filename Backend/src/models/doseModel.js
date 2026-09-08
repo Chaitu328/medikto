@@ -99,4 +99,8 @@ planType: {
 
 }, { timestamps: true });
 
+doseSchema.index({ user: 1, date: -1, isDeleted: 1 });
+doseSchema.index({ user: 1, medication: 1, date: 1, time: 1 });
+doseSchema.index({ date: 1, status: 1, isDeleted: 1 });
+
 module.exports = mongoose.model("Dose", doseSchema);

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
+import 'package:medikto/features/medications/models/dose_history_model.dart';
 import 'package:medikto/features/medications/models/today_scheduled_model.dart';
 import 'package:medikto/features/medications/views/medication_verification_screen.dart';
 
@@ -13,7 +15,8 @@ class ActivityHistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = context.themeColors;
-    final historyAsync = ref.watch(getTodayScheduleProvider);
+    const query = DoseHistoryQuery(timeframe: 'month');
+    final historyAsync = ref.watch(doseHistoryProvider(query));
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -46,15 +49,52 @@ class ActivityHistoryScreen extends ConsumerWidget {
         ),
 
         data: (response) {
-          final List<dynamic> historyData = response.data ?? [];
+          if (response.status != ResponseStatus.SUCCESS || response.data == null) {
+            return Center(
+              child: Text(
+                "No Activity History Found",
+                style: TextStyle(color: theme.textSecondary),
+              ),
+            );
+          }
+
+          final DoseHistoryResponse historyResponse = response.data is DoseHistoryResponse
+              ? response.data as DoseHistoryResponse
+              : DoseHistoryResponse(summary: DoseHistorySummary());
+
+          final List<TodayScheduleModel> historyData = historyResponse.schedules;
 
           if (historyData.isEmpty) {
             return Center(
               child: Text(
-                "No History Found",
+                "No Activity History Found",
                 style: TextStyle(color: theme.textSecondary),
               ),
             );
+          }
+
+          final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          final yesterdayStr = DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(const Duration(days: 1)));
+
+          final Map<String, List<TodayScheduleModel>> grouped = {};
+          for (final item in historyData) {
+            final dStr = item.date ?? '';
+            String groupKey;
+            if (dStr == todayStr) {
+              groupKey = "Today";
+            } else if (dStr == yesterdayStr) {
+              groupKey = "Yesterday";
+            } else if (dStr.isNotEmpty) {
+              try {
+                final dt = DateTime.parse(dStr);
+                groupKey = DateFormat("d MMMM yyyy").format(dt);
+              } catch (_) {
+                groupKey = dStr;
+              }
+            } else {
+              groupKey = "Earlier";
+            }
+            grouped.putIfAbsent(groupKey, () => []).add(item);
           }
 
           return Column(
@@ -66,37 +106,51 @@ class ActivityHistoryScreen extends ConsumerWidget {
                   backgroundColor: theme.card,
 
                   onRefresh: () async {
-                    ref.invalidate(getTodayScheduleProvider);
-
-                    await ref.read(getTodayScheduleProvider.future);
+                    ref.invalidate(doseHistoryProvider(query));
+                    await ref.read(doseHistoryProvider(query).future);
                   },
-                  child: ListView.builder(
+                  child: ListView(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 10,
                     ),
                     physics: const BouncingScrollPhysics(),
-                    itemCount: historyData.length,
-                    itemBuilder: (context, index) {
-                      final rawItem = historyData[index];
-                      final TodayScheduleModel item = rawItem is TodayScheduleModel
-                          ? rawItem
-                          : TodayScheduleModel.fromJson(rawItem);
-                  
-                      final bool isTaken =
-                          (item.status ?? "").toLowerCase() == "taken";
+                    children: [
+                      ...grouped.entries.map((entry) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                entry.key,
+                                style: TextStyle(
+                                  color: theme.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            ...entry.value.map((item) {
+                              final statusLower = (item.status ?? "").toLowerCase();
+                              final bool isTaken = statusLower == "taken";
+                              final bool isMissed = statusLower == "missed";
+                              final Color statusColor = isTaken
+                                  ? AppColors.takenGreen
+                                  : (isMissed ? AppColors.missedRed : AppColors.pendingAmber);
 
-                      final Color statusColor = isTaken
-                          ? AppColors.takenGreen
-                          : AppColors.missedRed;
-                  
-                      return _buildActivityTile(
-                        context,
-                        ref,
-                        item,
-                        statusColor,
-                      );
-                    },
+                              return _buildActivityTile(
+                                context,
+                                ref,
+                                item,
+                                statusColor,
+                              );
+                            }),
+                          ],
+                        );
+                      }),
+                      const SizedBox(height: 30),
+                    ],
                   ),
                 ),
               ),

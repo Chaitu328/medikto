@@ -2,9 +2,11 @@ import 'dart:io';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:medikto/core/cache/secure_history_cache.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
+import 'package:medikto/features/medications/models/dose_history_model.dart';
 import 'package:medikto/features/medications/models/today_scheduled_model.dart';
 import 'package:medikto/features/medications/views/selfie_verfication_medicine.dart';
 import 'package:path_provider/path_provider.dart';
@@ -26,8 +28,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     with SingleTickerProviderStateMixin {
 
   late TabController _tabController;
-  final Set<String> _expandedDates = {"1 May 2026, Friday"};
+  final Set<String> _expandedDates = {};
   DateTimeRange? _selectedDateRange;
+  String _selectedTimeframe = "week"; // "day", "week", "month", "year", "custom"
   bool _isSharing = false;
 
   @override
@@ -134,21 +137,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     List<Map<String, dynamic>> records,
   ) {
     return records.where((record) {
-      bool matchesTab = tabName == "All Records" || record['status'] == tabName;
-
-      bool matchesDate = true;
-
-      if (_selectedDateRange != null) {
-        DateTime date = record['dateTime'];
-
-        matchesDate =
-            (date.isAtSameMomentAs(_selectedDateRange!.start) ||
-                date.isAfter(_selectedDateRange!.start)) &&
-            (date.isAtSameMomentAs(_selectedDateRange!.end) ||
-                date.isBefore(_selectedDateRange!.end));
-      }
-
-      return matchesTab && matchesDate;
+      return tabName == "All Records" || record['status'] == tabName;
     }).toList();
   }
 
@@ -159,7 +148,10 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      initialDateRange: _selectedDateRange,
+      initialDateRange: _selectedDateRange ?? DateTimeRange(
+        start: DateTime.now().subtract(const Duration(days: 6)),
+        end: DateTime.now(),
+      ),
       builder: (context, child) {
         return Theme(
           data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
@@ -183,8 +175,41 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
       },
     );
     if (picked != null) {
-      setState(() => _selectedDateRange = picked);
+      setState(() {
+        _selectedDateRange = picked;
+        _selectedTimeframe = "custom";
+      });
     }
+  }
+
+  DoseHistoryQuery _getHistoryQuery() {
+    final now = DateTime.now();
+    final df = DateFormat('yyyy-MM-dd');
+    String? start;
+    String? end = df.format(now);
+
+    if (_selectedTimeframe == "custom" && _selectedDateRange != null) {
+      start = df.format(_selectedDateRange!.start);
+      end = df.format(_selectedDateRange!.end);
+    } else if (_selectedTimeframe == "day") {
+      start = df.format(now);
+      end = df.format(now);
+    } else if (_selectedTimeframe == "week") {
+      start = df.format(now.subtract(const Duration(days: 6)));
+      end = df.format(now);
+    } else if (_selectedTimeframe == "month") {
+      start = df.format(now.subtract(const Duration(days: 29)));
+      end = df.format(now);
+    } else if (_selectedTimeframe == "year") {
+      start = df.format(now.subtract(const Duration(days: 364)));
+      end = df.format(now);
+    }
+
+    return DoseHistoryQuery(
+      startDate: start,
+      endDate: end,
+      timeframe: _selectedTimeframe,
+    );
   }
 
   @override
@@ -262,55 +287,105 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              padding: EdgeInsets.zero,
-              labelPadding: const EdgeInsets.only(right: 24),
-              indicatorColor: colors.accentMedium,
-              labelColor: colors.accentMedium,
-              unselectedLabelColor: colors.textMuted,
-              dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: "All Records"),
-                Tab(text: "Taken"),
-                Tab(text: "Missed"),
-                Tab(text: "Pending"),
-              ],
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  padding: EdgeInsets.zero,
+                  labelPadding: const EdgeInsets.only(right: 24),
+                  indicatorColor: colors.accentMedium,
+                  labelColor: colors.accentMedium,
+                  unselectedLabelColor: colors.textMuted,
+                  dividerColor: Colors.transparent,
+                  tabs: const [
+                    Tab(text: "All Records"),
+                    Tab(text: "Taken"),
+                    Tab(text: "Missed"),
+                    Tab(text: "Pending"),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.calendar_month_outlined,
+                  color: _selectedTimeframe == "custom"
+                      ? Colors.greenAccent
+                      : colors.accentPrimary,
+                ),
+                onPressed: _selectDateRange,
+              ),
+            ],
           ),
-          IconButton(
-            icon: Icon(
-              Icons.filter_list,
-              color: _selectedDateRange != null
-                  ? Colors.greenAccent
-                  : colors.accentPrimary,
-            ),
-            onPressed: _selectDateRange,
-          ),
+          const SizedBox(height: 8),
+          _buildTimeframeSelector(),
         ],
       ),
     );
   }
 
-  Map<String, String?> _getHistoryQueryParams() {
-    if (_selectedDateRange != null) {
-      return {
-        'startDate': DateFormat('yyyy-MM-dd').format(_selectedDateRange!.start),
-        'endDate': DateFormat('yyyy-MM-dd').format(_selectedDateRange!.end),
-      };
-    }
-    return {};
+  Widget _buildTimeframeSelector() {
+    final colors = context.themeColors;
+    final items = [
+      {"id": "day", "label": "1D"},
+      {"id": "week", "label": "1W"},
+      {"id": "month", "label": "1M"},
+      {"id": "year", "label": "1Y"},
+      {"id": "custom", "label": "Custom"},
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: items.map((item) {
+          final isSelected = _selectedTimeframe == item["id"];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ChoiceChip(
+              label: Text(
+                item["label"]!,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : colors.textMuted,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              selected: isSelected,
+              selectedColor: colors.accentPrimary,
+              backgroundColor: colors.cardSecondary,
+              side: BorderSide(
+                color: isSelected ? colors.accentPrimary : colors.borderSubtle,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              onSelected: (selected) {
+                if (selected) {
+                  if (item["id"] == "custom") {
+                    _selectDateRange();
+                  } else {
+                    setState(() {
+                      _selectedTimeframe = item["id"]!;
+                    });
+                  }
+                }
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   Widget _buildTabContent(String tabName) {
     final colors = context.themeColors;
-    final params = _getHistoryQueryParams();
-    final scheduleAsync = ref.watch(doseHistoryProvider(params));
+    final query = _getHistoryQuery();
+    final scheduleAsync = ref.watch(doseHistoryProvider(query));
 
     return scheduleAsync.when(
       loading: () =>
@@ -331,27 +406,17 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
           );
         }
 
-        final schedules = response.data as List<TodayScheduleModel>;
+        final DoseHistoryResponse historyResponse = response.data is DoseHistoryResponse
+            ? response.data as DoseHistoryResponse
+            : DoseHistoryResponse(summary: DoseHistorySummary());
 
+        final schedules = historyResponse.schedules;
         final records = _convertRecords(schedules);
+        final summary = historyResponse.summary;
+        final timeline = historyResponse.timeline;
 
         final filteredItems = records.where((record) {
-          bool matchesTab =
-              tabName == "All Records" || record['status'] == tabName;
-
-          bool matchesDate = true;
-
-          if (_selectedDateRange != null) {
-            DateTime date = record['dateTime'];
-
-            matchesDate =
-                (date.isAtSameMomentAs(_selectedDateRange!.start) ||
-                    date.isAfter(_selectedDateRange!.start)) &&
-                (date.isAtSameMomentAs(_selectedDateRange!.end) ||
-                    date.isBefore(_selectedDateRange!.end));
-          }
-
-          return matchesTab && matchesDate;
+          return tabName == "All Records" || record['status'] == tabName;
         }).toList();
 
         Map<String, List<Map<String, dynamic>>> grouped = {};
@@ -360,29 +425,40 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
           grouped.putIfAbsent(item['dateString'], () => []).add(item);
         }
 
-        if (filteredItems.isEmpty) {
-          return Center(
-            child: Text("No records found", style: TextStyle(color: colors.textMuted)),
-          );
+        // Auto-expand latest dates if empty
+        if (_expandedDates.isEmpty && grouped.isNotEmpty) {
+          _expandedDates.add(grouped.keys.first);
         }
 
         return RefreshIndicator(
           color: colors.accentPrimary,
           backgroundColor: colors.surface,
           onRefresh: () async {
-            ref.invalidate(doseHistoryProvider(params));
+            SecureHistoryCache.instance.clearAll();
+            ref.invalidate(doseHistoryProvider(query));
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
             children: [
-              _buildComplianceChart(records),
-              _buildStatsSection(records),
+              _buildComplianceChart(timeline, records),
+              _buildStatsSection(summary),
 
-              ...grouped.keys.map(
-                (date) => _buildDateGroup(date, grouped[date]!),
-              ),
+              if (filteredItems.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: Text(
+                      "No $tabName records found for this period",
+                      style: TextStyle(color: colors.textMuted, fontSize: 13),
+                    ),
+                  ),
+                )
+              else
+                ...grouped.keys.map(
+                  (date) => _buildDateGroup(date, grouped[date]!),
+                ),
 
               _buildBottomInfoCard(),
 
@@ -394,65 +470,57 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     );
   }
 
-  /// 🔹 WEEKLY COMPLIANCE LINE CHART
-  Widget _buildComplianceChart(List<Map<String, dynamic>> items) {
+  /// 🔹 TIMEFRAME COMPLIANCE LINE CHART
+  Widget _buildComplianceChart(List<TimelinePoint> timeline, List<Map<String, dynamic>> items) {
     final colors = context.themeColors;
     final isDark = context.isDarkMode;
 
-    // Group records by date and compute taken/missed/pending counts per day
-    final Map<String, Map<String, int>> byDate = {};
-    for (final item in items) {
-      final dateStr = item['dateString'] as String? ?? '';
-      byDate.putIfAbsent(
-        dateStr,
-        () => {'taken': 0, 'missed': 0, 'pending': 0},
-      );
-      final status = (item['status'] as String).toLowerCase();
-      if (byDate[dateStr]!.containsKey(status)) {
-        byDate[dateStr]![status] = byDate[dateStr]![status]! + 1;
-      }
-    }
-
-    // Take the last 7 days (sorted)
-    final sortedDates = byDate.keys.toList()
-      ..sort((a, b) {
-        final df = DateFormat('d MMM yyyy, EEEE');
-        try {
-          return df.parse(a).compareTo(df.parse(b));
-        } catch (_) {
-          return 0;
-        }
-      });
-    final last7 = sortedDates.length > 7
-        ? sortedDates.sublist(sortedDates.length - 7)
-        : sortedDates;
-
-    // Build fl_chart spot lists
     final takenSpots = <FlSpot>[];
     final missedSpots = <FlSpot>[];
     final pendingSpots = <FlSpot>[];
-    for (int i = 0; i < last7.length; i++) {
-      final d = byDate[last7[i]]!;
-      takenSpots.add(FlSpot(i.toDouble(), d['taken']!.toDouble()));
-      missedSpots.add(FlSpot(i.toDouble(), d['missed']!.toDouble()));
-      pendingSpots.add(FlSpot(i.toDouble(), d['pending']!.toDouble()));
+    final labels = <String>[];
+
+    double maxDoseCount = 4.0;
+
+    if (timeline.isNotEmpty) {
+      for (int i = 0; i < timeline.length; i++) {
+        final pt = timeline[i];
+        takenSpots.add(FlSpot(i.toDouble(), pt.taken.toDouble()));
+        missedSpots.add(FlSpot(i.toDouble(), pt.missed.toDouble()));
+        pendingSpots.add(FlSpot(i.toDouble(), pt.pending.toDouble()));
+        labels.add(pt.label);
+        if (pt.taken > maxDoseCount) maxDoseCount = pt.taken.toDouble();
+        if (pt.missed > maxDoseCount) maxDoseCount = pt.missed.toDouble();
+        if (pt.pending > maxDoseCount) maxDoseCount = pt.pending.toDouble();
+        if (pt.total > maxDoseCount) maxDoseCount = pt.total.toDouble();
+      }
     }
 
-    // Short day labels for x-axis
-    List<String> shortLabels(List<String> dates) {
-      return dates.map((d) {
-        try {
-          final parsed = DateFormat('d MMM yyyy, EEEE').parse(d);
-          return DateFormat('EEE').format(parsed);
-        } catch (_) {
-          return d.length > 3 ? d.substring(0, 3) : d;
-        }
-      }).toList();
+    String chartTitle;
+    switch (_selectedTimeframe) {
+      case "day":
+        chartTitle = "Daily Medication Record";
+        break;
+      case "month":
+        chartTitle = "Monthly Medication Record";
+        break;
+      case "year":
+        chartTitle = "Yearly Medication Record";
+        break;
+      case "custom":
+        chartTitle = "Custom Range Record";
+        break;
+      case "week":
+      default:
+        chartTitle = "Weekly Medication Record";
+        break;
     }
 
-    final labels = shortLabels(last7);
+    final double bottomInterval = labels.length > 14
+        ? (labels.length / 7).ceil().toDouble()
+        : (labels.length > 7 ? 2.0 : 1.0);
 
-    LineChartBarData _line(List<FlSpot> spots, Color color) {
+    LineChartBarData lineData(List<FlSpot> spots, Color color) {
       return LineChartBarData(
         spots: spots,
         isCurved: true,
@@ -460,9 +528,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
         barWidth: 2.5,
         isStrokeCapRound: true,
         dotData: FlDotData(
-          show: true,
-          getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
-            radius: 4,
+          show: spots.length <= 15,
+          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+            radius: 3.5,
             color: color,
             strokeWidth: 1.5,
             strokeColor: isDark ? Colors.black : Colors.white,
@@ -502,7 +570,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
             runSpacing: 8,
             children: [
               Text(
-                'Weekly Medications record',
+                chartTitle,
                 style: TextStyle(
                   color: colors.textPrimary,
                   fontWeight: FontWeight.bold,
@@ -523,16 +591,17 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
           const SizedBox(height: 16),
           SizedBox(
             height: 160,
-            child: last7.isEmpty
+            child: labels.isEmpty
                 ? Center(
                     child: Text(
-                      'No data yet',
+                      'No data for selected period',
                       style: TextStyle(color: colors.textMuted, fontSize: 12),
                     ),
                   )
                 : LineChart(
                     LineChartData(
                       minY: 0,
+                      maxY: maxDoseCount + 1,
                       gridData: FlGridData(
                         show: true,
                         drawVerticalLine: false,
@@ -547,6 +616,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                           sideTitles: SideTitles(
                             showTitles: true,
                             reservedSize: 24,
+                            interval: (maxDoseCount / 4).ceil().toDouble().clamp(1.0, 10.0),
                             getTitlesWidget: (v, _) => Text(
                               v.toInt().toString(),
                               style: TextStyle(
@@ -559,7 +629,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            interval: 1,
+                            interval: bottomInterval,
                             getTitlesWidget: (v, _) {
                               final idx = v.toInt();
                               if (idx < 0 || idx >= labels.length) {
@@ -586,9 +656,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                         ),
                       ),
                       lineBarsData: [
-                        _line(takenSpots, AppColors.takenGreen),
-                        _line(missedSpots, AppColors.missedRed),
-                        _line(pendingSpots, AppColors.pendingAmber),
+                        lineData(takenSpots, AppColors.takenGreen),
+                        lineData(missedSpots, AppColors.missedRed),
+                        lineData(pendingSpots, AppColors.pendingAmber),
                       ],
                     ),
                   ),
@@ -620,22 +690,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     );
   }
 
-  Widget _buildStatsSection(List<Map<String, dynamic>> items) {
+  Widget _buildStatsSection(DoseHistorySummary summary) {
     final colors = context.themeColors;
     final isDark = context.isDarkMode;
-    final int totalCount = items.length;
-
-    final int takenCount = items
-        .where((item) => item['status'] == "Taken")
-        .length;
-
-    final int missedCount = items
-        .where((item) => item['status'] == "Missed")
-        .length;
-
-    final int pendingCount = items
-        .where((item) => item['status'] == "Pending")
-        .length;
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -657,10 +714,10 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _statColumn("Total Records", totalCount.toString(), colors.accentMetric),
-          _statColumn("Taken", takenCount.toString(), AppColors.takenGreen),
-          _statColumn("Missed", missedCount.toString(), AppColors.missedRed),
-          _statColumn("Pending", pendingCount.toString(), AppColors.pendingAmber),
+          _statColumn("Total Records", summary.total.toString(), colors.accentMetric),
+          _statColumn("Taken", summary.taken.toString(), AppColors.takenGreen),
+          _statColumn("Missed", summary.missed.toString(), AppColors.missedRed),
+          _statColumn("Pending", summary.pending.toString(), AppColors.pendingAmber),
         ],
       ),
     );
@@ -864,7 +921,8 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                   );
 
                   if (result == true) {
-                    ref.invalidate(doseHistoryProvider);
+                    SecureHistoryCache.instance.clearAll();
+                    ref.invalidate(doseHistoryProvider(_getHistoryQuery()));
                     if (mounted) {
                       setState(() {});
                     }
@@ -1125,18 +1183,21 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
 
     try {
       final tabNames = ["All Records", "Taken", "Missed", "Pending"];
-      final params = _getHistoryQueryParams();
+      final query = _getHistoryQuery();
 
-      final response = await ref.read(doseHistoryProvider(params).future);
+      final response = await ref.read(doseHistoryProvider(query).future);
 
       if (response.status != ResponseStatus.SUCCESS || response.data == null) {
+        setState(() => _isSharing = false);
         return;
       }
 
-      final schedules = response.data as List<TodayScheduleModel>;
+      final historyResponse = response.data is DoseHistoryResponse
+          ? response.data as DoseHistoryResponse
+          : DoseHistoryResponse(summary: DoseHistorySummary());
 
+      final schedules = historyResponse.schedules;
       final records = _convertRecords(schedules);
-
       final currentList = _getFilteredRecords(tabNames[tabIndex], records);
 
       final pdf = pw.Document();

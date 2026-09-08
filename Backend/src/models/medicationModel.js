@@ -55,4 +55,6 @@ const medicationSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+medicationSchema.index({ user: 1, status: 1 });
+
 module.exports = mongoose.model("Medication", medicationSchema);

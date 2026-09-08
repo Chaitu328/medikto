@@ -1,6 +1,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:medikto/core/cache/secure_history_cache.dart';
 import 'package:medikto/core/constants/api_urls.dart';
 import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
@@ -48,6 +49,9 @@ Future<void> logoutUser() async {
     await prefs.remove(StorageKeys.token);
     await prefs.remove(StorageKeys.refreshToken);
     await prefs.remove(StorageKeys.userId);
+
+    /// CLEAR CACHE
+    SecureHistoryCache.instance.clearAll();
 
     /// OPTIONAL
     /// keep onboarding so user won't see onboarding again
