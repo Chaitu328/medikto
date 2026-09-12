@@ -17,12 +17,14 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await NotificationManager().initialize();
   } catch (e) {
     debugPrint("Firebase SDK init failed: $e");
   }
 
   runApp(const ProviderScope(child: MyApp()));
+
+  // Asynchronously initialize notification manager without blocking UI rendering
+  NotificationManager().initialize();
 }
 
 class MyApp extends ConsumerWidget {

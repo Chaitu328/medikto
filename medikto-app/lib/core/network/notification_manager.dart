@@ -76,153 +76,158 @@ class NotificationManager {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // 1. Register background message handler
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    try {
+      // 1. Register background message handler
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-    // 2. Request user permissions (iOS & Android 13+)
-    NotificationSettings settings = await _fcm.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
-
-    if (kDebugMode) {
-      print('User granted notification permission: ${settings.authorizationStatus}');
-    }
-
-    // 3. Initialize Flutter Local Notifications & create Android channel
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
-    const initSettings = InitializationSettings(
-      android: androidInit,
-      iOS: iosInit,
-    );
-
-    await _localNotifications.initialize(
-      settings: initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (kDebugMode) {
-          print('Local notification clicked with payload: ${response.payload}');
-        }
-        final payload = response.payload;
-        handleNotificationNavigation(
-          doseId: (payload != null && payload.trim().isNotEmpty) ? payload : null,
-        );
-      },
-    );
-
-    // Explicitly create notification channel on Android system
-    final androidImplementation = _localNotifications
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
-    if (androidImplementation != null) {
-      await androidImplementation.createNotificationChannel(
-        mediktoNotificationChannel,
+      // 2. Request user permissions (iOS & Android 13+)
+      NotificationSettings settings = await _fcm.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
       );
-      if (kDebugMode) {
-        print('Android notification channel [medikto_channel] registered with high importance');
-      }
-    }
 
-    // 4. Enable foreground notification presentation options for iOS / macOS
-    await _fcm.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    // 5. Listen to foreground messages and show local notification heads-up
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (kDebugMode) {
-        print('Received foreground notification: ${message.notification?.title} - ${message.notification?.body}');
-        print('Message data: ${message.data}');
+        print('User granted notification permission: ${settings.authorizationStatus}');
       }
 
-      final notification = message.notification;
-      if (notification != null) {
-        final doseId = message.data['doseId'] ?? message.data['dose_id'] ?? message.data['id'] ?? '';
-        _localNotifications.show(
-          id: notification.hashCode,
-          title: notification.title ?? "💊 Medication Reminder",
-          body: notification.body ?? "",
-          notificationDetails: NotificationDetails(
-            android: AndroidNotificationDetails(
-              mediktoNotificationChannel.id,
-              mediktoNotificationChannel.name,
-              channelDescription: mediktoNotificationChannel.description,
-              importance: Importance.max,
-              priority: Priority.high,
-              icon: '@mipmap/ic_launcher',
-              playSound: true,
-              enableVibration: true,
-            ),
-            iOS: const DarwinNotificationDetails(
-              presentAlert: true,
-              presentBadge: true,
-              presentSound: true,
-            ),
-          ),
-          payload: doseId.toString(),
+      // 3. Initialize Flutter Local Notifications & create Android channel
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosInit = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
+      const initSettings = InitializationSettings(
+        android: androidInit,
+        iOS: iosInit,
+      );
+
+      await _localNotifications.initialize(
+        settings: initSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          if (kDebugMode) {
+            print('Local notification clicked with payload: ${response.payload}');
+          }
+          final payload = response.payload;
+          handleNotificationNavigation(
+            doseId: (payload != null && payload.trim().isNotEmpty) ? payload : null,
+          );
+        },
+      );
+
+      // Explicitly create notification channel on Android system
+      final androidImplementation = _localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (androidImplementation != null) {
+        await androidImplementation.createNotificationChannel(
+          mediktoNotificationChannel,
         );
+        if (kDebugMode) {
+          print('Android notification channel [medikto_channel] registered with high importance');
+        }
       }
-    });
 
-    // 6. Handle notification click events when app opens from background/terminated
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (kDebugMode) {
-        print('Notification clicked! Opened app: ${message.data}');
-      }
-      final doseId = message.data['doseId'] ?? message.data['dose_id'] ?? message.data['id'];
-      handleNotificationNavigation(doseId: doseId?.toString());
-    });
+      // 4. Enable foreground notification presentation options for iOS / macOS
+      await _fcm.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    // 7. Check if app was opened directly from terminated state via notification click
-    final initialMessage = await _fcm.getInitialMessage();
-    if (initialMessage != null) {
-      if (kDebugMode) {
-        print('App launched from terminated state via notification: ${initialMessage.data}');
-      }
-      final doseId = initialMessage.data['doseId'] ?? initialMessage.data['dose_id'] ?? initialMessage.data['id'];
-      handleNotificationNavigation(doseId: doseId?.toString());
-    }
+      // 5. Listen to foreground messages and show local notification heads-up
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        if (kDebugMode) {
+          print('Received foreground notification: ${message.notification?.title} - ${message.notification?.body}');
+          print('Message data: ${message.data}');
+        }
 
-    // 8. Listen for token refresh events
-    _fcm.onTokenRefresh.listen((newToken) {
-      if (kDebugMode) {
-        print('FCM Token refreshed: $newToken');
+        final notification = message.notification;
+        if (notification != null) {
+          final doseId = message.data['doseId'] ?? message.data['dose_id'] ?? message.data['id'] ?? '';
+          _localNotifications.show(
+            id: notification.hashCode,
+            title: notification.title ?? "💊 Medication Reminder",
+            body: notification.body ?? "",
+            notificationDetails: NotificationDetails(
+              android: AndroidNotificationDetails(
+                mediktoNotificationChannel.id,
+                mediktoNotificationChannel.name,
+                channelDescription: mediktoNotificationChannel.description,
+                importance: Importance.max,
+                priority: Priority.high,
+                icon: '@mipmap/ic_launcher',
+                playSound: true,
+                enableVibration: true,
+              ),
+              iOS: const DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+              ),
+            ),
+            payload: doseId.toString(),
+          );
+        }
+      });
+
+      // 6. Handle notification click events when app opens from background/terminated
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        if (kDebugMode) {
+          print('Notification clicked! Opened app: ${message.data}');
+        }
+        final doseId = message.data['doseId'] ?? message.data['dose_id'] ?? message.data['id'];
+        handleNotificationNavigation(doseId: doseId?.toString());
+      });
+
+      // 7. Check if app was opened directly from terminated state via notification click
+      final initialMessage = await _fcm.getInitialMessage();
+      if (initialMessage != null) {
+        if (kDebugMode) {
+          print('App launched from terminated state via notification: ${initialMessage.data}');
+        }
+        final doseId = initialMessage.data['doseId'] ?? initialMessage.data['dose_id'] ?? initialMessage.data['id'];
+        handleNotificationNavigation(doseId: doseId?.toString());
       }
+
+      // 8. Listen for token refresh events
+      _fcm.onTokenRefresh.listen((newToken) {
+        if (kDebugMode) {
+          print('FCM Token refreshed: $newToken');
+        }
+        registerFCMToken();
+      });
+
+      _isInitialized = true;
+
+      // 9. Retrieve and upload FCM token if logged in
       registerFCMToken();
-    });
-
-    _isInitialized = true;
-
-    // 9. Retrieve and upload FCM token if logged in
-    await registerFCMToken();
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error initializing NotificationManager: $e");
+      }
+    }
   }
 
   Future<void> registerFCMToken() async {
     try {
-      // On iOS, ensure APNs token is generated before requesting FCM token
+      // On iOS, check APNs token availability
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        String? apnsToken = await _fcm.getAPNSToken();
+        final apnsToken = await _fcm.getAPNSToken();
         if (apnsToken == null) {
           if (kDebugMode) {
-            print("APNs token is not ready yet. Retrying in 2 seconds...");
+            print("APNs token is not ready yet. Registration will retry on token refresh or navigation.");
           }
-          await Future.delayed(const Duration(seconds: 2));
-          apnsToken = await _fcm.getAPNSToken();
-        }
-        if (kDebugMode) {
-          print("Retrieved APNs token: $apnsToken");
+        } else {
+          if (kDebugMode) {
+            print("Retrieved APNs token: $apnsToken");
+          }
         }
       }
 
