@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/core/network/notification_manager.dart';
 import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
 import 'package:medikto/features/onboarding/views/onboarding_screens.dart';
@@ -84,6 +85,23 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void navigateToHome() {
+    if (NotificationManager.pendingOpenMedications) {
+      final doseId = NotificationManager.pendingDoseId;
+      NotificationManager.pendingOpenMedications = false;
+      NotificationManager.pendingDoseId = null;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BaseBottomNavigationPage(
+            index: 1,
+            pendingDoseId: doseId,
+          ),
+        ),
+      );
+      return;
+    }
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),

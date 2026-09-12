@@ -8,7 +8,8 @@ import 'package:medikto/features/vitals/views/vitals_screen.dart';
 
 class BaseBottomNavigationPage extends StatefulWidget {
   final int? index;
-  const BaseBottomNavigationPage({super.key, this.index});
+  final String? pendingDoseId;
+  const BaseBottomNavigationPage({super.key, this.index, this.pendingDoseId});
 
   @override
   State<BaseBottomNavigationPage> createState() =>
@@ -16,22 +17,32 @@ class BaseBottomNavigationPage extends StatefulWidget {
 }
 
 class _BaseBottomNavigationPageState extends State<BaseBottomNavigationPage> {
-  int _currentIndex = 0;
-
-  final List<Widget> _tabs = const [
-    HomeScreen(),
-    MedicationsScreen(),
-    AddReportsScreen(),
-    ProfileScreen(),
-  ];
+  late int _currentIndex;
+  String? _highlightDoseId;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.index ?? 0;
+    _highlightDoseId = widget.pendingDoseId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationManager().registerFCMToken();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant BaseBottomNavigationPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.index != null && widget.index != _currentIndex) {
+      setState(() {
+        _currentIndex = widget.index!;
+      });
+    }
+    if (widget.pendingDoseId != null && widget.pendingDoseId != _highlightDoseId) {
+      setState(() {
+        _highlightDoseId = widget.pendingDoseId;
+      });
+    }
   }
 
   void _onItemTapped(int index) {
@@ -65,7 +76,15 @@ class _BaseBottomNavigationPageState extends State<BaseBottomNavigationPage> {
 
     return Scaffold(
       backgroundColor: colors.bg,
-      body: IndexedStack(index: _currentIndex, children: _tabs),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          const HomeScreen(),
+          MedicationsScreen(highlightDoseId: _highlightDoseId),
+          const AddReportsScreen(),
+          const ProfileScreen(),
+        ],
+      ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.only(top: 6, bottom: 6),
         decoration: BoxDecoration(

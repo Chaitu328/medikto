@@ -11,13 +11,13 @@ console.log("Starting Subscription Lifecycle & Entitlements Tests...\n");
   assert.strictEqual(PLAN_PRICING.basic.priceText, "FREE");
   assert.strictEqual(PLAN_PRICING.basic.isFree, true);
 
-  assert.strictEqual(PLAN_PRICING.premium.regularPrice, 2000, "Regular price must be 2000");
+  assert.strictEqual(PLAN_PRICING.premium.regularPrice, 1000, "Regular price must be 1000");
   assert.strictEqual(PLAN_PRICING.premium.discountPercent, 50, "Discount must be 50%");
-  assert.strictEqual(PLAN_PRICING.premium.discountedPrice, 1000, "Discounted price must be 1000");
-  assert.strictEqual(PLAN_PRICING.premium.payableAmount, 1000, "Payable amount must be 1000");
+  assert.strictEqual(PLAN_PRICING.premium.discountedPrice, 500, "Discounted price must be 500");
+  assert.strictEqual(PLAN_PRICING.premium.payableAmount, 500, "Payable amount must be 500");
   assert.strictEqual(PLAN_PRICING.premium.hasTrial, true);
   assert.strictEqual(PLAN_PRICING.premium.trialDurationDays, 30);
-  console.log("  ✓ Pricing correctly configured: ₹2,000 struck through, 50% OFF, ₹1,000/mo, 1 Month Free Trial");
+  console.log("  ✓ Pricing correctly configured: ₹1,000 struck through, 50% OFF, ₹500/mo, 1 Month Free Trial");
 }
 
 // Test 2: New / Default User Subscription Resolution

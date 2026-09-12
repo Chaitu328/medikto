@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/features/home/premium_plans_views/premium_plans.dart';
 import 'package:medikto/features/profile/data/subscription_provider.dart';
 import 'package:medikto/features/profile/models/subscription_model.dart';
@@ -48,14 +47,14 @@ void main() {
       expect(model.remainingTrialDays, greaterThanOrEqualTo(20));
     });
 
-    test('PlanOfferingModel parses canonical pricing: ₹2000, 50% OFF, ₹1000, 1 Month Trial', () {
+    test('PlanOfferingModel parses canonical pricing: ₹1000, 50% OFF, ₹500, 1 Month Trial', () {
       final json = {
         'id': 'premium',
         'title': 'Premium Plan',
-        'priceText': '₹1,000/month',
-        'payableAmount': 1000,
-        'regularPrice': 2000,
-        'discountedPrice': 1000,
+        'priceText': '₹500/month',
+        'payableAmount': 500,
+        'regularPrice': 1000,
+        'discountedPrice': 500,
         'discountPercent': 50,
         'currency': 'INR',
         'isFree': false,
@@ -70,9 +69,9 @@ void main() {
 
       final model = PlanOfferingModel.fromJson(json);
       expect(model.id, 'premium');
-      expect(model.regularPrice, 2000);
+      expect(model.regularPrice, 1000);
       expect(model.discountPercent, 50);
-      expect(model.discountedPrice, 1000);
+      expect(model.discountedPrice, 500);
       expect(model.hasTrial, true);
       expect(model.trialDurationDays, 30);
       expect(model.trialDurationText, '1 MONTH FREE TRIAL');
@@ -80,7 +79,7 @@ void main() {
   });
 
   group('PremiumPlansScreen Widget Tests', () {
-    testWidgets('Renders Plans Screen with Basic FREE and Premium ₹2,000 struck, 50% OFF, ₹1,000/mo, 1 Month Trial', (tester) async {
+    testWidgets('Renders Plans Screen with Basic FREE and Premium ₹1,000 struck, 50% OFF, ₹500/mo, 1 Month Trial', (tester) async {
       final mockStatus = SubscriptionStatusModel.defaultBasic();
       final mockPlans = [
         PlanOfferingModel(
@@ -104,10 +103,10 @@ void main() {
         PlanOfferingModel(
           id: "premium",
           title: "Premium Plan",
-          priceText: "₹1,000/month",
-          payableAmount: 1000,
-          regularPrice: 2000,
-          discountedPrice: 1000,
+          priceText: "₹500/month",
+          payableAmount: 500,
+          regularPrice: 1000,
+          discountedPrice: 500,
           discountPercent: 50,
           currency: "INR",
           billingCycle: "month",
@@ -115,7 +114,7 @@ void main() {
           hasTrial: true,
           trialDurationDays: 30,
           trialDurationText: "1 MONTH FREE TRIAL",
-          trialOfferText: "1 Month FREE Trial, then ₹1,000/month",
+          trialOfferText: "1 Month FREE Trial, then ₹500/month (50% OFF regular ₹1,000/month)",
           badge: "",
           features: ["Store up to 250 health reports", "Manage unlimited medications"],
         ),
@@ -147,7 +146,7 @@ void main() {
 
       // Verify Premium Plan Commercial Pricing Elements
       expect(find.text("Premium Plan"), findsOneWidget);
-      expect(find.text("₹2,000/month"), findsOneWidget);
+      expect(find.text("₹1,000/month"), findsOneWidget);
       expect(find.text("50% OFF"), findsOneWidget);
       expect(find.text("1 MONTH FREE TRIAL"), findsOneWidget);
 
@@ -179,10 +178,10 @@ void main() {
         PlanOfferingModel(
           id: "premium",
           title: "Premium Plan",
-          priceText: "₹1,000/month",
-          payableAmount: 1000,
-          regularPrice: 2000,
-          discountedPrice: 1000,
+          priceText: "₹500/month",
+          payableAmount: 500,
+          regularPrice: 1000,
+          discountedPrice: 500,
           discountPercent: 50,
           currency: "INR",
           billingCycle: "month",
@@ -190,7 +189,7 @@ void main() {
           hasTrial: true,
           trialDurationDays: 30,
           trialDurationText: "1 MONTH FREE TRIAL",
-          trialOfferText: "1 Month FREE Trial, then ₹1,000/month",
+          trialOfferText: "1 Month FREE Trial, then ₹500/month (50% OFF regular ₹1,000/month)",
           badge: "",
           features: ["Store up to 250 health reports"],
         ),

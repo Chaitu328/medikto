@@ -437,7 +437,7 @@ class _PlanCard extends StatelessWidget {
                       children: [
                         // Struck-through Regular Price
                         Text(
-                          "₹2,000/month",
+                          "₹1,000/month",
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -468,10 +468,10 @@ class _PlanCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    // ₹1,000 / per month
+                    // ₹500 / per month
                     RichText(
                       text: TextSpan(
-                        text: "₹1,000/ ",
+                        text: "₹500/ ",
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -626,7 +626,7 @@ class _TrialConfirmationDialog extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              "Then ₹1,000/month\n50% OFF regular ₹2,000/month",
+              "Then ₹500/month\n50% OFF regular ₹1,000/month",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,

@@ -50,10 +50,10 @@ const PLAN_PRICING = {
   premium: {
     id: "premium",
     title: "Premium Plan",
-    priceText: "₹1,000/month",
-    payableAmount: 1000,
-    regularPrice: 2000,
-    discountedPrice: 1000,
+    priceText: "₹500/month",
+    payableAmount: 500,
+    regularPrice: 1000,
+    discountedPrice: 500,
     discountPercent: 50,
     currency: "INR",
     billingCycle: "month",
@@ -61,7 +61,7 @@ const PLAN_PRICING = {
     hasTrial: true,
     trialDurationDays: 30,
     trialDurationText: "1 MONTH FREE TRIAL",
-    trialOfferText: "1 Month FREE Trial, then ₹1,000/month (50% OFF regular ₹2,000/month)",
+    trialOfferText: "1 Month FREE Trial, then ₹500/month (50% OFF regular ₹1,000/month)",
     badge: "assets/images/premium-plan.png",
     features: [
       "🧾 Store up to 250 health reports",

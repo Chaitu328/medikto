@@ -431,7 +431,7 @@ Authorization: Bearer jwt_token_here
 
 **Method:** `GET`  
 **URL:** `/subscription/plans`  
-**Description:** Returns official plan pricing (₹2,000 regular price, 50% discount, ₹1,000 promotional price, 1-month free trial) and feature entitlements.
+**Description:** Returns official plan pricing (₹1,000 regular price, 50% discount, ₹500 promotional price, 1-month free trial) and feature entitlements.
 
 ### Response Example (200 OK)
 ```json
@@ -456,11 +456,11 @@ Authorization: Bearer jwt_token_here
     {
       "id": "premium",
       "title": "Premium Plan",
-      "priceText": "₹1,000/month",
-      "regularPrice": 2000,
+      "priceText": "₹500/month",
+      "regularPrice": 1000,
       "discountPercent": 50,
-      "discountedPrice": 1000,
-      "payableAmount": 1000,
+      "discountedPrice": 500,
+      "payableAmount": 500,
       "hasTrial": true,
       "trialDurationDays": 30,
       "trialDurationText": "1 MONTH FREE TRIAL",

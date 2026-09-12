@@ -23,38 +23,52 @@ const AndroidNotificationChannel mediktoNotificationChannel =
 final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
-void _navigateToMedications() {
-  try {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      navigatorKey.currentState?.pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => const BaseBottomNavigationPage(index: 1),
-        ),
-        (route) => false,
-      );
-    });
-  } catch (e) {
-    if (kDebugMode) {
-      print("Error navigating to medications on notification click: $e");
-    }
-  }
-}
-
-// Background message handler
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  if (kDebugMode) {
-    print("Handling background/terminated FCM message: ${message.messageId} - ${message.data}");
-  }
-}
-
 class NotificationManager {
   factory NotificationManager() => _instance;
   NotificationManager._internal();
   static final NotificationManager _instance = NotificationManager._internal();
+
+  static String? pendingDoseId;
+  static bool pendingOpenMedications = false;
+
+  static void handleNotificationNavigation({String? doseId}) {
+    if (kDebugMode) {
+      print("Handling notification navigation to MedicationsScreen with doseId: $doseId");
+    }
+    pendingDoseId = doseId;
+    pendingOpenMedications = true;
+
+    try {
+      if (navigatorKey.currentState != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          navigatorKey.currentState?.pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => BaseBottomNavigationPage(
+                index: 1,
+                pendingDoseId: doseId,
+              ),
+            ),
+            (route) => false,
+          );
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Error navigating to medications on notification click: $e");
+      }
+    }
+  }
+
+  // Background message handler
+  @pragma('vm:entry-point')
+  static Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    if (kDebugMode) {
+      print("Handling background/terminated FCM message: ${message.messageId} - ${message.data}");
+    }
+  }
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   bool _isInitialized = false;
@@ -98,7 +112,10 @@ class NotificationManager {
         if (kDebugMode) {
           print('Local notification clicked with payload: ${response.payload}');
         }
-        _navigateToMedications();
+        final payload = response.payload;
+        handleNotificationNavigation(
+          doseId: (payload != null && payload.trim().isNotEmpty) ? payload : null,
+        );
       },
     );
 
@@ -132,6 +149,7 @@ class NotificationManager {
 
       final notification = message.notification;
       if (notification != null) {
+        final doseId = message.data['doseId'] ?? message.data['dose_id'] ?? message.data['id'] ?? '';
         _localNotifications.show(
           id: notification.hashCode,
           title: notification.title ?? "💊 Medication Reminder",
@@ -153,7 +171,7 @@ class NotificationManager {
               presentSound: true,
             ),
           ),
-          payload: message.data['doseId'] ?? '',
+          payload: doseId.toString(),
         );
       }
     });
@@ -163,7 +181,8 @@ class NotificationManager {
       if (kDebugMode) {
         print('Notification clicked! Opened app: ${message.data}');
       }
-      _navigateToMedications();
+      final doseId = message.data['doseId'] ?? message.data['dose_id'] ?? message.data['id'];
+      handleNotificationNavigation(doseId: doseId?.toString());
     });
 
     // 7. Check if app was opened directly from terminated state via notification click
@@ -172,7 +191,8 @@ class NotificationManager {
       if (kDebugMode) {
         print('App launched from terminated state via notification: ${initialMessage.data}');
       }
-      _navigateToMedications();
+      final doseId = initialMessage.data['doseId'] ?? initialMessage.data['dose_id'] ?? initialMessage.data['id'];
+      handleNotificationNavigation(doseId: doseId?.toString());
     }
 
     // 8. Listen for token refresh events

@@ -37,7 +37,8 @@ class TimelineMedicine {
 }
 
 class MedicationsScreen extends ConsumerStatefulWidget {
-  const MedicationsScreen({super.key});
+  final String? highlightDoseId;
+  const MedicationsScreen({super.key, this.highlightDoseId});
 
   @override
   ConsumerState<MedicationsScreen> createState() => _MedicationsScreenState();
@@ -48,6 +49,35 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
   DateTime selectedDate = DateTime.now();
   Map<String, bool> takenMap = {};
   Set<String> loadingDoseIds = {};
+  String? _activeHighlightDoseId;
+  bool _hasScrolledToDose = false;
+  final Map<String, GlobalKey> _doseItemKeys = {};
+
+  GlobalKey _getOrCreateKey(String doseId) {
+    return _doseItemKeys.putIfAbsent(doseId, () => GlobalKey());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _activeHighlightDoseId = widget.highlightDoseId;
+    if (_activeHighlightDoseId != null) {
+      selectedDate = DateTime.now();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MedicationsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.highlightDoseId != null &&
+        widget.highlightDoseId != oldWidget.highlightDoseId) {
+      setState(() {
+        _activeHighlightDoseId = widget.highlightDoseId;
+        _hasScrolledToDose = false;
+        selectedDate = DateTime.now();
+      });
+    }
+  }
 
   String _formatDate(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
@@ -308,6 +338,35 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                     return (a.time ?? "").compareTo(b.time ?? "");
                   });
 
+                  // Trigger auto-scroll and highlight when target doseId is present
+                  if (_activeHighlightDoseId != null && !_hasScrolledToDose) {
+                    final targetId = _activeHighlightDoseId;
+                    final hasTarget = sortedDoses.any((d) => d.id == targetId);
+                    if (hasTarget) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        final targetKey = _doseItemKeys[targetId];
+                        final targetContext = targetKey?.currentContext;
+                        if (targetContext != null) {
+                          _hasScrolledToDose = true;
+                          Scrollable.ensureVisible(
+                            targetContext,
+                            duration: const Duration(milliseconds: 700),
+                            curve: Curves.easeInOutCubic,
+                            alignment: 0.2,
+                          );
+                          Future.delayed(const Duration(seconds: 4), () {
+                            if (mounted && _activeHighlightDoseId == targetId) {
+                              setState(() {
+                                _activeHighlightDoseId = null;
+                              });
+                            }
+                          });
+                        }
+                      });
+                    }
+                  }
+
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
@@ -325,6 +384,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                           final isFuture = !isTaken && !isMissed && !isCancelled && _isDoseInFuture(schedule.date, schedule.time);
 
                           return RepaintBoundary(
+                            key: _getOrCreateKey(scheduleId),
                             child: _buildAdvancedTimelineItem(
                               item: TimelineMedicine(
                                 doseId: scheduleId,
@@ -339,6 +399,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                               ),
                               isLast: index == sortedDoses.length - 1,
                               isGuardian: isGuardian,
+                              isHighlighted: scheduleId == _activeHighlightDoseId,
                               onMarkTaken: () async {
                                 if (scheduleId.isEmpty) return;
 
@@ -567,6 +628,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     required VoidCallback onMarkTaken,
     required VoidCallback onVerifyWithSelfie,
     bool isGuardian = false,
+    bool isHighlighted = false,
   }) {
     final colors = context.themeColors;
     final isDark = context.isDarkMode;
@@ -589,6 +651,10 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
       indicatorBg = dangerRed.withOpacity(0.15);
       indicatorBorder = dangerRed;
       indicatorIcon = const Icon(Icons.close, size: 14, color: dangerRed);
+    } else if (isHighlighted) {
+      indicatorBg = colors.accentPrimary.withOpacity(0.2);
+      indicatorBorder = colors.accentPrimary;
+      indicatorIcon = Icon(Icons.notifications_active, size: 14, color: colors.accentPrimary);
     } else if (isActionable) {
       indicatorBg = colors.accentSubtle;
       indicatorBorder = colors.accentBorder;
@@ -624,18 +690,32 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
 
           /// 🔹 CARD
           Expanded(
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: colors.card,
+                color: isHighlighted
+                    ? colors.accentPrimary.withOpacity(isDark ? 0.15 : 0.08)
+                    : colors.card,
                 borderRadius: BorderRadius.circular(16),
-                border: isActionable
+                border: isHighlighted
+                    ? Border.all(color: colors.accentPrimary, width: 2.2)
+                    : isActionable
                     ? Border.all(color: colors.accentBorder, width: 1.5)
                     : isMissed
                     ? Border.all(color: dangerRed.withOpacity(0.4), width: 1.2)
                     : Border.all(color: colors.borderSubtle),
-                boxShadow: !isDark
+                boxShadow: isHighlighted
+                    ? [
+                        BoxShadow(
+                          color: colors.accentPrimary.withOpacity(0.35),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 4),
+                        )
+                      ]
+                    : !isDark
                     ? [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.04),
@@ -648,6 +728,37 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  /// 🔥 HIGHLIGHT REMINDER BANNER
+                  if (isHighlighted)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: colors.accentPrimary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.notifications_active,
+                            size: 13,
+                            color: colors.onAccentPrimary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "REMINDER: ACTION REQUIRED",
+                            style: TextStyle(
+                              color: colors.onAccentPrimary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   /// TITLE + TIME
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
