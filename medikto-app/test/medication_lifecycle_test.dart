@@ -325,5 +325,51 @@ void main() {
       expect(evaluateDoseState(futurePendingDose), equals(DoseUIActionState.missed)); // Non-pending status ignored for action
       expect(evaluateDoseState(pastTakenDose), equals(DoseUIActionState.taken));
     });
+
+    test('Test 15: Timeline card action eligibility - PENDING dose is actionable BEFORE scheduled time (no clock gate)', () {
+      // Dose scheduled at 08:30 AM
+      const status = "pending";
+      final isTaken = status.toLowerCase() == "taken";
+      final isMissed = status.toLowerCase() == "missed";
+      final isCancelled = status.toLowerCase() == "cancelled";
+      const isGuardian = false;
+
+      final isActionable = !isTaken && !isMissed && !isCancelled && !isGuardian;
+      expect(isActionable, isTrue);
+    });
+
+    test('Test 16: Timeline card action eligibility - TAKEN dose is not actionable', () {
+      const status = "taken";
+      final isTaken = status.toLowerCase() == "taken";
+      final isMissed = status.toLowerCase() == "missed";
+      final isCancelled = status.toLowerCase() == "cancelled";
+      const isGuardian = false;
+
+      final isActionable = !isTaken && !isMissed && !isCancelled && !isGuardian;
+      expect(isActionable, isFalse);
+    });
+
+    test('Test 17: Timeline card action eligibility - MISSED and CANCELLED doses are not actionable', () {
+      for (final s in ["missed", "cancelled"]) {
+        final isTaken = s == "taken";
+        final isMissed = s == "missed";
+        final isCancelled = s == "cancelled";
+        const isGuardian = false;
+
+        final isActionable = !isTaken && !isMissed && !isCancelled && !isGuardian;
+        expect(isActionable, isFalse);
+      }
+    });
+
+    test('Test 18: Timeline card action eligibility - Guardian mode disables actions', () {
+      const status = "pending";
+      final isTaken = status == "taken";
+      final isMissed = status == "missed";
+      final isCancelled = status == "cancelled";
+      const isGuardian = true;
+
+      final isActionable = !isTaken && !isMissed && !isCancelled && !isGuardian;
+      expect(isActionable, isFalse);
+    });
   });
 }

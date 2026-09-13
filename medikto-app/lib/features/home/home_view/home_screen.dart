@@ -245,8 +245,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // final medicationsAsync = ref.watch(getMedicationsProvider);
     final todayAsync = ref.watch(getTodayScheduleProvider);
-    final todayList =
-        (todayAsync.value?.data as List?)?.cast<TodayScheduleModel>() ?? [];
+    final todayList = ((todayAsync.value?.data as List?)
+            ?.cast<TodayScheduleModel>() ?? [])
+        .where((d) => d.status?.toLowerCase() != "cancelled")
+        .toList();
     final filteredList = _getFilteredMedications(todayList);
 
     final vitalsAsync = ref.watch(getVitalsProvider);
@@ -440,7 +442,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         color: _getStatusColor(status),
                         colors: colors,
                       );
-                    }).toList(),
+                    }),
                   const SizedBox(height: 10),
                   const SizedBox(height: 10),
 

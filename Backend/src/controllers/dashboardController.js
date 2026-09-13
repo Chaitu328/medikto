@@ -39,6 +39,7 @@ exports.getAdherence = async (req, res) => {
         $gte: sevenDaysAgoIST,
         $lte: todayIST,
       },
+      status: { $ne: "cancelled" },
       isDeleted: { $ne: true }
     };
 

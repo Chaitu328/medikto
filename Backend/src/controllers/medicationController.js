@@ -445,7 +445,7 @@ const ensureDosesExistForRange = async (userId, startDate, endDate) => {
 
     const medications = await Medication.find({
       user: userId,
-      status: { $in: ["active", "completed", "stopped", "cancelled"] }
+      status: { $in: ["active", "completed", "stopped"] }
     });
     if (!medications || medications.length === 0) return { created: 0, skipped: 0 };
 
@@ -565,10 +565,12 @@ exports.getTodaySchedule = async (req, res) => {
 
     const filter = await buildUserAccessFilter(req, req.query.patientId);
 
-    // Fetch doses filtered by user and date
+    // Fetch doses filtered by user and date (excluding cancelled or deleted doses)
     const query = Dose.find({
       ...filter,
       date: date,
+      status: { $ne: "cancelled" },
+      isDeleted: { $ne: true }
     }).sort({ time: 1 }).populate("medication");
 
     if (shouldPopulateUser(req)) {
@@ -912,13 +914,13 @@ exports.updateMedication = async (req, res) => {
     if (med.status && med.status !== "active") {
       await Dose.updateMany(
         { medication: med._id, date: { $gte: today }, status: "pending" },
-        { status: "cancelled" }
+        { status: "cancelled", isDeleted: true }
       );
     } else if (med.status === "active") {
       // Re-activate cancelled future doses
       await Dose.updateMany(
         { medication: med._id, date: { $gte: today }, status: "cancelled" },
-        { status: "pending" }
+        { status: "pending", isDeleted: false }
       );
     }
 
@@ -962,13 +964,13 @@ exports.updateMedicationStatus = async (req, res) => {
       // Safely mark future pending doses as cancelled rather than physical deletion
       await Dose.updateMany(
         { medication: med._id, date: { $gte: today }, status: "pending" },
-        { status: "cancelled" }
+        { status: "cancelled", isDeleted: true }
       );
     } else {
       // If re-activated, restore future cancelled doses to pending
       await Dose.updateMany(
         { medication: med._id, date: { $gte: today }, status: "cancelled" },
-        { status: "pending" }
+        { status: "pending", isDeleted: false }
       );
     }
 
@@ -1005,7 +1007,7 @@ exports.deleteMedication = async (req, res) => {
 
     // Mark future pending doses as cancelled so reminders cease, preserving historical taken/missed records
     await Dose.updateMany(
-      { medication: id, date: { $gte: today }, status: "pending" },
+      { medication: id, status: "pending" },
       { status: "cancelled", isDeleted: true }
     );
 
@@ -1226,6 +1228,7 @@ exports.recoverSelfie =
       const query = Dose.find({
         ...filter,
         date: { $gte: startDate, $lte: endDate },
+        status: { $ne: "cancelled" },
         isDeleted: { $ne: true }
       }).sort({ date: -1, time: 1 }).populate("medication");
 

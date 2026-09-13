@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
+import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/features/home/notifications/notification_screen.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
+import 'package:medikto/features/medications/models/medication_model.dart';
 import 'package:medikto/features/medications/models/today_scheduled_model.dart';
 import 'package:medikto/features/medications/views/medical_records_screen.dart';
 import 'package:medikto/features/medications/views/medication_verification_screen.dart';
@@ -21,6 +23,7 @@ class TimelineMedicine {
   final String status;
   final bool isTaken;
   final bool isMissed;
+  final bool isCancelled;
   final bool isFuture;
 
   TimelineMedicine({
@@ -32,6 +35,7 @@ class TimelineMedicine {
     this.status = "pending",
     this.isTaken = false,
     this.isMissed = false,
+    this.isCancelled = false,
     this.isFuture = false,
   });
 }
@@ -131,6 +135,128 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     if (scheduled == null) return false;
     final expirationTime = scheduled.add(const Duration(minutes: 60));
     return DateTime.now().isAfter(expirationTime) || DateTime.now().isAtSameMomentAs(expirationTime);
+  }
+
+  void _onEditMedication(TodayScheduleModel item) async {
+    MedicationModel? med = item.medication;
+    final medId = item.medicationId ?? med?.id;
+
+    if (med == null && (item.name != null && item.name!.isNotEmpty)) {
+      int? parsedDosage;
+      if (item.dosage != null) {
+        final digits = item.dosage!.replaceAll(RegExp(r'[^0-9]'), '');
+        parsedDosage = int.tryParse(digits);
+      }
+      med = MedicationModel(
+        id: medId,
+        name: item.name,
+        dosage: parsedDosage,
+        unit: "mg",
+        timings: item.time != null ? [item.time!] : [],
+        frequency: "daily",
+      );
+    }
+
+    if (med != null) {
+      final updated = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MedicationVerificationScreen(
+            isEdit: true,
+            medication: med,
+            id: medId,
+          ),
+        ),
+      );
+
+      if (updated == true && mounted) {
+        final formattedDate = _formatDate(selectedDate);
+        ref.invalidate(getScheduleForDateProvider(formattedDate));
+        ref.invalidate(getTodayScheduleProvider);
+        ref.invalidate(getMedicationsProvider);
+        ref.invalidate(getAdherenceProvider);
+      }
+    } else {
+      AppToasts.showError(context, "Parent medication information unavailable");
+    }
+  }
+
+  void _onDeleteMedication(TodayScheduleModel item) async {
+    final colors = context.themeColors;
+    final medId = item.medicationId ?? item.medication?.id;
+
+    if (medId == null || medId.isEmpty) {
+      AppToasts.showError(context, "Parent medication ID unavailable");
+      return;
+    }
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_forever_outlined, color: AppColors.missedRed, size: 28),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                "Delete Medication?",
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          "Are you sure you want to delete \"${item.name ?? 'this medication'}\"?\n\nPast medication history will be preserved, but future scheduled doses and reminders will be cancelled.",
+          style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: colors.accentPrimary, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.missedRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      try {
+        final res = await ref.read(deleteMedicationProvider(medId).future);
+        if (!mounted) return;
+
+        if (res.status == ResponseStatus.SUCCESS) {
+          final formattedDate = _formatDate(selectedDate);
+          ref.invalidate(getScheduleForDateProvider(formattedDate));
+          ref.invalidate(getTodayScheduleProvider);
+          ref.invalidate(getMedicationsProvider);
+          ref.invalidate(getAdherenceProvider);
+          AppToasts.showSuccess(
+            context,
+            res.message.isNotEmpty ? res.message : "Medication deleted successfully",
+          );
+        } else {
+          AppToasts.showError(context, res.message);
+        }
+      } catch (e) {
+        if (mounted) {
+          AppToasts.showError(context, "Failed to delete medication: $e");
+        }
+      }
+    }
   }
 
   Future<void> selectDate() async {
@@ -282,9 +408,11 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                   ),
                 ),
                 data: (response) {
-                  final rawList = response.data is List<TodayScheduleModel>
-                      ? response.data as List<TodayScheduleModel>
-                      : <TodayScheduleModel>[];
+                  final rawList = (response.data is List<TodayScheduleModel>
+                          ? response.data as List<TodayScheduleModel>
+                          : <TodayScheduleModel>[])
+                      .where((d) => d.status?.toLowerCase() != "cancelled")
+                      .toList();
 
                   if (rawList.isEmpty) {
                     return SliverToBoxAdapter(
@@ -395,11 +523,14 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                                 status: isTaken ? "taken" : (isMissed ? "missed" : (isCancelled ? "cancelled" : "pending")),
                                 isTaken: isTaken,
                                 isMissed: isMissed,
+                                isCancelled: isCancelled,
                                 isFuture: isFuture,
                               ),
                               isLast: index == sortedDoses.length - 1,
                               isGuardian: isGuardian,
                               isHighlighted: scheduleId == _activeHighlightDoseId,
+                              onEdit: () => _onEditMedication(schedule),
+                              onDelete: () => _onDeleteMedication(schedule),
                               onMarkTaken: () async {
                                 if (scheduleId.isEmpty) return;
 
@@ -627,6 +758,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     required bool isLast,
     required VoidCallback onMarkTaken,
     required VoidCallback onVerifyWithSelfie,
+    VoidCallback? onEdit,
+    VoidCallback? onDelete,
     bool isGuardian = false,
     bool isHighlighted = false,
   }) {
@@ -634,8 +767,10 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     final isDark = context.isDarkMode;
     final isTaken = item.isTaken;
     final isMissed = item.isMissed;
+    final isCancelled = item.isCancelled;
     final isFuture = item.isFuture;
-    final isActionable = !isTaken && !isMissed && !isFuture && !isGuardian;
+    // Action eligibility is based purely on status — pending doses are actionable by default:
+    final isActionable = !isTaken && !isMissed && !isCancelled && !isGuardian;
     final isLoading = loadingDoseIds.contains(item.doseId);
 
     // Dynamic timeline indicator styles
@@ -797,7 +932,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
 
                   const SizedBox(height: 12),
 
-                  /// 🔥 ACTION BUTTONS (Available at or after scheduled dose time for pending doses)
+                  /// 🔥 ACTION BUTTONS (Directly visible for pending eligible doses)
                   if (isActionable) ...[
                     SizedBox(
                       width: double.infinity,
@@ -852,109 +987,180 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
                   ],
 
-                  /// ⏳ UPCOMING BADGE (Scheduled in the future)
-                  if (isFuture)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.cardSecondary,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: colors.borderSubtle),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.schedule,
-                            color: colors.accentMedium,
-                            size: 12,
+                  /// 🔹 BOTTOM FOOTER ROW: Status Badges (Left) & Edit/Delete Actions (Right)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Status Badge (when not actionable or when completed)
+                      if (isMissed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "Upcoming (Scheduled ${item.time})",
-                            style: TextStyle(
-                              color: colors.textSecondary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          decoration: BoxDecoration(
+                            color: dangerRed.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: dangerRed.withOpacity(0.3)),
                           ),
-                        ],
-                      ),
-                    ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.warning_amber_rounded,
+                                color: dangerRed,
+                                size: 12,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                "Missed Dose",
+                                style: TextStyle(
+                                  color: dangerRed,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (isTaken)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.accentSubtle,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: colors.accentBorder),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: colors.accentMedium,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                "Medicine Taken",
+                                style: TextStyle(
+                                  color: colors.accentMedium,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (isCancelled)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.cardSecondary,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: colors.borderSubtle),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.cancel_outlined,
+                                color: colors.textMuted,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                "Cancelled",
+                                style: TextStyle(
+                                  color: colors.textMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (isGuardian && isFuture)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.cardSecondary,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: colors.borderSubtle),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.schedule,
+                                color: colors.accentMedium,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                "Upcoming (${item.time})",
+                                style: TextStyle(
+                                  color: colors.textSecondary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        const SizedBox.shrink(),
 
-                  /// ⚠️ MISSED STATUS BADGE
-                  if (isMissed)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: dangerRed.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: dangerRed.withOpacity(0.3)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.warning_amber_rounded,
-                            color: dangerRed,
-                            size: 12,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            "Missed Dose",
-                            style: TextStyle(
-                              color: dangerRed,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                      const Spacer(),
 
-                  /// ✅ TAKEN STATUS (Verification Badge)
-                  if (isTaken)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.accentSubtle,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: colors.accentBorder),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: colors.accentMedium,
-                            size: 12,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "Medicine Taken",
-                            style: TextStyle(
-                              color: colors.accentMedium,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                      // Edit & Delete Action Buttons (Parent Medication)
+                      if (!isGuardian && (onEdit != null || onDelete != null))
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (onEdit != null)
+                              InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: onEdit,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6.0),
+                                  child: Icon(
+                                    Icons.edit_outlined,
+                                    size: 18,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            if (onEdit != null && onDelete != null)
+                              const SizedBox(width: 4),
+                            if (onDelete != null)
+                              InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: onDelete,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(6.0),
+                                  child: Icon(
+                                    Icons.delete_outline,
+                                    size: 18,
+                                    color: AppColors.missedRed,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
