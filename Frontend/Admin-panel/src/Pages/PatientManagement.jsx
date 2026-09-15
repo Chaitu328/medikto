@@ -259,12 +259,10 @@ const compliancePercent =
     try {
       setOtpLoading(true);
       setOtpError("");
-      const response = await api.post("/hospitals/send-link-otp", { phone: otpPhone });
-      const receivedOtp = response?.data?.otp || "";
-      setDisplayedOtp(receivedOtp);
+      await api.post("/hospitals/send-link-otp", { phone: otpPhone });
       setOtpSent(true);
     } catch (error) {
-      setOtpError(error?.response?.data?.message || "Failed to send OTP");
+      setOtpError(error?.response?.data?.message || "Failed to send verification code");
     } finally {
       setOtpLoading(false);
     }
@@ -964,19 +962,12 @@ const compliancePercent =
                   ) : (
                     <div className="space-y-4">
                       <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-900 text-xs leading-relaxed">
-                        A 6-digit authorization code has been sent to the patient&apos;s phone. Please ask the patient for the code to confirm hospital connection.
+                        A 6-digit authorization code has been dispatched to the patient&apos;s Medikto app. Please ask the patient for the 6-digit code to authorize the hospital connection.
                       </div>
-
-                      {displayedOtp && (
-                        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-sm font-medium">
-                          <span>Clinic Passcode:</span>
-                          <strong className="text-lg tracking-widest text-emerald-900">{displayedOtp}</strong>
-                        </div>
-                      )}
 
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
-                          Enter Patient&apos;s 6-Digit Code
+                          Enter Code Provided by Patient
                         </label>
                         <input
                           type="text"

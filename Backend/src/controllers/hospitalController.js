@@ -10,26 +10,28 @@ const { sendHospitalAdminCredentials } = require("../utils/emailHelper");
 // ================= SEND ACCESS LINK OTP =================
 exports.sendLinkOTP = async (req, res) => {
   try {
+    // 1. Role enforcement: Patients cannot initiate connection codes
+    if (req.user.role === "patient") {
+      return res.status(403).json({
+        message: "Hospital connection requests must be initiated by clinic staff in the Admin Panel."
+      });
+    }
+
     const { phone } = req.body;
 
     if (!phone) {
       return res.status(400).json({ message: "Patient phone number is required" });
     }
 
-    // 1. Verify patient exists in DB
+    // 2. Verify patient exists in DB
     const patient = await User.findOne({ phone, role: "patient" });
     if (!patient) {
       return res.status(404).json({ message: "Patient not registered on Medikto. Ask patient to register in the app first." });
     }
 
-    // 2. Identify Hospital
+    // 3. Identify Hospital from Admin
     let hospitalId;
-    if (req.user.role === "patient") {
-      hospitalId = req.body.hospitalId;
-      if (!hospitalId) {
-        return res.status(400).json({ message: "hospitalId is required when requested by patient" });
-      }
-    } else if (req.user.id === "123456") {
+    if (req.user.id === "123456") {
       // Demo Hospital for dummy admin
       let dummyHosp = await Hospital.findOne({ name: "Demo Hospital" });
       if (!dummyHosp) {
@@ -57,10 +59,10 @@ exports.sendLinkOTP = async (req, res) => {
     const hospital = await Hospital.findById(hospitalId);
     const hospitalName = hospital ? hospital.name : "Hospital";
 
-    // 3. Generate 6-digit OTP
+    // 4. Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    // 4. Save to temporary OTP link table with 5-minute expiry
+    // 5. Save to temporary OTP link table with 5-minute expiry
     await HospitalLinkOTP.deleteMany({ phone, hospitalId });
     await HospitalLinkOTP.create({
       phone,
@@ -69,14 +71,9 @@ exports.sendLinkOTP = async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes validity
     });
 
-    // 5. Trigger Firebase push notification alert to the patient
-    const isPatientRequest = (req.user.role === "patient");
-    const notifTitle = isPatientRequest 
-      ? "🏥 Hospital Connection Code" 
-      : "🏥 Hospital Connection Request";
-    const notifBody = isPatientRequest
-      ? `Your verification code to connect with ${hospitalName} is ${otp}. Enter this code in your app to confirm.`
-      : `${hospitalName} is requesting to connect with your Medikto profile. Share code ${otp} with your clinic staff to authorize.`;
+    // 6. Trigger Firebase push notification alert to the patient
+    const notifTitle = "🏥 Hospital Connection Request";
+    const notifBody = `${hospitalName} is requesting to connect with your Medikto profile. Share verification code ${otp} with your clinic staff to authorize.`;
 
     try {
       await sendPushNotification(
@@ -94,40 +91,25 @@ exports.sendLinkOTP = async (req, res) => {
       console.error("FCM dispatch skipped in sendLinkOTP:", notifErr.message);
     }
 
-    // 6. If patient requested connection, also notify the hospital admin in Admin Panel
-    if (isPatientRequest && hospital) {
-      try {
-        const adminQuery = {
-          $or: [
-            ...(hospital.adminId ? [{ _id: hospital.adminId }] : []),
-            { hospital: hospitalId },
-            { hospitals: hospitalId }
-          ]
-        };
-        const adminUsers = await User.find(adminQuery);
-        for (const adm of adminUsers) {
-          await Notification.create({
-            user: adm._id,
-            title: "Patient Connection Request",
-            body: `Patient ${patient.firstName || patient.name || "User"} (${phone}) requested to connect with ${hospitalName}. OTP Code: ${otp}`,
-            type: "alert",
-            isRead: false
-          });
-        }
-      } catch (adminNotifErr) {
-        console.error("Admin notification dispatch skipped:", adminNotifErr.message);
-      }
+    // 7. Also create In-App notification for patient inbox
+    try {
+      await Notification.create({
+        user: patient._id,
+        title: notifTitle,
+        body: notifBody,
+        type: "alert",
+        isRead: false
+      });
+    } catch (inAppErr) {
+      console.error("Patient in-app notification creation skipped:", inAppErr.message);
     }
 
-    // Return response
-    const responsePayload = {
+    // 8. Return response to Admin Panel
+    res.json({
       success: true,
       message: `Verification code sent to patient's phone for ${hospitalName}`,
-      hospitalName,
-      otp: otp
-    };
-
-    res.json(responsePayload);
+      hospitalName
+    });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -137,20 +119,22 @@ exports.sendLinkOTP = async (req, res) => {
 // ================= VERIFY OTP AND LINK PATIENT =================
 exports.verifyAndLink = async (req, res) => {
   try {
+    // 1. Role enforcement: Patients cannot self-verify connections
+    if (req.user.role === "patient") {
+      return res.status(403).json({
+        message: "Patients cannot self-verify hospital connections. Hospital admin must verify the code in the Admin Panel."
+      });
+    }
+
     const { phone, otp } = req.body;
 
     if (!phone || !otp) {
       return res.status(400).json({ message: "Phone and OTP are required" });
     }
 
-    // 1. Identify Hospital
+    // 2. Identify Hospital from Admin
     let hospitalId;
-    if (req.user.role === "patient") {
-      hospitalId = req.body.hospitalId;
-      if (!hospitalId) {
-        return res.status(400).json({ message: "hospitalId is required when verified by patient" });
-      }
-    } else if (req.user.id === "123456") {
+    if (req.user.id === "123456") {
       const dummyHosp = await Hospital.findOne({ name: "Demo Hospital" });
       if (!dummyHosp) {
         return res.status(404).json({ message: "Demo Hospital not found. Send OTP first." });
@@ -169,26 +153,26 @@ exports.verifyAndLink = async (req, res) => {
       }
     }
 
-    // 2. Fetch recent OTP record
+    // 3. Fetch recent OTP record
     const record = await HospitalLinkOTP.findOne({ phone, hospitalId }).sort({ createdAt: -1 });
 
     if (!record) {
       return res.status(400).json({ message: "Verification record not found. Please request a new code." });
     }
 
-    // 3. Check expiry
+    // 4. Check expiry
     if (record.expiresAt < Date.now()) {
       await HospitalLinkOTP.deleteMany({ phone, hospitalId });
       return res.status(400).json({ message: "Verification code has expired. Please request a new code." });
     }
 
-    // 4. Compare OTP
-    const isMatch = (otp.toString() === record.otp);
+    // 5. Compare OTP
+    const isMatch = (otp.toString().trim() === record.otp.trim());
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid verification code. Please check and try again." });
     }
 
-    // 5. Connect Patient
+    // 6. Connect Patient
     const patient = await User.findOne({ phone, role: "patient" });
     if (!patient) {
       return res.status(404).json({ message: "Patient not found" });
@@ -203,12 +187,15 @@ exports.verifyAndLink = async (req, res) => {
     const hospital = await Hospital.findById(hospitalId);
     const hospitalName = hospital ? hospital.name : "Hospital";
 
-    // Trigger push notification to the patient confirming successful link
+    // 7. Trigger push notification to the patient confirming successful link
+    const successTitle = "🔗 Hospital Connected Successfully";
+    const successBody = `Your Medikto profile is now linked with ${hospitalName}. Your clinical team can now securely monitor your care schedule.`;
+
     try {
       await sendPushNotification(
         patient._id,
-        "🔗 Hospital Connected Successfully",
-        `Your Medikto profile is now linked with ${hospitalName}. Your clinical team can now securely monitor your care schedule.`,
+        successTitle,
+        successBody,
         {
           type: "HOSPITAL_LINK_SUCCESS",
           hospitalId: hospitalId.toString(),
@@ -219,7 +206,33 @@ exports.verifyAndLink = async (req, res) => {
       console.error("FCM dispatch skipped in verifyAndLink:", notifErr.message);
     }
 
-    // 6. Cleanup
+    // 8. In-App notification for patient
+    try {
+      await Notification.create({
+        user: patient._id,
+        title: successTitle,
+        body: successBody,
+        type: "alert",
+        isRead: false
+      });
+    } catch (inAppErr) {
+      console.error("Patient in-app notification creation skipped:", inAppErr.message);
+    }
+
+    // 9. In-App notification for Admin
+    try {
+      await Notification.create({
+        user: req.user.id,
+        title: "✅ Patient Connected",
+        body: `Patient ${patient.firstName || patient.name || "User"} (${phone}) successfully linked to ${hospitalName}.`,
+        type: "alert",
+        isRead: false
+      });
+    } catch (adminNotifErr) {
+      console.error("Admin notification creation skipped:", adminNotifErr.message);
+    }
+
+    // 10. Cleanup OTP records
     await HospitalLinkOTP.deleteMany({ phone, hospitalId });
 
     res.json({

@@ -95,289 +95,212 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
 
   void _showConnectHospitalBottomSheet() {
     final themeColors = context.themeColors;
-    final profileAsync = ref.read(getProfileProvider);
-    final profile = profileAsync.value?.data as ProfileModel?;
-    final String patientPhone = profile?.phone ?? "";
-
-    if (patientPhone.isEmpty) {
-      AppToasts.showError(context, "Please complete your profile and contact number first.");
-      return;
-    }
-
-    List<dynamic> allHospitals = [];
-    bool isLoadingHospitals = true;
-    String? selectedHospitalId;
-    bool isOtpSent = false;
-    bool isActionLoading = false;
-    final otpController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: themeColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          if (isLoadingHospitals && allHospitals.isEmpty) {
-            ProfileManager().getAllHospitals().then((response) {
-              setModalState(() {
-                if (response.status == ResponseStatus.SUCCESS) {
-                  allHospitals = response.data as List<dynamic>;
-                }
-                isLoadingHospitals = false;
-              });
-            });
-          }
-
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 20,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Connect a Hospital",
-                        style: TextStyle(color: themeColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: themeColors.accentSubtle,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.local_hospital_rounded,
+                          color: themeColors.accentPrimary,
+                          size: 22,
+                        ),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: themeColors.textSecondary),
-                        onPressed: () => Navigator.pop(context),
+                      const SizedBox(width: 12),
+                      Text(
+                        "How to Connect",
+                        style: TextStyle(
+                          color: themeColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  if (isLoadingHospitals)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: CircularProgressIndicator(color: themeColors.accentPrimary),
-                      ),
-                    )
-                  else if (allHospitals.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        "No hospitals available to connect.",
-                        style: TextStyle(color: themeColors.textSecondary),
-                      ),
-                    )
-                  else ...[
-                    Text(
-                      "Select Hospital",
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: themeColors.textSecondary),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: themeColors.bg,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: themeColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedHospitalId,
-                          dropdownColor: themeColors.surface,
-                          isExpanded: true,
-                          hint: Text("Choose a hospital", style: TextStyle(color: themeColors.textMuted)),
-                          style: TextStyle(color: themeColors.textPrimary, fontSize: 16),
-                          icon: Icon(Icons.arrow_drop_down, color: themeColors.accentPrimary),
-                          onChanged: (val) {
-                            setModalState(() {
-                              selectedHospitalId = val;
-                            });
-                          },
-                          items: allHospitals.map((h) {
-                            return DropdownMenuItem<String>(
-                              value: h['_id'] as String,
-                              child: Text(h['name'] ?? "Unknown Hospital"),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (!isOtpSent) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: themeColors.accentPrimary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: themeColors.accentPrimary.withOpacity(0.2)),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.info_outline, size: 18, color: themeColors.accentPrimary),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Select your hospital and tap 'Request Connection Code'. A 6-digit verification code will be sent to your Medikto notifications.",
-                                style: TextStyle(fontSize: 12, color: themeColors.textSecondary, height: 1.4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      CustomButton(
-                        buttonText: "Request Connection Code",
-                        buttonColor: themeColors.accentPrimary,
-                        isLoading: isActionLoading,
-                        textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
-                        onPressed: () async {
-                          if (selectedHospitalId == null) {
-                            AppToasts.showError(context, "Please select a hospital first");
-                            return;
-                          }
-
-                          setModalState(() => isActionLoading = true);
-                          final res = await ProfileManager().requestHospitalOTP(
-                            phone: patientPhone,
-                            hospitalId: selectedHospitalId!,
-                          );
-                          setModalState(() => isActionLoading = false);
-
-                          if (res.status == ResponseStatus.SUCCESS) {
-                            setModalState(() => isOtpSent = true);
-                            AppToasts.showSuccess(context, "Verification code sent to your notifications!");
-                          } else {
-                            AppToasts.showError(context, res.message);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: TextButton(
-                          onPressed: () {
-                            if (selectedHospitalId == null) {
-                              AppToasts.showError(context, "Please select a hospital first");
-                              return;
-                            }
-                            setModalState(() => isOtpSent = true);
-                          },
-                          child: Text(
-                            "Already have a code from your doctor? Enter Code",
-                            style: TextStyle(fontSize: 12, color: themeColors.accentPrimary, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-                    ] else ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: themeColors.accentPrimary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: themeColors.accentPrimary.withOpacity(0.2)),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.lock_outline, size: 18, color: themeColors.accentPrimary),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Enter the 6-digit code received on your phone notification to connect.",
-                                style: TextStyle(fontSize: 12, color: themeColors.textSecondary, height: 1.4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextFormFieldTitled(
-                        title: "Hospital Connection Code",
-                        hintText: "Enter 6-digit code",
-                        controller: otpController,
-                        focusColor: themeColors.accentPrimary,
-                        fillColor: themeColors.bg,
-                        color: themeColors.textPrimary,
-                        borderColor: themeColors.border,
-                        textInputType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 20),
-                      CustomButton(
-                        buttonText: "Verify & Connect Hospital",
-                        buttonColor: themeColors.accentPrimary,
-                        isLoading: isActionLoading,
-                        textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
-                        onPressed: () async {
-                          if (selectedHospitalId == null) {
-                            AppToasts.showError(context, "Please select a hospital");
-                            return;
-                          }
-
-                          final otp = otpController.text.trim();
-                          if (otp.length < 4) {
-                            AppToasts.showError(context, "Please enter the 6-digit code from your notification");
-                            return;
-                          }
-
-                          setModalState(() => isActionLoading = true);
-                          final res = await ProfileManager().verifyHospitalOTP(
-                            phone: patientPhone,
-                            otp: otp,
-                            hospitalId: selectedHospitalId!,
-                          );
-                          setModalState(() => isActionLoading = false);
-                          if (res.status == ResponseStatus.SUCCESS) {
-                            AppToasts.showSuccess(context, "Successfully connected to hospital");
-                            Navigator.pop(ctx);
-                            fetchHospitals();
-                          } else {
-                            AppToasts.showError(context, res.message);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              setModalState(() {
-                                isOtpSent = false;
-                                otpController.clear();
-                              });
-                            },
-                            child: Text("Change Hospital", style: TextStyle(color: themeColors.textMuted, fontSize: 12)),
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              setModalState(() => isActionLoading = true);
-                              final res = await ProfileManager().requestHospitalOTP(
-                                phone: patientPhone,
-                                hospitalId: selectedHospitalId!,
-                              );
-                              setModalState(() => isActionLoading = false);
-                              if (res.status == ResponseStatus.SUCCESS) {
-                                AppToasts.showSuccess(context, "New code sent to your notifications!");
-                              } else {
-                                AppToasts.showError(context, res.message);
-                              }
-                            },
-                            child: Text("Resend Code", style: TextStyle(color: themeColors.accentPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
+                  IconButton(
+                    icon: Icon(Icons.close, color: themeColors.textSecondary),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ],
               ),
+              const SizedBox(height: 16),
+              Text(
+                "Hospital connections are initiated by your clinic staff for privacy and clinical security.",
+                style: TextStyle(
+                  fontSize: 13,
+                  color: themeColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildStepItem(
+                stepNumber: "1",
+                title: "Visit Clinic or Reception",
+                description:
+                    "Provide your registered Medikto mobile number to your hospital reception or doctor.",
+                icon: Icons.person_search_outlined,
+                themeColors: themeColors,
+              ),
+              const SizedBox(height: 14),
+              _buildStepItem(
+                stepNumber: "2",
+                title: "Receive 6-Digit Code",
+                description:
+                    "A push notification with a secure 6-digit verification code will appear on this device.",
+                icon: Icons.notifications_active_outlined,
+                themeColors: themeColors,
+              ),
+              const SizedBox(height: 14),
+              _buildStepItem(
+                stepNumber: "3",
+                title: "Share Code to Authorize",
+                description:
+                    "Read the code to the clinic staff. Once entered in their portal, your profile will be securely connected.",
+                icon: Icons.verified_user_outlined,
+                themeColors: themeColors,
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: themeColors.accentPrimary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: themeColors.accentPrimary.withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.shield_outlined,
+                      size: 20,
+                      color: themeColors.accentPrimary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        "Once connected, your clinical team can view your prescribed medicines, adherence records, and vitals to coordinate your care.",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: themeColors.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              CustomButton(
+                buttonText: "Got It",
+                buttonColor: themeColors.accentPrimary,
+                textStyle: TextStyle(
+                  color: themeColors.onAccentPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepItem({
+    required String stepNumber,
+    required String title,
+    required String description,
+    required IconData icon,
+    required dynamic themeColors,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: themeColors.bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: themeColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: themeColors.accentPrimary,
+              shape: BoxShape.circle,
             ),
-          );
-        },
+            child: Center(
+              child: Text(
+                stepNumber,
+                style: TextStyle(
+                  color: themeColors.onAccentPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 16, color: themeColors.accentPrimary),
+                    const SizedBox(width: 6),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: themeColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: themeColors.textMuted,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
