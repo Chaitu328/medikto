@@ -14,8 +14,8 @@
   } from "lucide-react";
 
   import { useEffect, useMemo, useRef, useState } from "react";
-
   import { useNavigate } from "react-router-dom";
+  import api from "../Api/axios";
 
   export default function Header({
     patients = [],
@@ -338,49 +338,67 @@
     }
   };
 
-    // ================= ROLE-AWARE NOTIFICATIONS =================
+    // ================= LIVE & ROLE-AWARE NOTIFICATIONS =================
+    const [liveNotifications, setLiveNotifications] = useState([]);
 
-    const getNotifications = () => {
+    const fetchLiveNotifications = async () => {
+      try {
+        const res = await api.get("/notifications");
+        if (Array.isArray(res.data)) {
+          setLiveNotifications(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      }
+    };
+
+    useEffect(() => {
+      fetchLiveNotifications();
+      const interval = setInterval(fetchLiveNotifications, 15000);
+      return () => clearInterval(interval);
+    }, []);
+
+    const formatRelativeTime = (isoString) => {
+      if (!isoString) return "Just now";
+      const diffMs = Date.now() - new Date(isoString).getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    };
+
+    const displayNotifications = useMemo(() => {
+      if (liveNotifications.length > 0) {
+        return liveNotifications.map((n) => ({
+          id: n._id,
+          title: n.title,
+          body: n.body,
+          time: formatRelativeTime(n.createdAt),
+          type: n.type || "alert",
+          isRead: n.isRead,
+        }));
+      }
+
       switch (userRole) {
         case "superadmin":
         case "super_admin":
           return [
-            { title: "New hospital registered", time: "2 mins ago", type: "platform" },
-            { title: "System backup completed", time: "1 hour ago", type: "platform" },
-            { title: "New super admin login detected", time: "3 hours ago", type: "security" },
+            { title: "System Active", body: "All platform services operating normally", time: "Just now", type: "platform" },
           ];
-
         case "hospital_admin":
         case "hospitaladmin":
           return [
-            { title: "New patient admitted", time: "5 mins ago", type: "hospital" },
-            { title: "Medication schedule updated", time: "20 mins ago", type: "hospital" },
-            { title: "Doctor assignment pending", time: "1 hour ago", type: "hospital" },
+            { title: "Clinic Connected", body: "Test Clinic connection service is ready", time: "Just now", type: "hospital" },
           ];
-
-        case "guardian":
-          return [
-            { title: "Patient vitals abnormal", time: "10 mins ago", type: "alert" },
-            { title: "Medication missed", time: "30 mins ago", type: "alert" },
-            { title: "New health report available", time: "2 hours ago", type: "info" },
-          ];
-
-        case "patient":
-        case "user":
-          return [
-            { title: "Time to take your medication", time: "Just now", type: "reminder" },
-            { title: "Upcoming doctor appointment", time: "30 mins ago", type: "reminder" },
-            { title: "New prescription added", time: "2 hours ago", type: "info" },
-          ];
-
         default:
           return [
-            { title: "Welcome to Medikto", time: "Just now", type: "info" },
+            { title: "Welcome to Medikto", body: "Your account is active", time: "Just now", type: "info" },
           ];
       }
-    };
-
-    const notifications = getNotifications();
+    }, [liveNotifications, userRole]);
 
     // ================= HELP MENU =================
 
@@ -502,35 +520,50 @@
               >
                 <Bell className="w-5 h-5" />
 
-                {notifications.length > 0 && (
+                {displayNotifications.length > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-semibold">
-                    {notifications.length}
+                    {displayNotifications.length}
                   </span>
                 )}
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
+                <div className="absolute right-0 top-12 w-88 sm:w-96 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
 
-                  <div className="px-5 py-4 border-b border-gray-100">
+                  <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">
                       Notifications
                     </h3>
+                    {liveNotifications.length > 0 && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.put("/notifications/read-all");
+                            fetchLiveNotifications();
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
                   </div>
 
-                  <div className="max-h-[320px] overflow-y-auto">
+                  <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-100">
 
-                    {notifications.map(
+                    {displayNotifications.map(
                       (
                         item,
                         index
                       ) => (
                         <div
-                          key={index}
-                          className="px-5 py-4 hover:bg-gray-50 border-b border-gray-100 last:border-none"
+                          key={item.id || index}
+                          className="px-5 py-3.5 hover:bg-gray-50 transition"
                         >
                           <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium text-gray-900">
+                            <h4 className="text-sm font-semibold text-gray-900">
                               {item.title}
                             </h4>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
@@ -543,7 +576,13 @@
                             </span>
                           </div>
 
-                          <p className="text-xs text-gray-500 mt-1">
+                          {item.body && (
+                            <p className="text-xs text-gray-700 mt-1 leading-relaxed break-words">
+                              {item.body}
+                            </p>
+                          )}
+
+                          <p className="text-[11px] text-gray-400 mt-1.5">
                             {item.time}
                           </p>
                         </div>

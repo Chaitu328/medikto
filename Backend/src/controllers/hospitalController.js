@@ -1,6 +1,7 @@
 const User = require("../models/userModel");
 const Hospital = require("../models/hospitalModel");
 const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
+const Notification = require("../models/notificationModel");
 const bcrypt = require("bcrypt");
 const axios = require("axios");
 const { sendPushNotification } = require("../utils/notificationHelper");
@@ -69,11 +70,19 @@ exports.sendLinkOTP = async (req, res) => {
     });
 
     // 5. Trigger Firebase push notification alert to the patient
+    const isPatientRequest = (req.user.role === "patient");
+    const notifTitle = isPatientRequest 
+      ? "🏥 Hospital Connection Code" 
+      : "🏥 Hospital Connection Request";
+    const notifBody = isPatientRequest
+      ? `Your verification code to connect with ${hospitalName} is ${otp}. Enter this code in your app to confirm.`
+      : `${hospitalName} is requesting to connect with your Medikto profile. Share code ${otp} with your clinic staff to authorize.`;
+
     try {
       await sendPushNotification(
         patient._id,
-        "🏥 Hospital Connection Request",
-        `${hospitalName} is requesting to connect with your Medikto profile. Share code ${otp} with your clinic staff to authorize.`,
+        notifTitle,
+        notifBody,
         {
           type: "HOSPITAL_LINK_REQUEST",
           hospitalId: hospitalId.toString(),
@@ -85,17 +94,38 @@ exports.sendLinkOTP = async (req, res) => {
       console.error("FCM dispatch skipped in sendLinkOTP:", notifErr.message);
     }
 
+    // 6. If patient requested connection, also notify the hospital admin in Admin Panel
+    if (isPatientRequest && hospital) {
+      try {
+        const adminQuery = {
+          $or: [
+            ...(hospital.adminId ? [{ _id: hospital.adminId }] : []),
+            { hospital: hospitalId },
+            { hospitals: hospitalId }
+          ]
+        };
+        const adminUsers = await User.find(adminQuery);
+        for (const adm of adminUsers) {
+          await Notification.create({
+            user: adm._id,
+            title: "Patient Connection Request",
+            body: `Patient ${patient.firstName || patient.name || "User"} (${phone}) requested to connect with ${hospitalName}. OTP Code: ${otp}`,
+            type: "alert",
+            isRead: false
+          });
+        }
+      } catch (adminNotifErr) {
+        console.error("Admin notification dispatch skipped:", adminNotifErr.message);
+      }
+    }
+
     // Return response
     const responsePayload = {
       success: true,
       message: `Verification code sent to patient's phone for ${hospitalName}`,
-      hospitalName
+      hospitalName,
+      otp: otp
     };
-
-    // If request was made by Hospital Admin, also return the OTP in response for clinic dashboard
-    if (req.user.role === "admin" || req.user.role === "superadmin") {
-      responsePayload.otp = otp;
-    }
 
     res.json(responsePayload);
 

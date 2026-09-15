@@ -1,7 +1,9 @@
+const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
+const Hospital = require("../models/hospitalModel");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendGuardianCredentials } = require("../utils/emailHelper");
 
@@ -56,6 +58,20 @@ exports.createGuardian = async (req, res) => {
       10
     );
 
+    // Resolve hospital if created by clinic admin
+    let resolvedHospital = hospital;
+    if (!resolvedHospital && req.user?.role === "admin") {
+      const admin = await User.findById(req.user.id);
+      if (admin?.hospitals?.length) {
+        resolvedHospital = admin.hospitals[0];
+      } else if (admin?.hospital) {
+        resolvedHospital = admin.hospital;
+      } else {
+        const hosp = await Hospital.findOne({ adminId: req.user.id });
+        if (hosp) resolvedHospital = hosp._id;
+      }
+    }
+
     // Create guardian
     const guardian = await User.create({
       firstName,
@@ -72,7 +88,8 @@ exports.createGuardian = async (req, res) => {
       isFirstLogin: true,
 
       accountStatus: "pending",
-      hospital: hospital || undefined
+      hospital: resolvedHospital || undefined,
+      guardianFor: [patientId]
     });
 
     // Create invite
@@ -496,11 +513,97 @@ exports.rejectInvitation = async (req, res) => {
 
 };
 
+// ================= GET ALL GUARDIANS (ROLE-BASED & ENRICHED) =================
 exports.getAllGuardians = async (req, res) => {
   try {
-    const guardians = await User.find({
-      role: "guardian",
-    }).select("-password");
+    const role = req.user?.role;
+    const requesterId = req.user?.id;
+
+    let filter = { role: "guardian" };
+
+    if (role === "admin") {
+      // 1. Find the hospitals this admin manages
+      const admin = await User.findById(requesterId).select("hospitals hospital");
+      const adminHospitals = [];
+      if (admin?.hospitals?.length) {
+        adminHospitals.push(...admin.hospitals.map(id => id.toString()));
+      }
+      if (admin?.hospital) {
+        adminHospitals.push(admin.hospital.toString());
+      }
+      const managedHospitals = await Hospital.find({ adminId: requesterId }).select("_id");
+      adminHospitals.push(...managedHospitals.map(h => h._id.toString()));
+      const hospitalIds = [...new Set(adminHospitals)].filter(id => mongoose.Types.ObjectId.isValid(id));
+
+      if (hospitalIds.length === 0) {
+        return res.json({ success: true, guardians: [] });
+      }
+
+      // 2. Find patients connected to these hospitals
+      const hospitalObjectIds = hospitalIds.map(id => new mongoose.Types.ObjectId(id));
+      const connectedPatientIds = await User.find({
+        role: "patient",
+        hospitals: { $in: hospitalObjectIds }
+      }).distinct("_id");
+
+      // 3. Find invites for these patients
+      const inviteCaretakerIds = await CaretakerInvite.find({
+        patientId: { $in: connectedPatientIds }
+      }).distinct("caretakerId");
+
+      // 4. Match guardians who are either:
+      //    a) Assigned to this hospital directly
+      //    b) A guardian for one of the clinic's connected patients (via guardianFor)
+      //    c) An invited caretaker for one of the clinic's connected patients
+      filter = {
+        role: "guardian",
+        $or: [
+          { hospital: { $in: hospitalObjectIds } },
+          { guardianFor: { $in: connectedPatientIds } },
+          { _id: { $in: inviteCaretakerIds } }
+        ]
+      };
+    } else if (role !== "superadmin") {
+      return res.status(403).json({ success: false, message: "Unauthorized access" });
+    }
+
+    const rawGuardians = await User.find(filter)
+      .select("-password")
+      .populate("hospital", "name")
+      .populate("guardianFor", "firstName lastName phone")
+      .sort({ createdAt: -1 });
+
+    // Fetch related invites to enrich metadata
+    const guardianIds = rawGuardians.map(g => g._id);
+    const invites = await CaretakerInvite.find({
+      caretakerId: { $in: guardianIds }
+    })
+      .populate("patientId", "firstName lastName")
+      .populate("createdBy", "firstName lastName")
+      .sort({ createdAt: -1 });
+
+    const inviteMap = {};
+    for (const inv of invites) {
+      if (inv.caretakerId && !inviteMap[inv.caretakerId.toString()]) {
+        inviteMap[inv.caretakerId.toString()] = inv;
+      }
+    }
+
+    const guardians = rawGuardians.map(g => {
+      const gObj = g.toObject();
+      const inv = inviteMap[g._id.toString()];
+
+      gObj.relation = inv?.relation || "Other";
+      gObj.patientName = inv?.patientId
+        ? `${inv.patientId.firstName || ""} ${inv.patientId.lastName || ""}`.trim()
+        : (g.guardianFor?.[0] ? `${g.guardianFor[0].firstName || ""} ${g.guardianFor[0].lastName || ""}`.trim() : "");
+      gObj.createdBy = inv?.createdBy ? `${inv.createdBy.firstName || ""} ${inv.createdBy.lastName || ""}`.trim() : "";
+      gObj.hospital = g.hospital?.name || "";
+      gObj.tempPasswordSent = true;
+      gObj.passwordChanged = !g.mustChangePassword;
+
+      return gObj;
+    });
 
     res.json({
       success: true,
