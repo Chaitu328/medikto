@@ -18,10 +18,12 @@ import {
   X,
   Phone,
   Mail,
-  UserCheck,
   TrendingUp,
   TrendingDown,
   Sparkles,
+  CalendarRange,
+  History,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import api from "../Api/axios";
@@ -30,7 +32,7 @@ export default function ComplianceTracker() {
   // ================= STATES =================
   const [users, setUsers] = useState([]);
   const [medications, setMedications] = useState([]);
-  const [todayDoses, setTodayDoses] = useState([]);
+  const [doseHistory, setDoseHistory] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -38,23 +40,62 @@ export default function ComplianceTracker() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  // TIMEFRAME STATE
+  const [timeframe, setTimeframe] = useState("week"); // "today" | "week" | "month" | "custom"
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split("T")[0];
+  });
+
   // PATIENT COMPLIANCE MODAL STATE
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [modalDoseFilter, setModalDoseFilter] = useState("all"); // "all" | "taken" | "missed" | "pending"
+  const [previewSelfie, setPreviewSelfie] = useState(null);
 
   // ================= FETCH DATA =================
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [timeframe, startDate, endDate]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      const [usersRes, medicationsRes, todayRes, reportsRes] = await Promise.all([
+      // Compute dates based on timeframe if not custom
+      let sDate = startDate;
+      let eDate = endDate;
+      const todayStr = new Date().toISOString().split("T")[0];
+
+      if (timeframe === "today") {
+        sDate = todayStr;
+        eDate = todayStr;
+      } else if (timeframe === "week") {
+        const d = new Date();
+        d.setDate(d.getDate() - 6);
+        sDate = d.toISOString().split("T")[0];
+        eDate = todayStr;
+      } else if (timeframe === "month") {
+        const d = new Date();
+        d.setDate(d.getDate() - 29);
+        sDate = d.toISOString().split("T")[0];
+        eDate = todayStr;
+      }
+
+      const [usersRes, medicationsRes, historyRes, reportsRes] = await Promise.all([
         api.get("/users"),
         api.get("/medications"),
-        api.get("/today"),
+        api.get("/doses/history", {
+          params: {
+            startDate: sDate,
+            endDate: eDate,
+            timeframe: timeframe === "today" ? "day" : timeframe === "week" ? "week" : timeframe === "month" ? "month" : "custom",
+          },
+        }),
         api.get("/reports"),
       ]);
 
@@ -74,15 +115,15 @@ export default function ComplianceTracker() {
           : []
       );
 
-      const rawToday = Array.isArray(todayRes?.data?.schedules)
-        ? todayRes.data.schedules
-        : Array.isArray(todayRes?.data?.doses)
-        ? todayRes.data.doses
-        : Array.isArray(todayRes?.data)
-        ? todayRes.data
+      const rawHistory = Array.isArray(historyRes?.data?.schedules)
+        ? historyRes.data.schedules
+        : Array.isArray(historyRes?.data?.doses)
+        ? historyRes.data.doses
+        : Array.isArray(historyRes?.data)
+        ? historyRes.data
         : [];
 
-      setTodayDoses(rawToday);
+      setDoseHistory(rawHistory);
 
       setReports(
         Array.isArray(reportsRes?.data?.reports)
@@ -106,11 +147,11 @@ export default function ComplianceTracker() {
     return String(itemUserId) === String(targetUserId);
   };
 
-  // Compute stats per patient
+  // Compute stats per patient across the selected timeframe
   const patientStats = useMemo(() => {
     return users.map((user) => {
       const userMeds = medications.filter((m) => isUserMatch(m?.user, user));
-      const userDoses = todayDoses.filter((d) => isUserMatch(d?.user, user));
+      const userDoses = doseHistory.filter((d) => isUserMatch(d?.user, user));
 
       const completedDoses = userDoses.filter(
         (d) => d?.status === "taken" || d?.taken === true
@@ -128,7 +169,7 @@ export default function ComplianceTracker() {
         (d) => d?.proofImage || d?.verified
       );
 
-      // Score: If today has doses, adherence is completed / total. If no doses today, fallback to 100% if meds active or N/A
+      // Score: If doses exist in timeframe, completed / total. If no doses, default to 100%
       let score = 100;
       if (userDoses.length > 0) {
         score = Math.round((completedDoses.length / userDoses.length) * 100);
@@ -137,7 +178,7 @@ export default function ComplianceTracker() {
       }
 
       let risk = "Low";
-      if (score < 50 || missedDoses.length >= 2) {
+      if (score < 50 || missedDoses.length >= 3) {
         risk = "Critical";
       } else if (score < 80 || missedDoses.length > 0) {
         risk = "Moderate";
@@ -147,7 +188,7 @@ export default function ComplianceTracker() {
         user,
         medsCount: userMeds.length,
         userMeds,
-        todayCount: userDoses.length,
+        totalDosesCount: userDoses.length,
         userDoses,
         completedCount: completedDoses.length,
         missedCount: missedDoses.length,
@@ -157,29 +198,29 @@ export default function ComplianceTracker() {
         risk,
       };
     });
-  }, [users, medications, todayDoses]);
+  }, [users, medications, doseHistory]);
 
-  // Overall KPIs
-  const totalDosesToday = todayDoses.length;
-  const totalCompletedDoses = todayDoses.filter(
+  // Overall KPIs across timeframe
+  const totalDosesAll = doseHistory.length;
+  const totalCompletedDoses = doseHistory.filter(
     (d) => d?.status === "taken" || d?.taken === true
   ).length;
-  const totalMissedDoses = todayDoses.filter(
+  const totalMissedDoses = doseHistory.filter(
     (d) => d?.status === "missed" || d?.status === "MISSED"
   ).length;
-  const totalPendingDoses = todayDoses.filter(
+  const totalPendingDoses = doseHistory.filter(
     (d) =>
       d?.status === "pending" ||
       (!d?.taken && d?.status !== "taken" && d?.status !== "missed" && d?.status !== "MISSED")
   ).length;
 
-  const totalVerifiedDoses = todayDoses.filter(
+  const totalVerifiedDoses = doseHistory.filter(
     (d) => (d?.status === "taken" || d?.taken === true) && (d?.proofImage || d?.verified)
   ).length;
 
   const averageCompliance =
-    totalDosesToday > 0
-      ? Math.round((totalCompletedDoses / totalDosesToday) * 100)
+    totalDosesAll > 0
+      ? Math.round((totalCompletedDoses / totalDosesAll) * 100)
       : users.length > 0
       ? 100
       : 0;
@@ -218,14 +259,72 @@ export default function ComplianceTracker() {
     return filteredRoster.slice(start, start + itemsPerPage);
   }, [filteredRoster, currentPage]);
 
+  // Group patient doses by date for modal timeline
+  const groupedModalDoses = useMemo(() => {
+    if (!selectedPatient?.userDoses) return {};
+
+    let doses = [...selectedPatient.userDoses];
+
+    // Filter by modal subfilter
+    if (modalDoseFilter === "taken") {
+      doses = doses.filter((d) => d?.status === "taken" || d?.taken);
+    } else if (modalDoseFilter === "missed") {
+      doses = doses.filter((d) => d?.status === "missed" || d?.status === "MISSED");
+    } else if (modalDoseFilter === "pending") {
+      doses = doses.filter(
+        (d) =>
+          d?.status === "pending" ||
+          (!d?.taken && d?.status !== "taken" && d?.status !== "missed" && d?.status !== "MISSED")
+      );
+    }
+
+    // Sort descending by date, then ascending by time
+    doses.sort((a, b) => {
+      if (a.date !== b.date) return (b.date || "").localeCompare(a.date || "");
+      return (a.time || "").localeCompare(b.time || "");
+    });
+
+    const groups = {};
+    for (const d of doses) {
+      const dKey = d.date || "Unknown Date";
+      if (!groups[dKey]) groups[dKey] = [];
+      groups[dKey].push(d);
+    }
+    return groups;
+  }, [selectedPatient, modalDoseFilter]);
+
+  // Format date readable
+  const formatReadableDate = (dateStr) => {
+    if (!dateStr || dateStr === "Unknown Date") return "Unknown Date";
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+
+    if (dateStr === today) return "Today (" + dateStr + ")";
+    if (dateStr === yesterday) return "Yesterday (" + dateStr + ")";
+
+    try {
+      const [y, m, d] = dateStr.split("-");
+      const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+      return dateObj.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   // Export CSV Report
   const exportCSVReport = () => {
     const headers = [
       "Patient Name",
       "Phone",
       "Email",
+      "Timeframe",
       "Active Medications",
-      "Today Total Doses",
+      "Period Total Doses",
       "Completed Doses",
       "Missed Doses",
       "Pending Doses",
@@ -233,18 +332,30 @@ export default function ComplianceTracker() {
       "Risk Level",
     ];
 
-    const rows = filteredRoster.map(({ user, medsCount, todayCount, completedCount, missedCount, pendingCount, score, risk }) => [
-      `"${user?.firstName || "Patient"} ${user?.lastName || ""}"`,
-      `"${user?.phone || ""}"`,
-      `"${user?.email || ""}"`,
-      medsCount,
-      todayCount,
-      completedCount,
-      missedCount,
-      pendingCount,
-      `${score}%`,
-      risk,
-    ]);
+    const tfLabel =
+      timeframe === "today"
+        ? "Today"
+        : timeframe === "week"
+        ? "Last 7 Days"
+        : timeframe === "month"
+        ? "Last 30 Days"
+        : `${startDate} to ${endDate}`;
+
+    const rows = filteredRoster.map(
+      ({ user, medsCount, totalDosesCount, completedCount, missedCount, pendingCount, score, risk }) => [
+        `"${user?.firstName || "Patient"} ${user?.lastName || ""}"`,
+        `"${user?.phone || ""}"`,
+        `"${user?.email || ""}"`,
+        `"${tfLabel}"`,
+        medsCount,
+        totalDosesCount,
+        completedCount,
+        missedCount,
+        pendingCount,
+        `${score}%`,
+        risk,
+      ]
+    );
 
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -255,7 +366,7 @@ export default function ComplianceTracker() {
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `Medikto_Compliance_Report_${new Date().toISOString().split("T")[0]}.csv`
+      `Medikto_Compliance_Report_${timeframe}_${new Date().toISOString().split("T")[0]}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -263,12 +374,12 @@ export default function ComplianceTracker() {
   };
 
   // ================= LOADING =================
-  if (loading) {
+  if (loading && doseHistory.length === 0 && users.length === 0) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-10 h-10 animate-spin text-[#2563EB]" />
         <p className="text-sm font-medium text-slate-500">
-          Calculating patient adherence analytics...
+          Loading comprehensive adherence history...
         </p>
       </div>
     );
@@ -282,31 +393,74 @@ export default function ComplianceTracker() {
         <div className="absolute top-0 right-0 w-80 h-80 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-0 w-56 h-56 bg-[#10B981]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
 
-        <div className="relative px-6 sm:px-8 py-7 sm:py-8 flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="relative px-6 sm:px-8 py-7 sm:py-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-[#2563EB]/10 flex items-center justify-center">
                 <Activity className="w-5 h-5 text-[#2563EB]" />
               </div>
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#64748B]">
-                Clinical Adherence Monitoring
+                Clinical Adherence & Intake Logs
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-[#0F172A] tracking-tight">
-              Compliance Tracking
+              Compliance Tracking & History
             </h1>
             <p className="text-[#64748B] mt-2 text-base max-w-xl leading-relaxed">
-              Real-time medication intake verification, patient risk stratification, and adherence trends across your clinic.
+              Analyze daily, weekly, and monthly intake trends, photo-verified dose administration, and high-risk patient flags.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* TIMEFRAME & EXPORT ACTION TOOLBAR */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
+            {/* TIMEFRAME SELECTOR BUTTONS */}
+            <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 shadow-inner">
+              {[
+                { id: "today", label: "Today" },
+                { id: "week", label: "Last 7 Days" },
+                { id: "month", label: "Last 30 Days" },
+                { id: "custom", label: "Custom" },
+              ].map((tf) => (
+                <button
+                  key={tf.id}
+                  onClick={() => setTimeframe(tf.id)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                    timeframe === tf.id
+                      ? "bg-white text-[#2563EB] shadow-md shadow-[#2563EB]/10 ring-1 ring-slate-200"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
+            </div>
+
+            {/* CUSTOM DATE RANGE INPUTS */}
+            {timeframe === "custom" && (
+              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-2xl border border-slate-200 shadow-sm">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="text-xs font-medium text-slate-700 bg-transparent border-none outline-none cursor-pointer"
+                />
+                <span className="text-xs text-slate-400">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="text-xs font-medium text-slate-700 bg-transparent border-none outline-none cursor-pointer"
+                />
+              </div>
+            )}
+
+            {/* EXPORT BUTTON */}
             <button
               onClick={exportCSVReport}
-              className="h-12 px-6 rounded-2xl bg-[#2563EB] text-white font-semibold shadow-lg shadow-[#2563EB]/25 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-[#2563EB]/35 active:scale-95 transition-all duration-200 flex items-center gap-2.5 cursor-pointer"
+              className="h-11 px-5 rounded-2xl bg-[#2563EB] text-white font-semibold shadow-lg shadow-[#2563EB]/25 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-[#2563EB]/35 active:scale-95 transition-all duration-200 flex items-center gap-2 cursor-pointer text-xs"
             >
               <Download className="w-4 h-4" />
-              Export Report
+              Export CSV
             </button>
           </div>
         </div>
@@ -333,7 +487,7 @@ export default function ComplianceTracker() {
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100/60">
               <TrendingUp className="w-3.5 h-3.5" />
-              Real-time adherence
+              {totalCompletedDoses} of {totalDosesAll} doses taken
             </span>
           </div>
         </div>
@@ -365,7 +519,7 @@ export default function ComplianceTracker() {
               {totalMissedDoses > 0 ? "Action required" : "Zero missed doses"}
             </span>
             <span className="text-xs text-slate-400">
-              {totalPendingDoses} pending today
+              {totalPendingDoses} pending in period
             </span>
           </div>
         </div>
@@ -429,11 +583,21 @@ export default function ComplianceTracker() {
         {/* TABLE FILTER & SEARCH TOOLBAR */}
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-[#0F172A]">
+            <h2 className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
+              <History className="w-5 h-5 text-[#2563EB]" />
               Patient Compliance Roster
             </h2>
             <p className="text-sm text-slate-400 mt-0.5">
-              Live adherence records and risk classification
+              Showing adherence metrics for{" "}
+              <strong className="text-slate-700">
+                {timeframe === "today"
+                  ? "Today"
+                  : timeframe === "week"
+                  ? "Last 7 Days"
+                  : timeframe === "month"
+                  ? "Last 30 Days"
+                  : `${startDate} to ${endDate}`}
+              </strong>
             </p>
           </div>
 
@@ -483,7 +647,7 @@ export default function ComplianceTracker() {
                 <th className="py-4 px-6">Patient</th>
                 <th className="py-4 px-6">Compliance Score</th>
                 <th className="py-4 px-6">Active Meds</th>
-                <th className="py-4 px-6">Today's Doses</th>
+                <th className="py-4 px-6">Period Doses Breakdown</th>
                 <th className="py-4 px-6">Risk Stratification</th>
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
@@ -495,7 +659,7 @@ export default function ComplianceTracker() {
                   const {
                     user,
                     medsCount,
-                    todayCount,
+                    totalDosesCount,
                     completedCount,
                     missedCount,
                     pendingCount,
@@ -557,7 +721,7 @@ export default function ComplianceTracker() {
                               {score}%
                             </span>
                             <span className="text-slate-400 font-normal text-[11px]">
-                              {completedCount}/{todayCount || medsCount || 0} taken
+                              {completedCount}/{totalDosesCount || medsCount || 0} taken
                             </span>
                           </div>
                           <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -583,7 +747,7 @@ export default function ComplianceTracker() {
                         </span>
                       </td>
 
-                      {/* TODAY'S DOSES BREAKDOWN */}
+                      {/* PERIOD DOSES BREAKDOWN */}
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {completedCount > 0 && (
@@ -604,9 +768,9 @@ export default function ComplianceTracker() {
                               {pendingCount} pending
                             </span>
                           )}
-                          {todayCount === 0 && (
+                          {totalDosesCount === 0 && (
                             <span className="text-xs text-slate-400 italic">
-                              No doses scheduled today
+                              No doses in this period
                             </span>
                           )}
                         </div>
@@ -645,12 +809,13 @@ export default function ComplianceTracker() {
                         <button
                           onClick={() => {
                             setSelectedPatient(item);
+                            setModalDoseFilter("all");
                             setDetailModalOpen(true);
                           }}
                           className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-[#2563EB] text-slate-700 hover:text-white text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 ml-auto cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          Details
+                          History & Logs
                         </button>
                       </td>
                     </tr>
@@ -662,7 +827,7 @@ export default function ComplianceTracker() {
                     <UserX className="w-10 h-10 mx-auto mb-2 text-slate-300" />
                     <p className="font-semibold text-slate-600">No patients found</p>
                     <p className="text-xs text-slate-400 mt-1">
-                      Try adjusting your search query or risk filters
+                      Try adjusting your search query, timeframe, or risk filters
                     </p>
                   </td>
                 </tr>
@@ -712,10 +877,10 @@ export default function ComplianceTracker() {
         </div>
       </div>
 
-      {/* ================= PATIENT DETAILS COMPLIANCE MODAL ================= */}
+      {/* ================= PATIENT DETAILS & FULL HISTORY MODAL ================= */}
       {detailModalOpen && selectedPatient && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
             {/* MODAL HEADER */}
             <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -734,7 +899,7 @@ export default function ComplianceTracker() {
                     {selectedPatient.user?.firstName}{" "}
                     {selectedPatient.user?.lastName}
                   </h3>
-                  <div className="flex items-center gap-3 text-xs text-slate-300 mt-1">
+                  <div className="flex items-center gap-3 text-xs text-slate-300 mt-1 flex-wrap">
                     <span className="flex items-center gap-1">
                       <Phone className="w-3 h-3" />
                       {selectedPatient.user?.phone || "No phone"}
@@ -760,9 +925,9 @@ export default function ComplianceTracker() {
             {/* MODAL CONTENT BODY */}
             <div className="p-6 overflow-y-auto space-y-6">
               {/* ADHERENCE STATS GRID */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-xs font-semibold text-slate-400 uppercase">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase">
                     Adherence Score
                   </p>
                   <h4
@@ -779,7 +944,7 @@ export default function ComplianceTracker() {
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-xs font-semibold text-slate-400 uppercase">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase">
                     Active Prescriptions
                   </p>
                   <h4 className="text-2xl font-bold text-[#0F172A] mt-1">
@@ -788,8 +953,20 @@ export default function ComplianceTracker() {
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-xs font-semibold text-slate-400 uppercase">
-                    Risk Assessment
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase">
+                    Period Taken / Total
+                  </p>
+                  <h4 className="text-2xl font-bold text-emerald-600 mt-1">
+                    {selectedPatient.completedCount}{" "}
+                    <span className="text-xs text-slate-400 font-normal">
+                      / {selectedPatient.totalDosesCount}
+                    </span>
+                  </h4>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase">
+                    Risk Classification
                   </p>
                   <h4
                     className={`text-xl font-bold mt-1.5 ${
@@ -805,76 +982,141 @@ export default function ComplianceTracker() {
                 </div>
               </div>
 
-              {/* TODAY'S DOSES TIMELINE */}
+              {/* TIMELINE SECTION HEADER & SUB-FILTER */}
               <div>
-                <h4 className="font-bold text-sm text-[#0F172A] mb-3 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#2563EB]" />
-                  Today's Dose Timeline
-                </h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <h4 className="font-bold text-sm text-[#0F172A] flex items-center gap-2">
+                    <History className="w-4 h-4 text-[#2563EB]" />
+                    Medication Intake History & Timeline
+                  </h4>
 
-                {selectedPatient.userDoses.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {selectedPatient.userDoses.map((dose, idx) => (
-                      <div
-                        key={dose._id || idx}
-                        className={`p-3.5 rounded-2xl border flex items-center justify-between ${
-                          dose?.status === "taken" || dose?.taken
-                            ? "bg-emerald-50/50 border-emerald-200/60"
-                            : dose?.status === "missed" || dose?.status === "MISSED"
-                            ? "bg-red-50/50 border-red-200/60"
-                            : "bg-slate-50 border-slate-200/60"
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+                    {[
+                      { id: "all", label: "All Doses" },
+                      { id: "taken", label: "Taken" },
+                      { id: "missed", label: "Missed" },
+                      { id: "pending", label: "Pending" },
+                    ].map((btn) => (
+                      <button
+                        key={btn.id}
+                        onClick={() => setModalDoseFilter(btn.id)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                          modalDoseFilter === btn.id
+                            ? "bg-white text-[#2563EB] shadow-xs"
+                            : "text-slate-500 hover:text-slate-900"
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                              dose?.status === "taken" || dose?.taken
-                                ? "bg-emerald-100 text-emerald-700"
-                                : dose?.status === "missed" || dose?.status === "MISSED"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-slate-200 text-slate-700"
-                            }`}
-                          >
-                            <Pill className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-xs sm:text-sm text-[#0F172A]">
-                              {dose?.medication?.name || "Medication"}
-                            </h5>
-                            <span className="text-[11px] text-slate-400">
-                              {dose?.time || "--:--"} • {dose?.medication?.dosage || ""}
-                            </span>
-                          </div>
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* GROUPED CHRONOLOGICAL TIMELINE */}
+                {Object.keys(groupedModalDoses).length > 0 ? (
+                  <div className="space-y-4">
+                    {Object.entries(groupedModalDoses).map(([dateKey, dateDoses]) => (
+                      <div
+                        key={dateKey}
+                        className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs"
+                      >
+                        {/* DATE SECTION HEADER */}
+                        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#2563EB]" />
+                            {formatReadableDate(dateKey)}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            {dateDoses.filter((d) => d.status === "taken" || d.taken).length} / {dateDoses.length} taken
+                          </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          {dose?.proofImage && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                              Photo Verified
-                            </span>
-                          )}
-                          <span
-                            className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                              dose?.status === "taken" || dose?.taken
-                                ? "bg-emerald-100 text-emerald-800"
-                                : dose?.status === "missed" || dose?.status === "MISSED"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {dose?.status === "taken" || dose?.taken
-                              ? "Taken"
-                              : dose?.status === "missed" || dose?.status === "MISSED"
-                              ? "Missed"
-                              : "Pending"}
-                          </span>
+                        {/* DOSES IN THIS DATE */}
+                        <div className="p-3 space-y-2">
+                          {dateDoses.map((dose, idx) => (
+                            <div
+                              key={dose._id || idx}
+                              className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                                dose?.status === "taken" || dose?.taken
+                                  ? "bg-emerald-50/40 border-emerald-200/60"
+                                  : dose?.status === "missed" || dose?.status === "MISSED"
+                                  ? "bg-red-50/40 border-red-200/60"
+                                  : "bg-slate-50/60 border-slate-200/60"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                                    dose?.status === "taken" || dose?.taken
+                                      ? "bg-emerald-100 text-emerald-700"
+                                      : dose?.status === "missed" || dose?.status === "MISSED"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-slate-200 text-slate-700"
+                                  }`}
+                                >
+                                  <Pill className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <h5 className="font-semibold text-xs sm:text-sm text-[#0F172A]">
+                                    {dose?.medication?.name || "Medication"}
+                                  </h5>
+                                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                                    <span>
+                                      Scheduled: <strong>{dose?.time || "--:--"}</strong>
+                                    </span>
+                                    {dose?.medication?.dosage && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{dose.medication.dosage}</span>
+                                      </>
+                                    )}
+                                    {dose?.takenAt && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="text-emerald-700 font-medium">
+                                          Taken at {new Date(dose.takenAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {dose?.proofImage && (
+                                  <button
+                                    onClick={() => setPreviewSelfie(dose.proofImage)}
+                                    className="px-2 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition"
+                                  >
+                                    <ImageIcon className="w-3 h-3" />
+                                    Selfie
+                                  </button>
+                                )}
+                                <span
+                                  className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                    dose?.status === "taken" || dose?.taken
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : dose?.status === "missed" || dose?.status === "MISSED"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-amber-100 text-amber-800"
+                                  }`}
+                                >
+                                  {dose?.status === "taken" || dose?.taken
+                                    ? "Taken"
+                                    : dose?.status === "missed" || dose?.status === "MISSED"
+                                    ? "Missed"
+                                    : "Pending"}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400 italic py-3 text-center bg-slate-50 rounded-xl">
-                    No scheduled doses for today.
+                  <p className="text-xs text-slate-400 italic py-6 text-center bg-slate-50 rounded-2xl border border-slate-100">
+                    No intake records found for this filter in the selected timeframe.
                   </p>
                 )}
               </div>
@@ -883,7 +1125,7 @@ export default function ComplianceTracker() {
               <div>
                 <h4 className="font-bold text-sm text-[#0F172A] mb-3 flex items-center gap-2">
                   <Pill className="w-4 h-4 text-[#2563EB]" />
-                  Active Medications ({selectedPatient.userMeds.length})
+                  Active Prescriptions ({selectedPatient.userMeds.length})
                 </h4>
 
                 {selectedPatient.userMeds.length > 0 ? (
@@ -924,6 +1166,36 @@ export default function ComplianceTracker() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= SELFIE PREVIEW LIGHTBOX ================= */}
+      {previewSelfie && (
+        <div
+          onClick={() => setPreviewSelfie(null)}
+          className="fixed inset-0 z-60 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl p-4 max-w-sm w-full overflow-hidden shadow-2xl relative"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-bold text-sm text-slate-800">
+                Photo Verification Proof
+              </h4>
+              <button
+                onClick={() => setPreviewSelfie(null)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+            <img
+              src={previewSelfie}
+              alt="Dose proof"
+              className="w-full h-80 object-cover rounded-2xl ring-1 ring-slate-200"
+            />
           </div>
         </div>
       )}
