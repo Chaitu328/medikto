@@ -19,11 +19,14 @@ const getAdminHospitalIds = async (adminId) => {
   const hospitalIds = [];
 
   if (isValidObjectId(adminId)) {
-    const admin = await User.findById(adminId).select("hospitals");
+    const admin = await User.findById(adminId).select("hospital hospitals");
 
-if (admin?.hospitals?.length) {
-  hospitalIds.push(...admin.hospitals);
-}
+    if (admin?.hospital) {
+      hospitalIds.push(admin.hospital);
+    }
+    if (admin?.hospitals?.length) {
+      hospitalIds.push(...admin.hospitals);
+    }
 
     const hospitals = await Hospital.find({ adminId }).select("_id");
     hospitalIds.push(...hospitals.map((hospital) => hospital._id));
@@ -53,40 +56,38 @@ const getAccessiblePatientIds = async (req, requestedPatientId) => {
     return [];
   }
 
-if (role === "admin") {
-  const admin = await User.findById(requesterId).select("hospitals");
+  if (role === "admin") {
+    const hospitalIds = await getAdminHospitalIds(requesterId);
 
-  if (!admin?.hospitals?.length) {
-    return [];
+    if (!hospitalIds.length) {
+      return [];
+    }
+
+    // 1. Find patients already linked to these hospitals
+    const linkedPatientIds = await User.find({
+      role: "patient",
+      hospitals: { $in: hospitalIds },
+    }).distinct("_id");
+
+    // 2. Find patients with pending connection OTPs to these hospitals
+    const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
+    const pendingPhones = await HospitalLinkOTP.find({
+      hospitalId: { $in: hospitalIds },
+      expiresAt: { $gt: new Date() }
+    }).distinct("phone");
+
+    const pendingPatientIds = await User.find({
+      role: "patient",
+      phone: { $in: pendingPhones }
+    }).distinct("_id");
+
+    const combinedPatientIds = [...linkedPatientIds, ...pendingPatientIds];
+
+    return filterRequestedPatient(
+      uniqueIds(combinedPatientIds),
+      requestedPatientId
+    );
   }
-
-  const hospitalIds = admin.hospitals.map(id => id.toString());
-
-  // 1. Find patients already linked to these hospitals
-  const linkedPatientIds = await User.find({
-    role: "patient",
-    hospitals: { $in: hospitalIds },
-  }).distinct("_id");
-
-  // 2. Find patients with pending connection OTPs to these hospitals
-  const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
-  const pendingPhones = await HospitalLinkOTP.find({
-    hospitalId: { $in: hospitalIds },
-    expiresAt: { $gt: new Date() }
-  }).distinct("phone");
-
-  const pendingPatientIds = await User.find({
-    role: "patient",
-    phone: { $in: pendingPhones }
-  }).distinct("_id");
-
-  const combinedPatientIds = [...linkedPatientIds, ...pendingPatientIds];
-
-  return filterRequestedPatient(
-    uniqueIds(combinedPatientIds),
-    requestedPatientId
-  );
-}
 
   if (role === "guardian") {
     if (!isValidObjectId(requesterId)) {
