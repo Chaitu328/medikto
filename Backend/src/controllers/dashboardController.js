@@ -47,7 +47,7 @@ exports.getAdherence = async (req, res) => {
 
     if (req.user && shouldPopulateUser(req)) {
       query
-        .populate("user", "firstName phone email profilePic subscription hospitals")
+        .populate("user", "firstName lastName phone email profilePic subscription hospitals role")
         .populate("medication");
     }
 

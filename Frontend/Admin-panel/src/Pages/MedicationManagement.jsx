@@ -69,16 +69,17 @@ const [selectedType, setSelectedType] =
         ? todayRes.data.schedules
         : [];
 
-const patientMedications = medicationData.filter(
-  (item) => item?.user?.role === "patient"
-);
+      const patientMedications = medicationData.filter(
+        (item) => !item?.user?.role || item?.user?.role === "patient"
+      );
 
-setMedications(patientMedications);
-const patientToday = todayData.filter(
-  (item) => item?.user?.role === "patient"
-);
+      setMedications(patientMedications);
+      const patientToday = todayData.filter(
+        (item) => !item?.user?.role || item?.user?.role === "patient"
+      );
 
-setToday(patientToday);    } catch (error) {
+      setToday(patientToday);
+    } catch (error) {
       console.log("Medication Error:", error);
     } finally {
       setLoading(false);
@@ -94,12 +95,11 @@ setToday(patientToday);    } catch (error) {
         ?.toLowerCase()
         .includes(search.toLowerCase());
 
+    const isItemActive = item?.status === "active" || item?.active === true || item?.active === undefined;
     const matchesStatus =
       selectedStatus === "all" ||
-      (selectedStatus === "active" &&
-        item?.active) ||
-      (selectedStatus === "paused" &&
-        !item?.active);
+      (selectedStatus === "active" && isItemActive) ||
+      (selectedStatus === "paused" && !isItemActive);
 
     const matchesType =
       selectedType === "all" ||
@@ -643,7 +643,7 @@ const adherence =
                     {/* DOSAGE */}
                     <td className="px-6 py-5">
                       <span className="text-sm text-[#475569] font-medium">
-                        {item?.dosage || "--"}
+                        {item?.dosage ? `${item.dosage} ${item?.unit || ""}`.trim() : "--"}
                       </span>
                     </td>
 
@@ -677,17 +677,17 @@ const adherence =
                       <span
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200
                         ${
-                          item?.active
+                          item?.status === "active" || item?.active === true || item?.active === undefined
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
                             : "bg-slate-100 text-[#64748B] border border-slate-200/60"
                         }`}
                       >
-                        {item?.active ? (
+                        {item?.status === "active" || item?.active === true || item?.active === undefined ? (
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         ) : (
                           <XCircle className="w-3.5 h-3.5" />
                         )}
-                        {item?.active ? "Active" : "Paused"}
+                        {item?.status === "active" || item?.active === true || item?.active === undefined ? "Active" : "Paused"}
                       </span>
                     </td>
 

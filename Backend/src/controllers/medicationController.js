@@ -311,7 +311,7 @@ exports.getMedications = async (req, res) => {
 
     const query = Medication.find({ ...filter, status: "active" }).sort({ createdAt: -1 });
     if (shouldPopulateUser(req)) {
-      query.populate("user", "firstName phone email profilePic subscription hospitals");
+      query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
 
     const meds = await query;
@@ -574,7 +574,7 @@ exports.getTodaySchedule = async (req, res) => {
     }).sort({ time: 1 }).populate("medication");
 
     if (shouldPopulateUser(req)) {
-      query.populate("user", "firstName phone email profilePic subscription hospitals");
+      query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
 
     const doses = await query;
@@ -1233,7 +1233,7 @@ exports.recoverSelfie =
       }).sort({ date: -1, time: 1 }).populate("medication");
 
       if (shouldPopulateUser(req)) {
-        query.populate("user", "firstName phone email profilePic subscription hospitals");
+        query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
       }
 
       const doses = await query;

@@ -78,7 +78,7 @@ exports.getPrescriptions = async (req, res) => {
     });
 
     if (shouldPopulateUser(req)) {
-      query.populate("user", "firstName phone email profilePic subscription hospitals");
+      query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
 
     const data = await query;
@@ -111,7 +111,7 @@ exports.getPrescriptionById = async (req, res) => {
     const query = Prescription.findOne({ _id: req.params.id, ...filter });
 
     if (shouldPopulateUser(req)) {
-      query.populate("user", "firstName phone email profilePic subscription hospitals");
+      query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
 
     const data = await query;

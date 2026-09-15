@@ -192,7 +192,7 @@ exports.getVitals =
       });
 
       if (shouldPopulateUser(req)) {
-        query.populate("user", "firstName phone email profilePic subscription hospitals");
+        query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
       }
 
       const vitals = await query;
@@ -217,7 +217,7 @@ exports.getVitalById = async (req, res) => {
     const query = Vitals.findOne({ _id: req.params.id, ...filter });
 
     if (shouldPopulateUser(req)) {
-      query.populate("user", "firstName phone email profilePic subscription hospitals");
+      query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
 
     const vital = await query;

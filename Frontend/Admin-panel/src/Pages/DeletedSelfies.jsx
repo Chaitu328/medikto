@@ -57,11 +57,11 @@ export default function DeletedSelfies() {
         const data =
           response?.data?.doses || [];
 
-const patientSelfies = data.filter(
-  (item) => item?.user?.role === "patient"
-);
+        const patientSelfies = data.filter(
+          (item) => !item?.user?.role || item?.user?.role === "patient"
+        );
 
-setDeletedSelfies(patientSelfies);
+        setDeletedSelfies(patientSelfies);
       } catch (error) {
 
         console.log(

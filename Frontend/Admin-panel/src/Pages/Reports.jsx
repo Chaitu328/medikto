@@ -67,10 +67,10 @@ export default function ReportsPage() {
         : [];
 
       const patientReports = reportData.filter(
-  (report) => report?.user?.role === "patient"
-);
+        (report) => !report?.user?.role || report?.user?.role === "patient"
+      );
 
-setReports(patientReports);
+      setReports(patientReports);
 
 if (patientReports.length > 0) {
   setSelectedReport(patientReports[0]);

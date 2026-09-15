@@ -92,7 +92,7 @@ exports.getReports = async (req, res) => {
     });
 
     if (shouldPopulateUser(req)) {
-      query.populate("user", "firstName phone email profilePic subscription hospitals");
+      query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
 
     const reports = await query;
@@ -125,7 +125,7 @@ exports.getReportById = async (req, res) => {
     const query = Report.findOne({ _id: req.params.id, ...filter });
 
     if (shouldPopulateUser(req)) {
-      query.populate("user", "firstName phone email profilePic subscription hospitals");
+      query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
 
     const report = await query;
@@ -237,7 +237,7 @@ exports.getReportsByType = async (req, res) => {
     });
 
     if (shouldPopulateUser(req)) {
-      query.populate("user", "firstName phone email profilePic subscription hospitals");
+      query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
 
     const reports = await query;

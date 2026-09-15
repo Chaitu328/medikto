@@ -119,15 +119,16 @@
     loginSuccess,
   } = require("../controllers/superadminController");
 
-  const {
     createGuardian,
     guardianLogin,
-      changeGuardianPassword,
-      getGuardianInvitations,
-      acceptInvitation,
-      rejectInvitation,
-        getAllGuardians,
-        updateGuardianStatus
+    changeGuardianPassword,
+    getGuardianInvitations,
+    acceptInvitation,
+    rejectInvitation,
+    getAllGuardians,
+    updateGuardianStatus,
+    resendGuardianCredentials,
+    deleteGuardian
   } = require("../controllers/guardianController");
 
   const passport = require("passport");
@@ -251,6 +252,16 @@
       "/guardians/:id/status",
       auth,
       updateGuardianStatus
+  );
+  router.post(
+      "/guardians/:id/resend",
+      auth,
+      resendGuardianCredentials
+  );
+  router.delete(
+      "/guardians/:id",
+      auth,
+      deleteGuardian
   );
 
 

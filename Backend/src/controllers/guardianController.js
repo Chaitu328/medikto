@@ -644,3 +644,81 @@ exports.updateGuardianStatus = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// ================= ADMIN: RESEND GUARDIAN CREDENTIALS =================
+exports.resendGuardianCredentials = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const guardian = await User.findById(id);
+    if (!guardian || guardian.role !== "guardian") {
+      return res.status(404).json({ success: false, message: "Guardian not found." });
+    }
+
+    // Generate new temporary password
+    const temporaryPassword = crypto.randomBytes(4).toString("hex") + "@1";
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+
+    guardian.password = hashedPassword;
+    guardian.mustChangePassword = true;
+    guardian.isFirstLogin = true;
+    await guardian.save();
+
+    // Fetch related invite for metadata
+    const invite = await CaretakerInvite.findOne({ caretakerId: guardian._id }).populate("patientId");
+    const patientName = invite?.patientId ? `${invite.patientId.firstName || ""} ${invite.patientId.lastName || ""}`.trim() : "Patient";
+    const relation = invite?.relation || "Caretaker";
+
+    // Send email
+    try {
+      await sendGuardianCredentials(
+        guardian.email,
+        guardian.firstName,
+        patientName,
+        relation,
+        guardian.email,
+        temporaryPassword
+      );
+    } catch (emailErr) {
+      console.error("Email dispatch error in resendGuardianCredentials:", emailErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: "Guardian credentials resent successfully."
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ================= ADMIN: DELETE GUARDIAN =================
+exports.deleteGuardian = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const guardian = await User.findById(id);
+    if (!guardian || guardian.role !== "guardian") {
+      return res.status(404).json({ success: false, message: "Guardian not found." });
+    }
+
+    // Clean up guardianFor references on patients
+    await User.updateMany(
+      { guardianFor: guardian._id },
+      { $pull: { guardianFor: guardian._id } }
+    );
+
+    // Delete associated invites
+    await CaretakerInvite.deleteMany({ caretakerId: guardian._id });
+
+    // Delete guardian user
+    await User.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: "Guardian removed successfully."
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
