@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const User = require("../models/userModel");
+const Hospital = require("../models/hospitalModel");
 const {
   uploadBufferToS3,
   generateAvatarKey,
@@ -7,6 +8,7 @@ const {
 } = require("../config/s3");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendInviteEmail } = require("../utils/emailHelper");
+const { sendPushNotification } = require("../utils/notificationHelper");
 const { buildPatientListFilter } = require("../utils/accessControl");
 const { getEffectiveSubscription } = require("./subscriptionController");
 const bcrypt = require("bcrypt");
@@ -304,15 +306,35 @@ exports.unlinkHospital = async (req, res) => {
       return res.status(404).json({ message: "Patient not found" });
     }
 
+    // Fetch hospital name for clear notification
+    const hospital = await Hospital.findById(hospitalId);
+    const hospitalName = hospital ? hospital.name : "the hospital";
+
     // Remove hospitalId from array
     patient.hospitals = (patient.hospitals || []).filter(
       (id) => id.toString() !== hospitalId
     );
     await patient.save();
 
+    // Trigger push notification to patient
+    try {
+      await sendPushNotification(
+        patient._id,
+        "Hospital Disconnected",
+        `You have successfully disconnected from ${hospitalName}.`,
+        {
+          type: "HOSPITAL_UNLINK",
+          hospitalId: hospitalId.toString(),
+          hospitalName
+        }
+      );
+    } catch (notifErr) {
+      console.error("FCM dispatch skipped in unlinkHospital:", notifErr.message);
+    }
+
     res.json({
       success: true,
-      message: "Hospital disconnected successfully"
+      message: `Successfully disconnected from ${hospitalName}`
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

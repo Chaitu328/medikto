@@ -193,13 +193,11 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                           hint: Text("Choose a hospital", style: TextStyle(color: themeColors.textMuted)),
                           style: TextStyle(color: themeColors.textPrimary, fontSize: 16),
                           icon: Icon(Icons.arrow_drop_down, color: themeColors.accentPrimary),
-                          onChanged: isOtpSent
-                              ? null
-                              : (val) {
-                                  setModalState(() {
-                                    selectedHospitalId = val;
-                                  });
-                                },
+                          onChanged: (val) {
+                            setModalState(() {
+                              selectedHospitalId = val;
+                            });
+                          },
                           items: allHospitals.map((h) {
                             return DropdownMenuItem<String>(
                               value: h['_id'] as String,
@@ -209,50 +207,71 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                         ),
                       ),
                     ),
-                    if (isOtpSent) ...[
-                      const SizedBox(height: 20),
-                      AppTextFormFieldTitled(
-                        title: "Verification Code (OTP)",
-                        hintText: "Enter 6-digit OTP",
-                        controller: otpController,
-                        focusColor: themeColors.accentPrimary,
-                        fillColor: themeColors.bg,
-                        color: themeColors.textPrimary,
-                        borderColor: themeColors.border,
-                        textInputType: TextInputType.number,
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: themeColors.accentPrimary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: themeColors.accentPrimary.withOpacity(0.2)),
                       ),
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: isActionLoading
-                              ? null
-                              : () async {
-                                  setModalState(() => isActionLoading = true);
-                                  final res = await ProfileManager().requestHospitalOTP(
-                                    phone: patientPhone,
-                                    hospitalId: selectedHospitalId!,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline, size: 18, color: themeColors.accentPrimary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Enter the 6-digit verification code provided by your hospital clinic staff to authorize connection.",
+                              style: TextStyle(fontSize: 12, color: themeColors.textSecondary, height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    AppTextFormFieldTitled(
+                      title: "Verification Code",
+                      hintText: "Enter 6-digit code",
+                      controller: otpController,
+                      focusColor: themeColors.accentPrimary,
+                      fillColor: themeColors.bg,
+                      color: themeColors.textPrimary,
+                      borderColor: themeColors.border,
+                      textInputType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: isActionLoading
+                            ? null
+                            : () async {
+                                if (selectedHospitalId == null) {
+                                  AppToasts.showError(context, "Please select a hospital first");
+                                  return;
+                                }
+                                setModalState(() => isActionLoading = true);
+                                final res = await ProfileManager().requestHospitalOTP(
+                                  phone: patientPhone,
+                                  hospitalId: selectedHospitalId!,
+                                );
+                                setModalState(() => isActionLoading = false);
+                                if (res.status == ResponseStatus.SUCCESS) {
+                                  AppToasts.showSuccess(
+                                    context,
+                                    "Verification code requested. Check your notifications.",
                                   );
-                                  setModalState(() => isActionLoading = false);
-                                  if (res.status == ResponseStatus.SUCCESS) {
-                                    final code = res.data is Map ? (res.data as Map)['otp']?.toString() ?? "" : "";
-                                    AppToasts.showSuccess(
-                                      context,
-                                      code.isNotEmpty
-                                          ? "Verification code: $code (resent)"
-                                          : "Verification code resent successfully",
-                                    );
-                                  } else {
-                                    AppToasts.showError(context, res.message);
-                                  }
-                                },
-                          child: Text("Resend Code", style: TextStyle(color: themeColors.accentPrimary)),
-                        ),
+                                } else {
+                                  AppToasts.showError(context, res.message);
+                                }
+                              },
+                        child: Text("Request New Code", style: TextStyle(color: themeColors.accentPrimary, fontSize: 13)),
                       ),
-                    ],
-                    const SizedBox(height: 24),
+                    ),
+                    const SizedBox(height: 16),
                     CustomButton(
-                      buttonText: isOtpSent ? "Verify & Connect" : "Request Connection Code",
+                      buttonText: "Verify & Connect Hospital",
                       buttonColor: themeColors.accentPrimary,
                       isLoading: isActionLoading,
                       textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
@@ -262,45 +281,25 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                           return;
                         }
 
-                        if (!isOtpSent) {
-                          setModalState(() => isActionLoading = true);
-                          final res = await ProfileManager().requestHospitalOTP(
-                            phone: patientPhone,
-                            hospitalId: selectedHospitalId!,
-                          );
-                          setModalState(() => isActionLoading = false);
-                          if (res.status == ResponseStatus.SUCCESS) {
-                            final code = res.data is Map ? (res.data as Map)['otp']?.toString() ?? "" : "";
-                            AppToasts.showSuccess(
-                              context,
-                              code.isNotEmpty
-                                  ? "Connection code: $code (sent via notification)"
-                                  : "Connection code sent successfully",
-                            );
-                            setModalState(() => isOtpSent = true);
-                          } else {
-                            AppToasts.showError(context, res.message);
-                          }
+                        final otp = otpController.text.trim();
+                        if (otp.length < 4) {
+                          AppToasts.showError(context, "Please enter a valid verification code");
+                          return;
+                        }
+
+                        setModalState(() => isActionLoading = true);
+                        final res = await ProfileManager().verifyHospitalOTP(
+                          phone: patientPhone,
+                          otp: otp,
+                          hospitalId: selectedHospitalId!,
+                        );
+                        setModalState(() => isActionLoading = false);
+                        if (res.status == ResponseStatus.SUCCESS) {
+                          AppToasts.showSuccess(context, "Successfully connected to hospital");
+                          Navigator.pop(ctx);
+                          fetchHospitals();
                         } else {
-                          final otp = otpController.text.trim();
-                          if (otp.length < 4) {
-                            AppToasts.showError(context, "Please enter a valid OTP code");
-                            return;
-                          }
-                          setModalState(() => isActionLoading = true);
-                          final res = await ProfileManager().verifyHospitalOTP(
-                            phone: patientPhone,
-                            otp: otp,
-                            hospitalId: selectedHospitalId!,
-                          );
-                          setModalState(() => isActionLoading = false);
-                          if (res.status == ResponseStatus.SUCCESS) {
-                            AppToasts.showSuccess(context, "Successfully connected to hospital");
-                            Navigator.pop(ctx);
-                            fetchHospitals();
-                          } else {
-                            AppToasts.showError(context, res.message);
-                          }
+                          AppToasts.showError(context, res.message);
                         }
                       },
                     ),

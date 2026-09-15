@@ -275,8 +275,8 @@ const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, onApp
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-semibold text-base truncate">{caretaker.name}</h4>
-                    <p className="text-blue-100 text-sm mt-0.5">{caretaker.email}</p>
+                    <h4 className="font-semibold text-base break-words">{caretaker.name}</h4>
+                    <p className="text-blue-100 text-sm mt-0.5 break-all">{caretaker.email}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
@@ -1188,9 +1188,9 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
                           className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group"
                         >
                           {/* Caretaker */}
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 min-w-[200px] whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className="relative">
+                              <div className="relative shrink-0">
                                 <img
                                   src={caretaker.profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.name)}&background=2563EB&color=fff&size=128`}
                                   alt={caretaker.name}
@@ -1203,10 +1203,10 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
                                   </div>
                                 )}
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-slate-900 truncate">{caretaker.name}</p>
+                              <div className="min-w-0 flex flex-col justify-center">
+                                <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{caretaker.name}</p>
                                 {caretaker.isGuardian && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5">
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 w-fit">
                                     <ShieldCheck size={8} /> Guardian
                                   </span>
                                 )}
@@ -1215,27 +1215,27 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
                           </td>
 
                           {/* Relation */}
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <RelationBadge relation={caretaker.relation} />
                           </td>
 
                           {/* Phone */}
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-slate-600 font-medium">{caretaker.phone}</span>
                           </td>
 
                           {/* Invitation Date */}
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-slate-600">{formatDate(caretaker.createdAt)}</div>
                           </td>
 
                           {/* Invitation Status */}
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <StatusBadge status={caretaker.status} />
                           </td>
 
                           {/* Account Status */}
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <AccountStatusBadge status={caretaker.accountStatus} />
                           </td>
 

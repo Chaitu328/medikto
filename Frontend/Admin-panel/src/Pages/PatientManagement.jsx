@@ -924,10 +924,10 @@ const compliancePercent =
                     </svg>
                   </div>
                   <h3 className="text-lg font-bold text-[#0F172A] mb-1">
-                    Hospital linked successfully
+                    Patient Connected Successfully
                   </h3>
                   <p className="text-sm text-[#64748B]">
-                    Closing in a moment...
+                    The patient profile is now connected to your hospital.
                   </p>
                 </div>
               ) : (
@@ -935,14 +935,17 @@ const compliancePercent =
                   {/* Step 1: Phone */}
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
-                      Phone Number
+                      Patient Mobile Number
                     </label>
                     <input
                       type="text"
                       value={otpPhone}
                       readOnly
-                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-4 text-sm text-[#0F172A] outline-none cursor-not-allowed"
+                      className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50 pl-4 pr-4 text-sm text-[#0F172A] outline-none cursor-not-allowed font-medium"
                     />
+                    <p className="text-xs text-[#64748B] mt-1.5">
+                      Verification code will be dispatched via push notification to this patient&apos;s device.
+                    </p>
                   </div>
 
                   {/* Step 2: OTP or Send Button */}
@@ -950,45 +953,50 @@ const compliancePercent =
                     <button
                       onClick={sendLinkOTP}
                       disabled={otpLoading}
-                      className="w-full h-12 rounded-xl bg-[#2563EB] text-white text-sm font-semibold hover:bg-[#1D4ED8] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-full h-12 rounded-xl bg-[#2563EB] text-white text-sm font-semibold hover:bg-[#1D4ED8] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
                     >
                       {otpLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        "Send OTP"
+                        "Send Verification Code to Patient"
                       )}
                     </button>
                   ) : (
                     <div className="space-y-4">
+                      <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-900 text-xs leading-relaxed">
+                        A 6-digit authorization code has been sent to the patient&apos;s phone. Please ask the patient for the code to confirm hospital connection.
+                      </div>
+
                       {displayedOtp && (
-                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-700 text-sm font-medium">
-                          <Crown className="w-4 h-4 flex-shrink-0" />
-                          <span>Generated OTP: <strong className="text-base text-emerald-800">{displayedOtp}</strong></span>
+                        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-sm font-medium">
+                          <span>Clinic Passcode:</span>
+                          <strong className="text-lg tracking-widest text-emerald-900">{displayedOtp}</strong>
                         </div>
                       )}
+
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-[#64748B] mb-2">
-                          Enter OTP
+                          Enter Patient&apos;s 6-Digit Code
                         </label>
                         <input
                           type="text"
                           value={otpCode}
                           onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          placeholder="6-digit OTP"
+                          placeholder="••••••"
                           maxLength={6}
-                          className="w-full h-12 rounded-xl border border-slate-200 bg-white pl-4 pr-4 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all duration-200 text-center tracking-[0.5em] font-semibold"
+                          className="w-full h-12 rounded-xl border border-slate-200 bg-white pl-4 pr-4 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all duration-200 text-center tracking-[0.5em] font-semibold text-lg"
                         />
                       </div>
 
                       <button
                         onClick={verifyLinkOTP}
                         disabled={otpLoading || otpCode.length < 4}
-                        className="w-full h-12 rounded-xl bg-[#2563EB] text-white text-sm font-semibold hover:bg-[#1D4ED8] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full h-12 rounded-xl bg-[#2563EB] text-white text-sm font-semibold hover:bg-[#1D4ED8] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
                       >
                         {otpLoading ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          "Verify & Link Hospital"
+                          "Verify & Authorize Connection"
                         )}
                       </button>
                     </div>
@@ -996,7 +1004,7 @@ const compliancePercent =
 
                   {/* Error */}
                   {otpError && (
-                    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200/60 text-red-700 text-sm font-medium">
+                    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200/60 text-red-700 text-xs font-medium">
                       <AlertCircle className="w-4 h-4 flex-shrink-0" />
                       {otpError}
                     </div>

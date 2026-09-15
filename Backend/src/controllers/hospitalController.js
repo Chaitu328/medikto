@@ -21,7 +21,7 @@ exports.sendLinkOTP = async (req, res) => {
       return res.status(404).json({ message: "Patient not registered on Medikto. Ask patient to register in the app first." });
     }
 
-    // 2. Identify Admin's Hospital
+    // 2. Identify Hospital
     let hospitalId;
     if (req.user.role === "patient") {
       hospitalId = req.body.hospitalId;
@@ -29,7 +29,7 @@ exports.sendLinkOTP = async (req, res) => {
         return res.status(400).json({ message: "hospitalId is required when requested by patient" });
       }
     } else if (req.user.id === "123456") {
-      // Create or get Demo Hospital for dummy admin
+      // Demo Hospital for dummy admin
       let dummyHosp = await Hospital.findOne({ name: "Demo Hospital" });
       if (!dummyHosp) {
         dummyHosp = await Hospital.create({
@@ -52,10 +52,14 @@ exports.sendLinkOTP = async (req, res) => {
       }
     }
 
+    // Fetch hospital details for accurate notification title & branding
+    const hospital = await Hospital.findById(hospitalId);
+    const hospitalName = hospital ? hospital.name : "Hospital";
+
     // 3. Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    // 4. Save to temporary OTP link table
+    // 4. Save to temporary OTP link table with 5-minute expiry
     await HospitalLinkOTP.deleteMany({ phone, hospitalId });
     await HospitalLinkOTP.create({
       phone,
@@ -64,21 +68,36 @@ exports.sendLinkOTP = async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes validity
     });
 
-    // 5. Trigger Firebase push notification alert with the OTP code to the patient
+    // 5. Trigger Firebase push notification alert to the patient
     try {
       await sendPushNotification(
         patient._id,
-        "Hospital Connection Request",
-        `A hospital is requesting to connect with your Medikto profile. Use code ${otp} to authorize connection.`
+        "🏥 Hospital Connection Request",
+        `${hospitalName} is requesting to connect with your Medikto profile. Share code ${otp} with your clinic staff to authorize.`,
+        {
+          type: "HOSPITAL_LINK_REQUEST",
+          hospitalId: hospitalId.toString(),
+          hospitalName: hospitalName,
+          otp: otp.toString()
+        }
       );
     } catch (notifErr) {
       console.error("FCM dispatch skipped in sendLinkOTP:", notifErr.message);
     }
 
-    res.json({
-      message: "OTP generated and sent to patient via push notification",
-      otp: otp // Keep for local development/testing verification
-    });
+    // Return response
+    const responsePayload = {
+      success: true,
+      message: `Verification code sent to patient's phone for ${hospitalName}`,
+      hospitalName
+    };
+
+    // If request was made by Hospital Admin, also return the OTP in response for clinic dashboard
+    if (req.user.role === "admin" || req.user.role === "superadmin") {
+      responsePayload.otp = otp;
+    }
+
+    res.json(responsePayload);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -94,7 +113,7 @@ exports.verifyAndLink = async (req, res) => {
       return res.status(400).json({ message: "Phone and OTP are required" });
     }
 
-    // 1. Identify Admin's Hospital
+    // 1. Identify Hospital
     let hospitalId;
     if (req.user.role === "patient") {
       hospitalId = req.body.hospitalId;
@@ -124,19 +143,19 @@ exports.verifyAndLink = async (req, res) => {
     const record = await HospitalLinkOTP.findOne({ phone, hospitalId }).sort({ createdAt: -1 });
 
     if (!record) {
-      return res.status(400).json({ message: "Verification record not found. Try sending OTP again." });
+      return res.status(400).json({ message: "Verification record not found. Please request a new code." });
     }
 
     // 3. Check expiry
     if (record.expiresAt < Date.now()) {
       await HospitalLinkOTP.deleteMany({ phone, hospitalId });
-      return res.status(400).json({ message: "OTP expired. Request a new one." });
+      return res.status(400).json({ message: "Verification code has expired. Please request a new code." });
     }
 
     // 4. Compare OTP
     const isMatch = (otp.toString() === record.otp);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({ message: "Invalid verification code. Please check and try again." });
     }
 
     // 5. Connect Patient
@@ -154,12 +173,17 @@ exports.verifyAndLink = async (req, res) => {
     const hospital = await Hospital.findById(hospitalId);
     const hospitalName = hospital ? hospital.name : "Hospital";
 
-    // Trigger push notification to the patient
+    // Trigger push notification to the patient confirming successful link
     try {
       await sendPushNotification(
         patient._id,
-        "Connection Successful",
-        `Your Medikto profile is now successfully connected with ${hospitalName}.`
+        "🔗 Hospital Connected Successfully",
+        `Your Medikto profile is now linked with ${hospitalName}. Your clinical team can now securely monitor your care schedule.`,
+        {
+          type: "HOSPITAL_LINK_SUCCESS",
+          hospitalId: hospitalId.toString(),
+          hospitalName: hospitalName
+        }
       );
     } catch (notifErr) {
       console.error("FCM dispatch skipped in verifyAndLink:", notifErr.message);
@@ -170,7 +194,13 @@ exports.verifyAndLink = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Patient linked to hospital successfully"
+      message: `Patient linked to ${hospitalName} successfully`,
+      hospitalName,
+      patient: {
+        _id: patient._id,
+        firstName: patient.firstName,
+        phone: patient.phone
+      }
     });
 
   } catch (err) {
