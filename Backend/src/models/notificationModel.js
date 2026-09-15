@@ -16,8 +16,12 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ["medicine", "report", "alert", "system"],
+    enum: ["medicine", "report", "alert", "system", "hospital_link"],
     default: "system"
+  },
+  data: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
   isRead: {
     type: Boolean,

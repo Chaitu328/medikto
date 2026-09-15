@@ -294,6 +294,38 @@ class ProfileManager {
     }
   }
 
+  /// SEND CONNECTION REQUEST TO HOSPITAL (patient-initiated)
+  /// Patient selects a hospital from the list and taps "Connect".
+  /// The hospital admin receives a notification and can approve from the Admin Panel.
+  Future<ResponseData> requestHospitalLink({required String hospitalId}) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.post(
+        "/hospitals/request-link",
+        data: {"hospitalId": hospitalId},
+      );
+      if (response.statusCode == 200) {
+        return ResponseData(
+          response.data['message'] ?? "Connection request sent successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData(
+        response.data['message'] ?? "Failed to send connection request",
+        ResponseStatus.FAILED,
+      );
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+
   /// REQUEST OTP TO LINK HOSPITAL
   Future<ResponseData> requestHospitalOTP({
     required String phone,

@@ -28,6 +28,8 @@
   const {
     sendLinkOTP,
     verifyAndLink,
+    requestHospitalLink,
+    approvePatientLink,
     createHospitalWithAdmin,
     getHospitals,
     getHospitalById,
@@ -192,8 +194,10 @@
   router.put("/subscription", auth, auth.blockGuardianWrite, updateSubscription);
 
   // ================= HOSPITAL LINKS =================
-  router.post("/hospitals/send-link-otp", auth, sendLinkOTP);
-  router.post("/hospitals/verify-link", auth, verifyAndLink);
+  router.post("/hospitals/send-link-otp", auth, sendLinkOTP);          // admin-initiated (legacy)
+  router.post("/hospitals/verify-link", auth, verifyAndLink);           // admin verifies (legacy)
+  router.post("/hospitals/request-link", auth, requestHospitalLink);    // patient initiates request
+  router.post("/hospitals/approve-link", auth, approvePatientLink);     // admin approves request
   router.get("/profile/hospitals", auth, getConnectedHospitals);
   router.delete("/profile/hospitals/:hospitalId", auth, unlinkHospital);
 

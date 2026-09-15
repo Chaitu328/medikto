@@ -379,6 +379,7 @@
           time: formatRelativeTime(n.createdAt),
           type: n.type || "alert",
           isRead: n.isRead,
+          data: n.data || {},           // ← carry machine-readable payload
         }));
       }
 
@@ -386,16 +387,16 @@
         case "superadmin":
         case "super_admin":
           return [
-            { title: "System Active", body: "All platform services operating normally", time: "Just now", type: "platform" },
+            { title: "System Active", body: "All platform services operating normally", time: "Just now", type: "platform", data: {} },
           ];
         case "hospital_admin":
         case "hospitaladmin":
           return [
-            { title: "Clinic Connected", body: "Test Clinic connection service is ready", time: "Just now", type: "hospital" },
+            { title: "Clinic Ready", body: "Patient connection service is active", time: "Just now", type: "hospital", data: {} },
           ];
         default:
           return [
-            { title: "Welcome to Medikto", body: "Your account is active", time: "Just now", type: "info" },
+            { title: "Welcome to Medikto", body: "Your account is active", time: "Just now", type: "info", data: {} },
           ];
       }
     }, [liveNotifications, userRole]);
@@ -422,9 +423,53 @@
 
     const helpOptions = getHelpOptions();
 
+    // ================= HOSPITAL LINK APPROVAL MODAL =================
+    const [linkApprovalModal, setLinkApprovalModal] = useState({
+      open: false,
+      phone: "",
+      patientName: "",
+      hospitalName: "",
+      notificationId: null,
+      approving: false,
+      approved: false,
+      error: "",
+    });
+
+    const handleNotificationClick = (item) => {
+      if (item?.data?.requestType === "hospital_link_request") {
+        setShowNotifications(false);
+        setLinkApprovalModal({
+          open: true,
+          phone: item.data.phone || "",
+          patientName: item.data.patientName || "Patient",
+          hospitalName: item.data.hospitalName || "Clinic",
+          notificationId: item.id || null,
+          approving: false,
+          approved: false,
+          error: "",
+        });
+      }
+    };
+
+    const handleApproveLink = async () => {
+      setLinkApprovalModal((prev) => ({ ...prev, approving: true, error: "" }));
+      try {
+        await api.post("/hospitals/approve-link", { phone: linkApprovalModal.phone });
+        setLinkApprovalModal((prev) => ({ ...prev, approving: false, approved: true }));
+        fetchLiveNotifications(); // Refresh notification list
+        setTimeout(() => {
+          setLinkApprovalModal((prev) => ({ ...prev, open: false }));
+        }, 2500);
+      } catch (err) {
+        const msg = err?.response?.data?.message || "Failed to approve connection. Please try again.";
+        setLinkApprovalModal((prev) => ({ ...prev, approving: false, error: msg }));
+      }
+    };
+
     // ================= RENDER =================
 
     return (
+      <>
       <header className="h-[70px] bg-white border-b border-gray-200 px-8 flex items-center justify-between relative">
 
         {/* SEARCH */}
@@ -560,20 +605,33 @@
                       ) => (
                         <div
                           key={item.id || index}
-                          className="px-5 py-3.5 hover:bg-gray-50 transition"
+                          onClick={() => handleNotificationClick(item)}
+                          className={`px-5 py-3.5 transition border-l-2 ${
+                            item?.data?.requestType === "hospital_link_request"
+                              ? "border-blue-400 bg-blue-50 hover:bg-blue-100 cursor-pointer"
+                              : "border-transparent hover:bg-gray-50 cursor-default"
+                          }`}
                         >
                           <div className="flex items-center justify-between">
                             <h4 className="text-sm font-semibold text-gray-900">
                               {item.title}
                             </h4>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                              item.type === "alert" ? "bg-red-50 text-red-600" :
-                              item.type === "reminder" ? "bg-blue-50 text-blue-600" :
-                              item.type === "security" ? "bg-amber-50 text-amber-600" :
-                              "bg-gray-100 text-gray-600"
-                            }`}>
-                              {item.type}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {item?.data?.requestType === "hospital_link_request" && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 animate-pulse">
+                                  Action Required
+                                </span>
+                              )}
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                item.type === "alert" ? "bg-red-50 text-red-600" :
+                                item.type === "hospital_link" ? "bg-blue-50 text-blue-600" :
+                                item.type === "reminder" ? "bg-blue-50 text-blue-600" :
+                                item.type === "security" ? "bg-amber-50 text-amber-600" :
+                                "bg-gray-100 text-gray-600"
+                              }`}>
+                                {item.type === "hospital_link" ? "Connection" : item.type}
+                              </span>
+                            </div>
                           </div>
 
                           {item.body && (
@@ -775,5 +833,115 @@
           </div>
         </div>
       </header>
-    );
+
+      {/* ══════════════════════════════════════════════════════════
+          HOSPITAL LINK APPROVAL MODAL
+          Shown when admin clicks a 'hospital_link_request' notification
+      ══════════════════════════════════════════════════════════ */}
+      {linkApprovalModal.open && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center">
+          {/* Blurred backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => !linkApprovalModal.approving && setLinkApprovalModal((p) => ({ ...p, open: false }))}
+          />
+
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-500">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Patient Connection Request</h3>
+                  <p className="text-blue-100 text-xs mt-0.5">{linkApprovalModal.hospitalName}</p>
+                </div>
+              </div>
+              {!linkApprovalModal.approving && (
+                <button
+                  onClick={() => setLinkApprovalModal((p) => ({ ...p, open: false }))}
+                  className="text-white/70 hover:text-white transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-6">
+              {linkApprovalModal.approved ? (
+                /* Success state */
+                <div className="flex flex-col items-center py-4 gap-3">
+                  <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+                    <span className="text-2xl">✅</span>
+                  </div>
+                  <p className="text-base font-semibold text-gray-900 text-center">
+                    {linkApprovalModal.patientName} linked successfully!
+                  </p>
+                  <p className="text-sm text-gray-500 text-center">
+                    They are now connected to {linkApprovalModal.hospitalName}.
+                  </p>
+                </div>
+              ) : (
+                /* Approval state */
+                <>
+                  <p className="text-sm text-gray-500 mb-5">
+                    Review the patient's request and approve to link their Medikto profile to your clinic.
+                  </p>
+
+                  {/* Patient Info Card */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 text-base">
+                        {linkApprovalModal.patientName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{linkApprovalModal.patientName}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{linkApprovalModal.phone}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <p className="text-xs text-gray-500">
+                        Wants to connect to: <span className="font-semibold text-gray-800">{linkApprovalModal.hospitalName}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Error */}
+                  {linkApprovalModal.error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
+                      <p className="text-xs text-red-600">{linkApprovalModal.error}</p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setLinkApprovalModal((p) => ({ ...p, open: false }))}
+                      disabled={linkApprovalModal.approving}
+                      className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+                    >
+                      Dismiss
+                    </button>
+                    <button
+                      onClick={handleApproveLink}
+                      disabled={linkApprovalModal.approving}
+                      className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold text-white transition disabled:opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {linkApprovalModal.approving ? (
+                        <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Approving...</>
+                      ) : (
+                        "Approve & Link"
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   }

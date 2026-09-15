@@ -93,217 +93,26 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
     }
   }
 
-  void _showConnectHospitalBottomSheet() {
+  Future<void> _showConnectHospitalBottomSheet() async {
     final themeColors = context.themeColors;
 
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: themeColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: themeColors.accentSubtle,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.local_hospital_rounded,
-                          color: themeColors.accentPrimary,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        "How to Connect",
-                        style: TextStyle(
-                          color: themeColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, color: themeColors.textSecondary),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "Hospital connections are initiated by your clinic staff for privacy and clinical security.",
-                style: TextStyle(
-                  fontSize: 13,
-                  color: themeColors.textSecondary,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _buildStepItem(
-                stepNumber: "1",
-                title: "Visit Clinic or Reception",
-                description:
-                    "Provide your registered Medikto mobile number to your hospital reception or doctor.",
-                icon: Icons.person_search_outlined,
-                themeColors: themeColors,
-              ),
-              const SizedBox(height: 14),
-              _buildStepItem(
-                stepNumber: "2",
-                title: "Receive 6-Digit Code",
-                description:
-                    "A push notification with a secure 6-digit verification code will appear on this device.",
-                icon: Icons.notifications_active_outlined,
-                themeColors: themeColors,
-              ),
-              const SizedBox(height: 14),
-              _buildStepItem(
-                stepNumber: "3",
-                title: "Share Code to Authorize",
-                description:
-                    "Read the code to the clinic staff. Once entered in their portal, your profile will be securely connected.",
-                icon: Icons.verified_user_outlined,
-                themeColors: themeColors,
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: themeColors.accentPrimary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: themeColors.accentPrimary.withOpacity(0.2),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.shield_outlined,
-                      size: 20,
-                      color: themeColors.accentPrimary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        "Once connected, your clinical team can view your prescribed medicines, adherence records, and vitals to coordinate your care.",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: themeColors.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              CustomButton(
-                buttonText: "Got It",
-                buttonColor: themeColors.accentPrimary,
-                textStyle: TextStyle(
-                  color: themeColors.onAccentPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        ),
+      builder: (ctx) => _HospitalPickerSheet(
+        themeColors: themeColors,
+        onConnected: () {
+          fetchHospitals(); // Refresh the connected list after request sent
+        },
       ),
     );
   }
 
-  Widget _buildStepItem({
-    required String stepNumber,
-    required String title,
-    required String description,
-    required IconData icon,
-    required dynamic themeColors,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: themeColors.bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: themeColors.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: themeColors.accentPrimary,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                stepNumber,
-                style: TextStyle(
-                  color: themeColors.onAccentPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(icon, size: 16, color: themeColors.accentPrimary),
-                    const SizedBox(width: 6),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: themeColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: themeColors.textMuted,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -465,6 +274,291 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
                 ],
               ),
             ),
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOSPITAL PICKER BOTTOM SHEET
+// Fetches all hospitals, lets patient select one, sends connection request
+// ═══════════════════════════════════════════════════════════════════════════
+class _HospitalPickerSheet extends StatefulWidget {
+  final dynamic themeColors;
+  final VoidCallback onConnected;
+
+  const _HospitalPickerSheet({
+    required this.themeColors,
+    required this.onConnected,
+  });
+
+  @override
+  State<_HospitalPickerSheet> createState() => _HospitalPickerSheetState();
+}
+
+class _HospitalPickerSheetState extends State<_HospitalPickerSheet> {
+  List<dynamic> hospitals = [];
+  bool isLoading = true;
+  String? errorMessage;
+  Map<String, dynamic>? selectedHospital;
+  bool isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHospitals();
+  }
+
+  Future<void> _fetchHospitals() async {
+    final response = await ProfileManager().getAllHospitals();
+    if (mounted) {
+      if (response.status == ResponseStatus.SUCCESS) {
+        setState(() {
+          hospitals = (response.data as List<dynamic>?) ?? [];
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = response.message;
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _sendRequest() async {
+    if (selectedHospital == null) return;
+    setState(() => isSending = true);
+
+    final response = await ProfileManager().requestHospitalLink(
+      hospitalId: selectedHospital!['_id'] as String,
+    );
+
+    if (!mounted) return;
+    setState(() => isSending = false);
+
+    if (response.status == ResponseStatus.SUCCESS) {
+      Navigator.pop(context);
+      widget.onConnected();
+      AppToasts.showSuccess(
+        context,
+        response.message,
+      );
+    } else {
+      AppToasts.showError(context, response.message);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tc = widget.themeColors;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (_, scrollController) => Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: tc.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Title row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: tc.accentSubtle,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.local_hospital_rounded, color: tc.accentPrimary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Connect a Hospital',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: tc.textPrimary),
+                      ),
+                      Text(
+                        'Select a clinic to send a connection request',
+                        style: TextStyle(fontSize: 12, color: tc.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: tc.textSecondary, size: 20),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+          Divider(color: tc.border, height: 1),
+
+          // Hospital list
+          Expanded(
+            child: isLoading
+                ? Center(child: CircularProgressIndicator(color: tc.accentPrimary))
+                : errorMessage != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(errorMessage!, textAlign: TextAlign.center,
+                              style: TextStyle(color: tc.textMuted)),
+                        ),
+                      )
+                    : hospitals.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No hospitals available.',
+                              style: TextStyle(color: tc.textMuted),
+                            ),
+                          )
+                        : ListView.separated(
+                            controller: scrollController,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            itemCount: hospitals.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            itemBuilder: (_, i) {
+                              final h = hospitals[i] as Map<String, dynamic>;
+                              final isSelected =
+                                  selectedHospital?['_id'] == h['_id'];
+                              return GestureDetector(
+                                onTap: () => setState(() => selectedHospital = h),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? tc.accentPrimary.withOpacity(0.08)
+                                        : tc.surface,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? tc.accentPrimary
+                                          : tc.border,
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? tc.accentPrimary.withOpacity(0.15)
+                                              : tc.bg,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.local_hospital,
+                                          color: isSelected
+                                              ? tc.accentPrimary
+                                              : tc.textMuted,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              h['name'] ?? 'Unknown',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: tc.textPrimary,
+                                              ),
+                                            ),
+                                            if ((h['address'] as String?)?.isNotEmpty == true) ...
+                                              [
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  h['address'] as String,
+                                                  style: TextStyle(fontSize: 12, color: tc.textMuted),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                          ],
+                                        ),
+                                      ),
+                                      if (isSelected)
+                                        Icon(Icons.check_circle, color: tc.accentPrimary, size: 20),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+          ),
+
+          // Send button
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 20),
+            child: Column(
+              children: [
+                if (selectedHospital != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Connecting to: ${selectedHospital!['name']}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tc.accentPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: selectedHospital != null && !isSending ? _sendRequest : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: tc.accentPrimary,
+                      disabledBackgroundColor: tc.accentPrimary.withOpacity(0.4),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: isSending
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(tc.onAccentPrimary),
+                            ),
+                          )
+                        : Text(
+                            'Send Connection Request',
+                            style: TextStyle(
+                              color: tc.onAccentPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
