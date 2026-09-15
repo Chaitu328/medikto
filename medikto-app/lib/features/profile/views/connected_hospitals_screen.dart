@@ -4,10 +4,7 @@ import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
-import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/profile/data/profile_manager.dart';
-import 'package:medikto/features/profile/data/profile_provider.dart';
-import 'package:medikto/features/profile/models/profile_model.dart';
 
 class ConnectedHospitalsScreen extends ConsumerStatefulWidget {
   const ConnectedHospitalsScreen({super.key});
@@ -275,6 +272,7 @@ class _ConnectedHospitalsScreenState extends ConsumerState<ConnectedHospitalsScr
               ),
             ),
     );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -431,7 +429,7 @@ class _HospitalPickerSheetState extends State<_HospitalPickerSheet> {
                             controller: scrollController,
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             itemCount: hospitals.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            separatorBuilder: (context, index) => const SizedBox(height: 8),
                             itemBuilder: (_, i) {
                               final h = hospitals[i] as Map<String, dynamic>;
                               final isSelected =
