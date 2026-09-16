@@ -13,3 +13,9 @@ medikto_system_summary.md
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Binaries & Large Build Outputs
+*.apk
+*.ipa
+vapt/*.apk
+vapt/*.ipa

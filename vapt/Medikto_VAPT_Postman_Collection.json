@@ -1,0 +1,1632 @@
+{
+  "info": {
+    "_postman_id": "medikto-vapt-collection-2026",
+    "name": "Medikto Health Platform - Complete API Collection (VAPT Staging)",
+    "description": "Comprehensive Postman API collection for Medikto backend REST API on AWS DocumentDB, covering authentication, hospital admin, patient records, doses, vitals, prescriptions, and reports.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api-prd.medikto.com/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "superadmin-token",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "patientToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "guardianToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication & Public Endpoints",
+      "item": [
+        {
+          "name": "Verify Phone OTP (Firebase Login)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verifyOTP",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "verifyOTP"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<FIREBASE_ID_TOKEN>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Patient Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Test User\",\n  \"mobile_number\": \"+919999999999\",\n  \"email\": \"konakallachaitanya@gmail.com\",\n  \"termsAccepted\": true,\n  \"privacyPolicyAccepted\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Check Phone Registration Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/check-phone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "check-phone"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919999999999\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Google Auth (Firebase ID Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/google",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<FIREBASE_GOOGLE_ID_TOKEN>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Complete Google Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/google/complete-registration",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "google",
+                "complete-registration"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<FIREBASE_GOOGLE_ID_TOKEN>\",\n  \"fullName\": \"Shah Azeem\",\n  \"phone\": \"+919642331668\",\n  \"termsAccepted\": true,\n  \"privacyPolicyAccepted\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Hospital Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hospital.admin@medikto.com\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Admin Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "change-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"Admin@123\",\n  \"newPassword\": \"NewAdminPassword@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Public Contact Us Submission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/public/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "contact"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Security Tester\",\n  \"email\": \"tester@securityfirm.com\",\n  \"phone\": \"+919999999999\",\n  \"message\": \"Inquiry regarding healthcare platform security\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Hospitals & Clinic Administration",
+      "item": [
+        {
+          "name": "Create Hospital With Admin (SuperAdmin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/create-with-admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "create-with-admin"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hospitalName\": \"Test Clinic\",\n  \"hospitalAddress\": \"Hyderabad\",\n  \"adminFirstName\": \"Admin\",\n  \"adminPhone\": \"9876543210\",\n  \"adminEmail\": \"hospital.admin@medikto.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Hospitals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Hospital By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/6aa94e0492bd67c1209bac7e",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "6aa94e0492bd67c1209bac7e"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Hospital Info",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/6aa94e0492bd67c1209bac7e",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "6aa94e0492bd67c1209bac7e"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Clinic\",\n  \"address\": \"Hyderabad\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Hospital Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/6aa94e0492bd67c1209bac7e/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "6aa94e0492bd67c1209bac7e",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Patient: Request Connection to Hospital",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/request-link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "request-link"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hospitalId\": \"6aa94e0492bd67c1209bac7e\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Admin: Approve Patient Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/approve-link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "approve-link"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919999999999\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Admin: Send Link OTP (Legacy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/send-link-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "send-link-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919999999999\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Admin: Verify OTP and Link (Legacy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/verify-link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "verify-link"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919999999999\",\n  \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Connected Hospitals for Patient",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/hospitals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "hospitals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlink Patient from Hospital",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/hospitals/6aa94e0492bd67c1209bac7e",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "hospitals",
+                "6aa94e0492bd67c1209bac7e"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. User Profiles & Guardians (Caretakers)",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Users (Admin / SuperAdmin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Profile Details",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "firstName",
+                  "value": "Test User",
+                  "type": "text"
+                },
+                {
+                  "key": "gender",
+                  "value": "male",
+                  "type": "text"
+                },
+                {
+                  "key": "bloodGroup",
+                  "value": "O+",
+                  "type": "text"
+                },
+                {
+                  "key": "height",
+                  "value": "170",
+                  "type": "text"
+                },
+                {
+                  "key": "weight",
+                  "value": "70",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Family Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/family-members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "family-members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Parent\",\n  \"relation\": \"Father\",\n  \"age\": 55\n}"
+            }
+          }
+        },
+        {
+          "name": "Update FCM Push Token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/fcm-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "fcm-token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcmToken\": \"sample_fcm_token_string\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Caretakers for Patient",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/caretakers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "caretakers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Monitored Patients for Caretaker",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/caretakers/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "caretakers",
+                "patients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Guardian / Caretaker Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guardians/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "guardians",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Testcare\",\n  \"email\": \"testcare@gmail.com\",\n  \"phone\": \"8888888080\",\n  \"relation\": \"Guardian\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Guardian Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guardian/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "guardian",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testcare@gmail.com\",\n  \"password\": \"GuardianPassword@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Guardian Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guardian/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "guardian",
+                "change-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"GuardianPassword@123\",\n  \"newPassword\": \"NewGuardianPassword@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Guardian Invitations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guardian/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "guardian",
+                "invitations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Guardians (Admin List)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guardians",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "guardians"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Toggle Guardian Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guardians/6a9abd8e9b2ef45f521a7034/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "guardians",
+                "6a9abd8e9b2ef45f521a7034",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountStatus\": \"active\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Medications & Doses Management",
+      "item": [
+        {
+          "name": "Add New Medication Regimen",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Metformin 500mg\",\n  \"dosage\": \"1 tablet\",\n  \"frequency\": \"daily\",\n  \"times\": [\n    \"08:00\",\n    \"20:00\"\n  ],\n  \"startDate\": \"2026-09-01\",\n  \"endDate\": \"2026-12-31\",\n  \"instructions\": \"Take after meals\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Patient Medications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Today Scheduled Doses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/today",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "today"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Dose History & Adherence",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/doses/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "doses",
+                "history"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Dose as Taken",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dose/6aa94e0492bd67c1209bac99/taken",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dose",
+                "6aa94e0492bd67c1209bac99",
+                "taken"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Dose with Selfie Photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dose/6aa94e0492bd67c1209bac99/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dose",
+                "6aa94e0492bd67c1209bac99",
+                "verify"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "value": "<SELFIE_IMAGE_FILE>",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Dose Selfie",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dose/6aa94e0492bd67c1209bac99/selfie",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dose",
+                "6aa94e0492bd67c1209bac99",
+                "selfie"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: Get Deleted Selfies Audit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/deleted-selfies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "deleted-selfies"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Vitals & Health Biometrics",
+      "item": [
+        {
+          "name": "Get Patient Vitals History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vitals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vitals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Record Blood Pressure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vitals/blood-pressure",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vitals",
+                "blood-pressure"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"systolic\": 120,\n  \"diastolic\": 80,\n  \"pulse\": 72,\n  \"notes\": \"Normal morning reading\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Record Heart Rate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vitals/heart-rate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vitals",
+                "heart-rate"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bpm\": 75,\n  \"notes\": \"Resting heart rate\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Record Body Temperature",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vitals/temperature",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vitals",
+                "temperature"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"temperature\": 98.6,\n  \"unit\": \"F\",\n  \"notes\": \"Normal\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Record Blood Sugar Level",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vitals/sugar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vitals",
+                "sugar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": 110,\n  \"type\": \"fasting\",\n  \"notes\": \"Pre-breakfast fasting glucose\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Prescriptions & Medical Reports Vault",
+      "item": [
+        {
+          "name": "Upload Prescription Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "doctorName",
+                  "value": "Dr. Test",
+                  "type": "text"
+                },
+                {
+                  "key": "hospitalName",
+                  "value": "Test Clinic",
+                  "type": "text"
+                },
+                {
+                  "key": "diagnosis",
+                  "value": "Routine Health Checkup",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "value": "<PRESCRIPTION_PDF_OR_IMAGE>",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Prescriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Prescription By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions/6aa94e0492bd67c1209bac98",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions",
+                "6aa94e0492bd67c1209bac98"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Medical Lab Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Lipid Profile Report",
+                  "type": "text"
+                },
+                {
+                  "key": "type",
+                  "value": "Blood Test",
+                  "type": "text"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-09-10",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "value": "<LAB_REPORT_PDF>",
+                  "type": "text"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Medical Reports List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Reports by Category Type",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/type/Blood%20Test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "type",
+                "Blood%20Test"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Subscriptions, Adherence & Notifications",
+      "item": [
+        {
+          "name": "Get Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "subscription"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Subscription Plans (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "subscription",
+                "plans"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Start Free Trial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscription/trial",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "subscription",
+                "trial"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Adherence Analytics Score",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/adherence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adherence"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get In-App Notifications Inbox",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Single Notification as Read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/6aa94e0492bd67c1209bac97/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "6aa94e0492bd67c1209bac97",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit In-App Support Issue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/support/report-issue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "support",
+                "report-issue"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issue\": \"Notification Delay\",\n  \"description\": \"Push reminder received 2 minutes late.\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
