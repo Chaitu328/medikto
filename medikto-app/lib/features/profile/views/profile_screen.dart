@@ -533,7 +533,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     /// SUBSCRIPTION
                                     InkWell(
                                       borderRadius: BorderRadius.circular(30),
-                                      onTap: () => SubscriptionPlansDialog.show(context, profile),
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const PremiumPlansScreen(),
+                                        ),
+                                      ),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 12,
@@ -677,16 +682,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     _ListItem(
                       onTap: () {
-                        if (profile != null) {
-                          SubscriptionPlansDialog.show(context, profile);
-                        } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const PremiumPlansScreen(),
-                            ),
-                          );
-                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PremiumPlansScreen(),
+                          ),
+                        );
                       },
                       icon: Icons.workspace_premium_outlined,
                       title: "Subscription & Plans",
@@ -1092,14 +1093,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return _PremiumCard(
       colors: colors,
       onTap: () {
-        if (profile != null) {
-          SubscriptionPlansDialog.show(context, profile);
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const PremiumPlansScreen()),
-          );
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PremiumPlansScreen()),
+        );
       },
     );
   }
