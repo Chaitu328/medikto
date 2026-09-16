@@ -132,6 +132,12 @@
     deleteGuardian
   } = require("../controllers/guardianController");
 
+  const {
+    createOrder,
+    verifyPayment,
+    handleWebhook
+  } = require("../controllers/paymentController");
+
   const passport = require("passport");
 
   // ================= AUTH =================
@@ -321,9 +327,11 @@
   // ================= DASHBOARD =================
   router.get("/adherence", auth, getAdherence);
 
-  // ================= NOTIFICATIONS =================
-  router.get("/notifications", auth, getNotifications);
-  router.put("/notifications/:id/read", auth, markAsRead);
-  router.put("/notifications/read-all", auth, markAllAsRead);
+  // ================= PAYMENTS (RAZORPAY) =================
+  router.post("/payments/create-order", auth, createOrder);
+  router.post("/create-order", auth, createOrder);
+  router.post("/payments/verify-payment", auth, verifyPayment);
+  router.post("/verify-payment", auth, verifyPayment);
+  router.post("/payments/webhook", handleWebhook);
 
   module.exports = router;

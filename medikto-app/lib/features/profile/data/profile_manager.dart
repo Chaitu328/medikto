@@ -225,6 +225,78 @@ class ProfileManager {
     }
   }
 
+  /// CREATE RAZORPAY PAYMENT ORDER
+  Future<ResponseData> createPaymentOrder({required int amount, String plan = "premium"}) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.post(
+        ApiUrls.createOrder,
+        data: {
+          "amount": amount,
+          "plan": plan,
+          "currency": "INR",
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ResponseData(
+          "Order created successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData(
+        response.data?['message'] ?? "Failed to create payment order",
+        ResponseStatus.FAILED,
+      );
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Failed to create payment order",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet connection", ResponseStatus.FAILED);
+    }
+  }
+
+  /// VERIFY RAZORPAY PAYMENT SIGNATURE
+  Future<ResponseData> verifyPaymentSignature({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+    String plan = "premium",
+  }) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.post(
+        ApiUrls.verifyPayment,
+        data: {
+          "razorpay_order_id": orderId,
+          "razorpay_payment_id": paymentId,
+          "razorpay_signature": signature,
+          "plan": plan,
+        },
+      );
+      if (response.statusCode == 200) {
+        return ResponseData(
+          response.data?['message'] ?? "Payment verified successfully!",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData(
+        response.data?['message'] ?? "Payment verification failed",
+        ResponseStatus.FAILED,
+      );
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Payment verification failed",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet connection", ResponseStatus.FAILED);
+    }
+  }
+
   /// FETCH CONNECTED HOSPITALS
   Future<ResponseData> getConnectedHospitals() async {
     Response response;

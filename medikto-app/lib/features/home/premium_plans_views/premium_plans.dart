@@ -5,7 +5,9 @@ import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/data/subscription_provider.dart';
+import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:medikto/features/profile/models/subscription_model.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class PremiumPlansScreen extends ConsumerStatefulWidget {
   const PremiumPlansScreen({super.key});
@@ -16,11 +18,113 @@ class PremiumPlansScreen extends ConsumerStatefulWidget {
 
 class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
   final ValueNotifier<int> _selectedPlanIndex = ValueNotifier<int>(1); // Default select Premium
+  late Razorpay _razorpay;
+  String? _currentOrderId;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
 
   @override
   void dispose() {
+    _razorpay.clear();
     _selectedPlanIndex.dispose();
     super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    final colors = context.themeColors;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: CircularProgressIndicator(color: colors.accentPrimary),
+      ),
+    );
+
+    try {
+      final verifyRes = await ref.read(profileProvider).verifyPaymentSignature(
+            orderId: response.orderId ?? _currentOrderId ?? "",
+            paymentId: response.paymentId ?? "",
+            signature: response.signature ?? "",
+            plan: "premium",
+          );
+
+      if (mounted) {
+        Navigator.pop(context); // Pop loading
+
+        if (verifyRes.status == ResponseStatus.SUCCESS) {
+          ref.invalidate(subscriptionStatusProvider);
+          ref.invalidate(getProfileProvider);
+
+          showDialog(
+            barrierColor: Colors.black54,
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => _SuccessDialog(
+              surfaceColor: colors.card,
+              title: "Premium Activated!",
+              subtitle: "Thank you for subscribing to Medikto Premium.",
+            ),
+          );
+
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BaseBottomNavigationPage(),
+                ),
+                (route) => false,
+              );
+            }
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Payment verification failed: ${verifyRes.message}"),
+              backgroundColor: AppColors.statusCritical,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Verification error: $e"),
+            backgroundColor: AppColors.statusCritical,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response.message ?? "Payment cancelled or failed."),
+          backgroundColor: AppColors.statusCritical,
+        ),
+      );
+    }
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("External wallet selected: ${response.walletName}"),
+        ),
+      );
+    }
   }
 
   Future<void> _handleStartFreeTrial(AppThemeColors colors) async {
@@ -89,6 +193,74 @@ class _PremiumPlansScreenState extends ConsumerState<PremiumPlansScreen> {
   }
 
   Future<void> _handleUpdateSubscription(String plan, AppThemeColors colors) async {
+    if (plan == "premium") {
+      // Trigger Razorpay Checkout
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(
+          child: CircularProgressIndicator(color: colors.accentPrimary),
+        ),
+      );
+
+      try {
+        final profile = ref.read(getProfileProvider).value?.data as ProfileModel?;
+        final orderRes = await ref.read(profileProvider).createPaymentOrder(
+              amount: 50000, // ₹500 in paise
+              plan: "premium",
+            );
+
+        if (mounted) {
+          Navigator.pop(context); // Pop loading
+        }
+
+        if (orderRes.status != ResponseStatus.SUCCESS || orderRes.data == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(orderRes.message),
+                backgroundColor: AppColors.statusCritical,
+              ),
+            );
+          }
+          return;
+        }
+
+        final orderData = orderRes.data;
+        _currentOrderId = orderData['order_id'] ?? orderData['id'];
+
+        final options = {
+          'key': orderData['key_id'] ?? 'rzp_test_Tcayw2QOeSxMyh',
+          'amount': orderData['amount'] ?? 50000,
+          'name': 'Medikto Health Platform',
+          'order_id': _currentOrderId,
+          'description': 'Medikto Premium Subscription (1 Month)',
+          'timeout': 300,
+          'prefill': {
+            'contact': profile?.phone ?? '',
+            'email': profile?.email ?? '',
+          },
+          'theme': {
+            'color': '#0284C7',
+          },
+        };
+
+        _razorpay.open(options);
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Payment launch error: $e"),
+              backgroundColor: AppColors.statusCritical,
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    // Downgrade to Basic
     showDialog(
       context: context,
       barrierDismissible: false,

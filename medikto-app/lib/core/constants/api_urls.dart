@@ -19,6 +19,8 @@ class ApiUrls {
   static const String subscription = "/subscription";
   static const String subscriptionPlans = "/subscription/plans";
   static const String subscriptionTrial = "/subscription/trial";
+  static const String createOrder = "/payments/create-order";
+  static const String verifyPayment = "/payments/verify-payment";
   static const String guardianLogin = "/guardian/login";
   static const String changeGuardianPassword = "/guardian/change-password";
 

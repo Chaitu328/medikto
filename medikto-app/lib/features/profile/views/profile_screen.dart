@@ -20,6 +20,7 @@ import 'package:medikto/features/profile/views/faq_screen.dart';
 import 'package:medikto/features/profile/views/contact_support_screen.dart';
 import 'package:medikto/features/profile/views/policies_and_terms_screen.dart';
 import 'package:medikto/features/profile/views/report_issue_screen.dart';
+import 'package:medikto/features/profile/views/subscription_plans_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -530,43 +531,47 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       ),
 
                                     /// SUBSCRIPTION
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: profile.isPremium
-                                            ? colors.accentSubtle
-                                            : colors.cardSecondary,
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            profile.isPremium
-                                                ? Icons.workspace_premium
-                                                : Icons.lock_outline,
-                                            size: 14,
-                                            color: profile.isPremium
-                                                ? colors.accent
-                                                : colors.textSecondary,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            profile.isTrial
-                                                ? "PREMIUM TRIAL"
-                                                : (profile.isPremium ? "PREMIUM" : "FREE"),
-                                            style: TextStyle(
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(30),
+                                      onTap: () => SubscriptionPlansDialog.show(context, profile),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: profile.isPremium
+                                              ? colors.accentSubtle
+                                              : colors.cardSecondary,
+                                          borderRadius: BorderRadius.circular(30),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              profile.isPremium
+                                                  ? Icons.workspace_premium
+                                                  : Icons.lock_outline,
+                                              size: 14,
                                               color: profile.isPremium
                                                   ? colors.accent
                                                   : colors.textSecondary,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              profile.isTrial
+                                                  ? "PREMIUM TRIAL"
+                                                  : (profile.isPremium ? "PREMIUM" : "FREE"),
+                                              style: TextStyle(
+                                                color: profile.isPremium
+                                                    ? colors.accent
+                                                    : colors.textSecondary,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -661,8 +666,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ] else ...[
                 if (profile?.isPremium != true) ...[
                   SizedBox(height: screenSize.height * 0.02),
-                  _buildPremiumCard(colors),
+                  _buildPremiumCard(colors, profile),
                 ],
+                SizedBox(height: screenSize.height * 0.02),
+
+                /// 🔹 Membership & Subscription Section
+                _buildSection(
+                  title: "Membership",
+                  colors: colors,
+                  children: [
+                    _ListItem(
+                      onTap: () {
+                        if (profile != null) {
+                          SubscriptionPlansDialog.show(context, profile);
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PremiumPlansScreen(),
+                            ),
+                          );
+                        }
+                      },
+                      icon: Icons.workspace_premium_outlined,
+                      title: "Subscription & Plans",
+                      subtitle: profile?.isPremium == true
+                          ? (profile?.isTrial == true ? "Premium Trial Active" : "Premium Active")
+                          : "Upgrade to Premium (₹500 / month)",
+                      trailing: Icons.arrow_forward_ios,
+                    ),
+                  ],
+                ),
                 SizedBox(height: screenSize.height * 0.02),
 
                 /// 🔹 Settings Section
@@ -1054,14 +1088,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   );
 }
 
-  Widget _buildPremiumCard(AppThemeColors colors) {
+  Widget _buildPremiumCard(AppThemeColors colors, ProfileModel? profile) {
     return _PremiumCard(
       colors: colors,
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PremiumPlansScreen()),
-        );
+        if (profile != null) {
+          SubscriptionPlansDialog.show(context, profile);
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PremiumPlansScreen()),
+          );
+        }
       },
     );
   }
