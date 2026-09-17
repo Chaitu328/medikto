@@ -5,8 +5,12 @@ import 'package:medikto/bottom_bar.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
+import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
+import 'package:medikto/features/auth/pin/set_pin_screen.dart';
 import 'package:pinput/pinput.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String? phoneNumber;
@@ -56,6 +60,31 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (!mounted) return;
 
     if (response.status == ResponseStatus.SUCCESS) {
+      final userMap = response.data is Map ? response.data['user'] : null;
+      final userId = userMap?['_id'] ?? userMap?['id'];
+      
+      if (userId != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(StorageKeys.userId, userId.toString());
+        
+        final hasPin = await AppLockManager().hasPin(userId.toString());
+        if (!hasPin) {
+          if (!mounted) return;
+          AppToasts.showSuccess(context, "Please set up your 4-digit Medikto PIN");
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SetPinScreen(userId: userId.toString()),
+            ),
+            (route) => false,
+          );
+          return;
+        }
+      }
+
+      AppLockManager().unlockApp();
+
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),

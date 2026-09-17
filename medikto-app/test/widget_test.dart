@@ -12,7 +12,7 @@ void main() {
   test('LegalContent constants are defined properly', () {
     expect(LegalContent.termsVersion, equals("1.0"));
     expect(LegalContent.privacyPolicyVersion, equals("1.0"));
-    expect(LegalContent.supportEmail, equals("shahmedikto@gmail.com"));
+    expect(LegalContent.supportEmail, equals("info@medikto.com"));
     expect(LegalContent.supportPhone, equals("+91 9642331668"));
   });
 
@@ -71,9 +71,9 @@ void main() {
 
     expect(find.text("Contact Support"), findsOneWidget);
     expect(find.text("Email Support"), findsOneWidget);
-    expect(find.text("shahmedikto@gmail.com"), findsOneWidget);
+    expect(find.text(LegalContent.supportEmail), findsOneWidget);
     expect(find.text("Phone Support"), findsOneWidget);
-    expect(find.text("+91 9642331668"), findsOneWidget);
+    expect(find.text(LegalContent.supportPhone), findsOneWidget);
   });
 
   group('Medication Timestamps & Scheduled vs Taken Logic', () {

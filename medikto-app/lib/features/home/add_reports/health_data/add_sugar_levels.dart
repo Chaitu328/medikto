@@ -142,8 +142,11 @@ class _AddSugarLevelsScreenState extends ConsumerState<AddSugarLevelsScreen> {
   }
 
   Future<void> addSugar() async {
-    final sugar = int.tryParse(sugarController.text.trim());
-    if (sugar == null || sugar <= 0) {
+    final rawText = sugarController.text.trim().replaceAll(',', '.');
+    final parsedNum = num.tryParse(rawText);
+    final sugar = parsedNum != null ? parsedNum.round() : null;
+
+    if (sugar == null || sugar <= 0 || sugar > 1500) {
       AppToasts.showError(context, "Please enter valid blood sugar reading");
       return;
     }

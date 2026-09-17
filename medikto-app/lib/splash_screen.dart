@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/notification_manager.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
 import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
+import 'package:medikto/features/auth/pin/pin_lock_screen.dart';
+import 'package:medikto/features/auth/pin/set_pin_screen.dart';
 import 'package:medikto/features/onboarding/views/onboarding_screens.dart';
-import 'package:medikto/core/constants/app_themes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -73,7 +76,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
       navigateToLogin();
     } else {
-      navigateToHome();
+      await navigateToHome();
     }
   }
 
@@ -84,12 +87,45 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  void navigateToHome() {
-    if (NotificationManager.pendingOpenMedications) {
-      final doseId = NotificationManager.pendingDoseId;
-      NotificationManager.pendingOpenMedications = false;
-      NotificationManager.pendingDoseId = null;
+  Future<void> navigateToHome() async {
+    final doseId = NotificationManager.pendingDoseId;
+    NotificationManager.pendingOpenMedications = false;
+    NotificationManager.pendingDoseId = null;
 
+    final lockManager = AppLockManager();
+    final userId = await lockManager.getActiveUserId();
+
+    if (userId != null && userId.isNotEmpty) {
+      final hasPin = await lockManager.hasPin(userId);
+      if (!hasPin) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SetPinScreen(
+              userId: userId,
+              targetDoseId: doseId,
+            ),
+          ),
+        );
+        return;
+      }
+
+      lockManager.lockApp();
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PinLockScreen(
+            targetDoseId: doseId,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    if (doseId != null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -99,13 +135,12 @@ class _SplashScreenState extends State<SplashScreen> {
           ),
         ),
       );
-      return;
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),
+      );
     }
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const BaseBottomNavigationPage()),
-    );
   }
 
   void navigateToLogin() {

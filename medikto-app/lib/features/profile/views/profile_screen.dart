@@ -10,7 +10,7 @@ import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
 import 'package:medikto/features/home/notifications/notification_screen.dart';
 import 'package:medikto/features/home/premium_plans_views/premium_plans.dart';
-import 'package:medikto/features/profile/change_password_view/change_password_screen.dart';
+import 'package:medikto/features/profile/data/profile_manager.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:medikto/features/profile/views/edit_profile.dart';
@@ -20,7 +20,9 @@ import 'package:medikto/features/profile/views/faq_screen.dart';
 import 'package:medikto/features/profile/views/contact_support_screen.dart';
 import 'package:medikto/features/profile/views/policies_and_terms_screen.dart';
 import 'package:medikto/features/profile/views/report_issue_screen.dart';
-import 'package:medikto/features/profile/views/subscription_plans_dialog.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
+import 'package:medikto/features/auth/pin/pin_lock_screen.dart';
+import 'package:medikto/features/profile/views/change_pin_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -170,6 +172,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 await prefs.remove(StorageKeys.token);
                 await prefs.remove(StorageKeys.refreshToken);
                 await prefs.remove(StorageKeys.userId);
+                AppLockManager().lockApp();
 
                 AppToasts.showSuccess(context, "Logged out successfully");
                 await Future.delayed(const Duration(milliseconds: 500));
@@ -195,41 +198,95 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     showDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          backgroundColor: colors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: colors.border),
-          ),
-          title: const Text(
-            "Delete Account",
-            style: TextStyle(color: AppColors.statusCritical),
-          ),
-          content: Text(
-            "This action is permanent and cannot be undone.\n\nAre you sure you want to delete your account?",
-            style: TextStyle(color: colors.textSecondary),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                "Cancel",
-                style: TextStyle(color: colors.textMuted),
+      builder: (dialogCtx) {
+        bool isDeleting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: colors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: colors.border),
               ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.statusCritical,
-                foregroundColor: Colors.white,
+              title: const Text(
+                "Delete Account",
+                style: TextStyle(color: AppColors.statusCritical, fontWeight: FontWeight.bold),
               ),
-              onPressed: () {
-                Navigator.pop(context);
-                debugPrint("Account Deleted");
-              },
-              child: const Text("Delete"),
-            ),
-          ],
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "This action is permanent and cannot be undone.\n\nAll your medical data, profile, and active subscriptions will be permanently removed.",
+                    style: TextStyle(color: colors.textSecondary, fontSize: 14),
+                  ),
+                  if (isDeleting)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16.0),
+                      child: Center(
+                        child: CircularProgressIndicator(color: AppColors.statusCritical),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                if (!isDeleting) ...[
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogCtx),
+                    child: Text(
+                      "Cancel",
+                      style: TextStyle(color: colors.textMuted),
+                    ),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.statusCritical,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () async {
+                      setDialogState(() => isDeleting = true);
+
+                      final response = await ProfileManager().deleteAccount();
+
+                      if (!mounted) return;
+                      Navigator.pop(dialogCtx);
+
+                      if (response.status == ResponseStatus.SUCCESS) {
+                        final prefs = await SharedPreferences.getInstance();
+                        final currentUserId = prefs.getString(StorageKeys.userId);
+
+                        if (currentUserId != null && currentUserId.isNotEmpty) {
+                          await AppLockManager().removePin(currentUserId);
+                        }
+
+                        await prefs.remove(StorageKeys.token);
+                        await prefs.remove(StorageKeys.refreshToken);
+                        await prefs.remove(StorageKeys.userId);
+                        AppLockManager().lockApp();
+
+                        if (mounted) {
+                          AppToasts.showSuccess(context, "Account deleted successfully");
+                          await Future.delayed(const Duration(milliseconds: 500));
+                          if (mounted) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              (route) => false,
+                            );
+                          }
+                        }
+                      } else {
+                        if (mounted) {
+                          AppToasts.showError(context, response.message);
+                        }
+                      }
+                    },
+                    child: const Text("Delete Permanently"),
+                  ),
+                ],
+              ],
+            );
+          },
         );
       },
     );
@@ -620,60 +677,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 error: (e, _) => const SizedBox(),
               ),
 
-              if (profile?.role == "guardian") ...[
+              if (profile?.isPremium != true) ...[
                 SizedBox(height: screenSize.height * 0.02),
-                _buildSection(
-                  title: "Appearance",
-                  colors: colors,
-                  children: [
-                    _ListItem(
-                      icon: Icons.palette_outlined,
-                      title: "Theme Mode",
-                      subtitle: themeMode == ThemeMode.light ? "Light Theme" : "Dark Theme",
-                      trailing: Icons.arrow_forward_ios,
-                      onTap: () => _showThemeSelectorDialog(context),
-                    ),
-                  ],
-                ),
-                SizedBox(height: screenSize.height * 0.02),
-                _buildSection(
-                  title: "Password",
-                  colors: colors,
-                  children: [
-                    _ListItem(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ChangePasswordScreen(),
-                          ),
-                        );
-                      },
-                      icon: Icons.key_outlined,
-                      title: "Change Password",
-                      trailing: Icons.arrow_forward_ios,
-                    ),
-                  ],
-                ),
-                SizedBox(height: screenSize.height * 0.02),
-                _buildSection(
-                  colors: colors,
-                  children: [
-                    _ListItem(
-                      icon: Icons.logout,
-                      title: "Logout",
-                      color: colors.textSecondary,
-                      onTap: _showLogoutDialog,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 100),
-              ] else ...[
-                if (profile?.isPremium != true) ...[
-                  SizedBox(height: screenSize.height * 0.02),
-                  _buildPremiumCard(colors, profile),
-                ],
-                SizedBox(height: screenSize.height * 0.02),
+                _buildPremiumCard(colors, profile),
+              ],
+              SizedBox(height: screenSize.height * 0.02),
 
                 /// 🔹 Membership & Subscription Section
                 _buildSection(
@@ -839,29 +847,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
 
-                /// 🔹 Password (Only for accounts with password authentication)
-                if (profile?.authProvider == "password") ...[
-                  SizedBox(height: screenSize.height * 0.02),
-                  _buildSection(
-                    title: "Password",
-                    colors: colors,
-                    children: [
-                      _ListItem(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ChangePasswordScreen(),
-                            ),
-                          );
-                        },
-                        icon: Icons.key_outlined,
-                        title: "Change Password",
-                        trailing: Icons.arrow_forward_ios,
-                      ),
-                    ],
-                  ),
-                ],
+                /// 🔹 Medikto App Security (4-Digit PIN)
+                SizedBox(height: screenSize.height * 0.02),
+                _buildSection(
+                  title: "Medikto App Security",
+                  colors: colors,
+                  children: [
+                    _ListItem(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangePinScreen(),
+                          ),
+                        );
+                      },
+                      icon: Icons.lock_outline_rounded,
+                      title: "Change App PIN",
+                      subtitle: "Update your 4-digit security PIN",
+                      trailing: Icons.arrow_forward_ios,
+                    ),
+                    _ListItem(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PinLockScreen(),
+                          ),
+                        );
+                      },
+                      icon: Icons.refresh_rounded,
+                      title: "Reset App PIN",
+                      subtitle: "Reset your PIN via SMS verification",
+                      trailing: Icons.arrow_forward_ios,
+                    ),
+                  ],
+                ),
 
                 SizedBox(height: screenSize.height * 0.02),
 
@@ -1005,7 +1026,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                 const SizedBox(height: 100),
               ],
-            ],
           ),
         ),
       ),

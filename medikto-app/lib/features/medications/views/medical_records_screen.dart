@@ -15,6 +15,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
 
 class MedicalRecordsScreen extends ConsumerStatefulWidget {
   const MedicalRecordsScreen({super.key});
@@ -442,7 +443,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
               parent: BouncingScrollPhysics(),
             ),
             children: [
-              _buildComplianceChart(timeline, records),
+              _buildComplianceChart(timeline, records, tabName),
               _buildStatsSection(summary),
 
               if (filteredItems.isEmpty)
@@ -471,9 +472,13 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
   }
 
   /// 🔹 TIMEFRAME COMPLIANCE LINE CHART
-  Widget _buildComplianceChart(List<TimelinePoint> timeline, List<Map<String, dynamic>> items) {
+  Widget _buildComplianceChart(List<TimelinePoint> timeline, List<Map<String, dynamic>> items, String tabName) {
     final colors = context.themeColors;
     final isDark = context.isDarkMode;
+
+    final showTaken = tabName == "All Records" || tabName == "Taken";
+    final showMissed = tabName == "All Records" || tabName == "Missed";
+    final showPending = tabName == "All Records" || tabName == "Pending";
 
     final takenSpots = <FlSpot>[];
     final missedSpots = <FlSpot>[];
@@ -485,34 +490,40 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
     if (timeline.isNotEmpty) {
       for (int i = 0; i < timeline.length; i++) {
         final pt = timeline[i];
-        takenSpots.add(FlSpot(i.toDouble(), pt.taken.toDouble()));
-        missedSpots.add(FlSpot(i.toDouble(), pt.missed.toDouble()));
-        pendingSpots.add(FlSpot(i.toDouble(), pt.pending.toDouble()));
+        if (showTaken) {
+          takenSpots.add(FlSpot(i.toDouble(), pt.taken.toDouble()));
+          if (pt.taken > maxDoseCount) maxDoseCount = pt.taken.toDouble();
+        }
+        if (showMissed) {
+          missedSpots.add(FlSpot(i.toDouble(), pt.missed.toDouble()));
+          if (pt.missed > maxDoseCount) maxDoseCount = pt.missed.toDouble();
+        }
+        if (showPending) {
+          pendingSpots.add(FlSpot(i.toDouble(), pt.pending.toDouble()));
+          if (pt.pending > maxDoseCount) maxDoseCount = pt.pending.toDouble();
+        }
         labels.add(pt.label);
-        if (pt.taken > maxDoseCount) maxDoseCount = pt.taken.toDouble();
-        if (pt.missed > maxDoseCount) maxDoseCount = pt.missed.toDouble();
-        if (pt.pending > maxDoseCount) maxDoseCount = pt.pending.toDouble();
-        if (pt.total > maxDoseCount) maxDoseCount = pt.total.toDouble();
       }
     }
 
     String chartTitle;
+    final prefix = tabName == "All Records" ? "" : "$tabName ";
     switch (_selectedTimeframe) {
       case "day":
-        chartTitle = "Daily Medication Record";
+        chartTitle = "${prefix}Daily Record";
         break;
       case "month":
-        chartTitle = "Monthly Medication Record";
+        chartTitle = "${prefix}Monthly Record";
         break;
       case "year":
-        chartTitle = "Yearly Medication Record";
+        chartTitle = "${prefix}Yearly Record";
         break;
       case "custom":
-        chartTitle = "Custom Range Record";
+        chartTitle = "${prefix}Custom Range Record";
         break;
       case "week":
       default:
-        chartTitle = "Weekly Medication Record";
+        chartTitle = "${prefix}Weekly Record";
         break;
     }
 
@@ -542,6 +553,11 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
         ),
       );
     }
+
+    final activeLineBars = <LineChartBarData>[];
+    if (showTaken) activeLineBars.add(lineData(takenSpots, AppColors.takenGreen));
+    if (showMissed) activeLineBars.add(lineData(missedSpots, AppColors.missedRed));
+    if (showPending) activeLineBars.add(lineData(pendingSpots, AppColors.pendingAmber));
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -581,9 +597,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                 spacing: 10,
                 runSpacing: 4,
                 children: [
-                  _chartLegend(AppColors.takenGreen, 'Taken'),
-                  _chartLegend(AppColors.missedRed, 'Missed'),
-                  _chartLegend(AppColors.pendingAmber, 'Pending'),
+                  if (showTaken) _chartLegend(AppColors.takenGreen, 'Taken'),
+                  if (showMissed) _chartLegend(AppColors.missedRed, 'Missed'),
+                  if (showPending) _chartLegend(AppColors.pendingAmber, 'Pending'),
                 ],
               ),
             ],
@@ -655,11 +671,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                           sideTitles: SideTitles(showTitles: false),
                         ),
                       ),
-                      lineBarsData: [
-                        lineData(takenSpots, AppColors.takenGreen),
-                        lineData(missedSpots, AppColors.missedRed),
-                        lineData(pendingSpots, AppColors.pendingAmber),
-                      ],
+                      lineBarsData: activeLineBars,
                     ),
                   ),
           ),
@@ -1176,6 +1188,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
 
   Future<void> _generateAndSharePDF(int tabIndex) async {
     if (_isSharing) return;
+
+    final verified = await AppLockManager().requestPinVerification(context);
+    if (!verified) return;
 
     setState(() {
       _isSharing = true;

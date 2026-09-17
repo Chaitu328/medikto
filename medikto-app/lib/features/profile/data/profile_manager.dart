@@ -598,4 +598,30 @@ class ProfileManager {
       return ResponseData("Please check your internet", ResponseStatus.FAILED);
     }
   }
+
+  /// DELETE ACCOUNT (Destructive)
+  Future<ResponseData> deleteAccount() async {
+    try {
+      final response = await dioClient.ref!.delete(ApiUrls.profile);
+      if (response.statusCode == 200) {
+        return ResponseData(
+          response.data?['message'] ?? "Account deleted successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      }
+      return ResponseData(
+        response.data?['message'] ?? "Failed to delete account",
+        ResponseStatus.FAILED,
+      );
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
 }
+

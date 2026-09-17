@@ -8,6 +8,8 @@ import 'package:medikto/core/network/dio_client.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:medikto/main.dart';
 import 'package:medikto/bottom_bar.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
+import 'package:medikto/features/auth/pin/pin_lock_screen.dart';
 
 // Android notification channel specification
 const AndroidNotificationChannel mediktoNotificationChannel =
@@ -31,7 +33,7 @@ class NotificationManager {
   static String? pendingDoseId;
   static bool pendingOpenMedications = false;
 
-  static void handleNotificationNavigation({String? doseId}) {
+  static Future<void> handleNotificationNavigation({String? doseId}) async {
     if (kDebugMode) {
       print("Handling notification navigation to MedicationsScreen with doseId: $doseId");
     }
@@ -40,16 +42,31 @@ class NotificationManager {
 
     try {
       if (navigatorKey.currentState != null) {
+        final lockManager = AppLockManager();
+        final userId = await lockManager.getActiveUserId();
+        final hasPin = userId != null ? await lockManager.hasPin(userId) : false;
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          navigatorKey.currentState?.pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (_) => BaseBottomNavigationPage(
-                index: 1,
-                pendingDoseId: doseId,
+          if (userId != null && hasPin && lockManager.isAppLocked) {
+            navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (_) => PinLockScreen(
+                  targetDoseId: doseId,
+                ),
+                fullscreenDialog: true,
               ),
-            ),
-            (route) => false,
-          );
+            );
+          } else {
+            navigatorKey.currentState?.pushAndRemoveUntil(
+              MaterialPageRoute(
+                builder: (_) => BaseBottomNavigationPage(
+                  index: 1,
+                  pendingDoseId: doseId,
+                ),
+              ),
+              (route) => false,
+            );
+          }
         });
       }
     } catch (e) {

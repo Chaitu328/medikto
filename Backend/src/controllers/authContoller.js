@@ -458,7 +458,7 @@ exports.checkPhone = async (req, res) => {
   }
 };
 
-// ================= GOOGLE AUTHENTICATION =================
+// ================= GOOGLE AUTHENTICATION (REGISTRATION ONLY) =================
 exports.googleAuth = async (req, res) => {
   try {
     const { token } = req.body;
@@ -466,7 +466,7 @@ exports.googleAuth = async (req, res) => {
     if (!token) {
       return res.status(400).json({
         success: false,
-        message: "Firebase ID Token is required for Google authentication"
+        message: "Firebase ID Token is required for Google registration"
       });
     }
 
@@ -491,53 +491,20 @@ exports.googleAuth = async (req, res) => {
       ]
     });
 
-    // 3. Existing User Flow
+    // 3. Existing User Flow: Block Google login, instruct user to use Phone OTP login
     if (user) {
-      // Check account status
-      if (user.accountStatus === "disabled" || user.isVerified === false && user.role === "admin") {
-        return res.status(403).json({
-          success: false,
-          message: "Your account is currently disabled. Please contact support."
-        });
-      }
-
-      // Link firebaseUid if it was not linked yet
-      if (!user.firebaseUid) {
-        user.firebaseUid = uid;
-      }
-      if (normalizedEmail && !user.email) {
-        user.email = normalizedEmail;
-      }
-      if (picture && !user.profilePic) {
-        user.profilePic = picture;
-      }
-      user.isVerified = true;
-      await user.save();
-
-      // Check for pending caretaker invitations
-      await linkPendingCaretakerInvites(user);
-
-      // Generate App JWT Token
-      const appToken = jwt.sign(
-        { id: user._id, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
-
-      return res.json({
-        success: true,
+      return res.status(400).json({
+        success: false,
         isNewUser: false,
-        message: "Login successful",
-        token: appToken,
-        user
+        message: "This Google account is already registered. Please log in using your registered mobile number and OTP."
       });
     }
 
-    // 4. New Google User -> Return prompt for explicit consent & account creation
+    // 4. New Google User -> Return prompt for explicit consent & account completion with phone number
     return res.json({
       success: true,
       isNewUser: true,
-      message: "New user. Explicit consent and profile completion required.",
+      message: "Google verification successful. Please complete your mobile number verification.",
       firebaseUid: uid,
       email: normalizedEmail,
       name: name || "Medikto User",
@@ -548,13 +515,13 @@ exports.googleAuth = async (req, res) => {
     console.error("Google Auth Firebase ID Token verification error:", err.message);
     return res.status(401).json({
       success: false,
-      message: "Unable to sign in with Google. Please try again.",
+      message: "Unable to verify Google account. Please try again.",
       error: err.message
     });
   }
 };
 
-// ================= COMPLETE GOOGLE REGISTRATION (WITH EXPLICIT CONSENT) =================
+// ================= COMPLETE GOOGLE REGISTRATION (WITH EXPLICIT CONSENT & MANDATORY PHONE) =================
 exports.completeGoogleRegistration = async (req, res) => {
   try {
     const {
@@ -574,6 +541,15 @@ exports.completeGoogleRegistration = async (req, res) => {
       });
     }
 
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile phone number is mandatory for registration."
+      });
+    }
+
+    const normalizedPhone = phone.trim();
+
     // 1. Verify consent
     const hasConsented = (termsAccepted === true || termsAccepted === "true") &&
                          (privacyPolicyAccepted === true || privacyPolicyAccepted === "true");
@@ -591,7 +567,7 @@ exports.completeGoogleRegistration = async (req, res) => {
 
     const normalizedEmail = email ? email.trim().toLowerCase() : null;
 
-    // 3. Double check if user already exists
+    // 3. Double check if user already exists by Google UID or email
     let existingUser = await User.findOne({
       $or: [
         { firebaseUid: uid },
@@ -600,45 +576,26 @@ exports.completeGoogleRegistration = async (req, res) => {
     });
 
     if (existingUser) {
-      // User already registered
-      existingUser.termsAccepted = true;
-      existingUser.privacyPolicyAccepted = true;
-      existingUser.consentTimestamp = new Date();
-      existingUser.termsVersion = termsVersion || "1.0";
-      existingUser.privacyPolicyVersion = privacyPolicyVersion || "1.0";
-      existingUser.isVerified = true;
-      await existingUser.save();
-
-      const appToken = jwt.sign(
-        { id: existingUser._id, role: existingUser.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
-
-      return res.json({
-        success: true,
-        message: "Account verified and logged in successfully",
-        token: appToken,
-        user: existingUser
+      return res.status(400).json({
+        success: false,
+        message: "This Google account is already registered. Please log in using your registered mobile number."
       });
     }
 
-    // If phone is provided, verify it's not already used
-    if (phone) {
-      const phoneUser = await User.findOne({ phone });
-      if (phoneUser) {
-        return res.status(400).json({
-          success: false,
-          message: "This phone number is already associated with another account."
-        });
-      }
+    // Check if phone number is already registered
+    const phoneUser = await User.findOne({ phone: normalizedPhone });
+    if (phoneUser) {
+      return res.status(400).json({
+        success: false,
+        message: "This phone number is already registered with an account. Please log in."
+      });
     }
 
     // 4. Create new user with explicit consent record
     const user = await User.create({
       firstName: fullName || name || "Medikto User",
       email: normalizedEmail || undefined,
-      phone: phone || undefined,
+      phone: normalizedPhone,
       profilePic: picture || undefined,
       role: "patient",
       authProvider: "google",

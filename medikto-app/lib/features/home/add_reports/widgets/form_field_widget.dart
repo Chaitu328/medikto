@@ -132,11 +132,17 @@ class DynamicFormSection extends StatelessWidget {
           /// Temperature
           else if (field.title == "Body Temperature") {
             controller = controllers?[0];
-          } else if (field.title == "RBS Value") {
+          }
+          /// Blood Sugar
+          else if (field.title == "RBS Value" ||
+              field.title == "Blood Sugar Level" ||
+              field.title == "Blood Sugar") {
             controller = controllers?[0];
           }
           /// Notes
-          else if (field.title == "Notes") {
+          else if (field.title == "Notes" ||
+              field.title == "Notes (Optional)" ||
+              field.title.toLowerCase().startsWith("notes")) {
             controller = (controllers != null && controllers!.length > 4)
                 ? controllers![4]
                 : controllers?[1];

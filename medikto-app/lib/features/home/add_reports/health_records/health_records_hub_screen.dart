@@ -3,6 +3,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
+import 'package:medikto/core/utils/file_share_helper.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
@@ -87,7 +89,13 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     super.dispose();
   }
 
-  void _shareAllVitals(List<VitalsModel> records) {
+  Future<void> _shareAllVitals(List<VitalsModel> records) async {
+    final authenticated = await AppLockManager().requestPinVerification(
+      context,
+      reason: "Enter PIN to share health records",
+    );
+    if (!authenticated) return;
+
     if (records.isEmpty) {
       Share.share("No health readings recorded yet in Medikto.");
       return;
@@ -1280,9 +1288,11 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   icon: Icon(Icons.share_outlined,
                       color: themeColors.accentMedium, size: 18),
                   onPressed: () {
-                    Share.share(
-                      "Medical Report: ${report.title}\nAttachment: ${report.fileUrl}",
-                      subject: report.title,
+                    FileShareHelper.shareFile(
+                      context: context,
+                      fileUrl: report.fileUrl,
+                      fallbackTitle: report.title,
+                      customFileName: "medical_report_${report.id}.pdf",
                     );
                   },
                 ),
@@ -1373,9 +1383,11 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   icon: Icon(Icons.share_outlined,
                       color: themeColors.accentMedium, size: 18),
                   onPressed: () {
-                    Share.share(
-                      "Prescription: ${prescription.medicineName}\nFile: ${prescription.fileUrl}",
-                      subject: prescription.medicineName,
+                    FileShareHelper.shareFile(
+                      context: context,
+                      fileUrl: prescription.fileUrl!,
+                      fallbackTitle: prescription.medicineName,
+                      customFileName: "prescription_${prescription.id}.pdf",
                     );
                   },
                 ),

@@ -15,7 +15,8 @@
     inviteCaretaker,
     getCaretakers,
     deleteCaretaker,
-    getCaretakerPatients
+    getCaretakerPatients,
+    deleteProfile
   } = require("../controllers/userController");
 
   const {
@@ -192,6 +193,7 @@
   router.get("/profile", auth, getProfile);
   router.get("/users", auth, getAllUsers);
   router.put("/profile", auth, upload.single("image"), updateProfile);
+  router.delete("/profile", auth, deleteProfile);
   router.post("/family-members", auth, auth.blockGuardianWrite, addFamilyMember);
   router.put("/profile/fcm-token", auth, updateFCMToken);
 

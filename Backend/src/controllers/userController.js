@@ -518,3 +518,31 @@ exports.getCaretakerPatients = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// ================= PATIENT / USER: DELETE ACCOUNT =================
+exports.deleteProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const user = await User.findByIdAndDelete(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Clean up associated caretaker invites
+    await CaretakerInvite.deleteMany({
+      $or: [{ patientId: userId }, { caretakerId: userId }]
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Account deleted successfully"
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+

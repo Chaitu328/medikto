@@ -6,6 +6,7 @@ import 'package:medikto/firebase_options.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/theme/theme_provider.dart';
 import 'package:medikto/core/network/notification_manager.dart';
+import 'package:medikto/core/security/app_lock_wrapper.dart';
 import 'package:medikto/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -57,6 +58,11 @@ class MyApp extends ConsumerWidget {
       theme: AppThemes.lightTheme,
       darkTheme: AppThemes.darkTheme,
       themeMode: themeMode,
+
+      builder: (context, child) => AppLockWrapper(
+        navigatorKey: navigatorKey,
+        child: child ?? const SizedBox.shrink(),
+      ),
 
       home: const SplashScreen(),
     );

@@ -5,6 +5,9 @@ import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
+import 'package:medikto/core/utils/file_share_helper.dart';
+import 'package:medikto/core/utils/widgets/pdf_viewer_screen.dart';
 import 'package:share_plus/share_plus.dart';
 
 class PrescriptionDetailScreen extends ConsumerWidget {
@@ -238,7 +241,12 @@ class PrescriptionDetailScreen extends ConsumerWidget {
                                 IconButton(
                                   icon: Icon(Icons.share_outlined, color: themeColors.accentMedium, size: 20),
                                   onPressed: () {
-                                    Share.share(prescription.fileUrl!, subject: prescription.medicineName);
+                                    FileShareHelper.shareFile(
+                                      context: context,
+                                      fileUrl: prescription.fileUrl!,
+                                      fallbackTitle: prescription.medicineName,
+                                      customFileName: "prescription_${prescription.id}.jpg",
+                                    );
                                   },
                                 ),
                               ],
@@ -248,49 +256,88 @@ class PrescriptionDetailScreen extends ConsumerWidget {
                       ),
                     )
                   else
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: themeColors.surface,
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: themeColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: themeColors.accentSubtle,
-                              borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PdfViewerScreen(
+                                title: prescription.medicineName,
+                                pdfUrl: prescription.fileUrl!,
+                                fileName: "prescription_${prescription.id}.pdf",
+                              ),
                             ),
-                            child: Icon(Icons.insert_drive_file, color: themeColors.accentMedium, size: 28),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: themeColors.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: themeColors.border),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Prescription File",
-                                  style: TextStyle(color: themeColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.missedRed.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  prescription.fileUrl!.split('/').last,
-                                  style: TextStyle(color: themeColors.textMuted, fontSize: 12),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: const Icon(Icons.picture_as_pdf, color: AppColors.missedRed, size: 28),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Prescription Document",
+                                          style: TextStyle(color: themeColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: themeColors.accentSubtle,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            "TAP TO VIEW",
+                                            style: TextStyle(color: themeColors.accentMedium, fontSize: 9, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      prescription.fileUrl!.split('/').last,
+                                      style: TextStyle(color: themeColors.textMuted, fontSize: 12),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.share_outlined, color: themeColors.accentMedium),
+                                onPressed: () {
+                                  FileShareHelper.shareFile(
+                                    context: context,
+                                    fileUrl: prescription.fileUrl!,
+                                    fallbackTitle: prescription.medicineName,
+                                    customFileName: "prescription_${prescription.id}.pdf",
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                          IconButton(
-                            icon: Icon(Icons.share_outlined, color: themeColors.accentMedium),
-                            onPressed: () {
-                              Share.share(prescription.fileUrl!, subject: prescription.medicineName);
-                            },
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                 ],

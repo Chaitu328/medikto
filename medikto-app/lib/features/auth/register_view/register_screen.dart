@@ -19,6 +19,10 @@ import 'package:medikto/features/profile/views/privacy_policy_screen.dart';
 import 'package:medikto/features/profile/views/terms_and_conditions_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:medikto/core/utils/storage_keys.dart';
+import 'package:medikto/features/auth/pin/set_pin_screen.dart';
+import 'package:medikto/features/auth/register_view/google_consent_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -369,10 +373,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   inviteCaretaker = false;
                                 });
 
-                                AppToasts.showSuccess(context, "Account created successfully. Please log in.");
+                                final userMap = response.data is Map ? response.data['user'] : null;
+                                final userId = userMap?['_id'] ?? userMap?['id'];
+                                if (userId != null) {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setString(StorageKeys.userId, userId.toString());
+                                }
+
+                                AppToasts.showSuccess(context, "Account created! Please set up your 4-digit App PIN.");
                                 Navigator.pushAndRemoveUntil(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                  MaterialPageRoute(
+                                    builder: (_) => SetPinScreen(userId: userId?.toString()),
+                                  ),
                                   (route) => false,
                                 );
                               } else {
@@ -399,6 +412,65 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
       },
     );
+  }
+
+  Future<void> handleGoogleRegistration() async {
+    final colors = context.themeColors;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          Center(child: CircularProgressIndicator(color: colors.accentPrimary)),
+    );
+
+    try {
+      final response = await ref.read(authProvider).signInWithGoogle();
+
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+      if (response.status == ResponseStatus.SUCCESS && response.data is Map) {
+        final data = response.data as Map<String, dynamic>;
+        final bool isNewUser = data['isNewUser'] == true;
+
+        if (isNewUser) {
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GoogleConsentScreen(
+                  idToken: data['idToken'] as String,
+                  email: data['email'] as String?,
+                  name: data['name'] as String?,
+                  picture: data['picture'] as String?,
+                ),
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            AppToasts.showError(
+              context,
+              "This Google account is already registered. Please log in with your phone number.",
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          final isCancelled =
+              (response.data is Map) && response.data['cancelled'] == true;
+          if (!isCancelled) {
+            AppToasts.showError(context, response.message);
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        AppToasts.showError(context, "Google sign-up failed: $e");
+      }
+    }
   }
 
   void _showImagePickerSheet() {
@@ -687,6 +759,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 );
               },
               onRegister: handleRegister,
+              onGoogleRegister: handleGoogleRegistration,
+              onTapLogin: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
             ),
           ],
         ),
@@ -931,6 +1010,8 @@ class _BottomSection extends StatelessWidget {
   final VoidCallback onTapTerms;
   final VoidCallback onTapPrivacy;
   final VoidCallback onRegister;
+  final VoidCallback onGoogleRegister;
+  final VoidCallback onTapLogin;
 
   const _BottomSection({
     required this.size,
@@ -939,6 +1020,8 @@ class _BottomSection extends StatelessWidget {
     required this.onTapTerms,
     required this.onTapPrivacy,
     required this.onRegister,
+    required this.onGoogleRegister,
+    required this.onTapLogin,
   });
 
   @override
@@ -1001,6 +1084,82 @@ class _BottomSection extends StatelessWidget {
             fontWeight: FontWeight.bold,
             color: colors.onAccentPrimary,
           ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: Divider(color: colors.border)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "OR",
+                style: TextStyle(
+                  color: colors.textMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: colors.border)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        InkWell(
+          onTap: onGoogleRegister,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            height: 52,
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: colors.border),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.network(
+                  "https://cdn1.iconfinder.com/data/icons/google-s-logo/150/Google_Icons-09-512.png",
+                  height: 22,
+                  width: 22,
+                  errorBuilder: (ctx, err, stack) => Icon(
+                    Icons.g_mobiledata,
+                    color: colors.iconColor,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  "Continue with Google",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "Already have an account? ",
+              style: TextStyle(fontSize: 14, color: colors.textMuted),
+            ),
+            InkWell(
+              onTap: onTapLogin,
+              child: Text(
+                "Login",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colors.accentMedium,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
