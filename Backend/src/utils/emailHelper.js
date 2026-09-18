@@ -344,6 +344,177 @@ Need assistance? Contact support at: ${senderEmail}
 
 /**
  * =========================================================================
+ * 1B. GUARDIAN ACCESS RE-GRANTED / CONNECTED EMAIL (FOR EXISTING USERS)
+ * =========================================================================
+ */
+exports.sendGuardianAccessGrantedEmail = async (
+  to,
+  guardianName,
+  patientName,
+  relation
+) => {
+  try {
+    const isSmtpConfigured =
+      process.env.SMTP_HOST &&
+      process.env.SMTP_PORT &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS;
+
+    const cleanPatient = patientName || "Patient";
+    const cleanRelation = relation || "Guardian";
+    const emailSubject = `Access Granted - Connected to ${cleanPatient} on Medikto`;
+    const senderEmail = getSenderEmail();
+
+    const infoCardHtml = `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:20px; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
+        <tr>
+          <td style="padding:16px 20px; width:50%; vertical-align:top; border-right:1px solid #E2E8F0;">
+            <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
+              CONNECTED PATIENT
+            </span>
+            <span style="display:block; font-size:16px; font-weight:700; color:#0F172A;">
+              ${cleanPatient}
+            </span>
+          </td>
+          <td style="padding:16px 20px; width:50%; vertical-align:top;">
+            <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
+              RELATIONSHIP
+            </span>
+            <span style="display:inline-block; padding:2px 10px; background-color:#EFF6FF; border:1px solid #DBEAFE; border-radius:6px; font-size:14px; font-weight:700; color:#1D4ED8;">
+              ${cleanRelation}
+            </span>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    const credentialsNoticeHtml = `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:24px; background-color:#F0FDF4; border:1px solid #BBF7D0; border-radius:12px; overflow:hidden;">
+        <tr>
+          <td style="padding:16px 20px;">
+            <span style="display:block; font-size:13px; font-weight:700; color:#166534; margin-bottom:4px;">
+              &#10003; Existing Account Active
+            </span>
+            <p style="margin:0; font-size:14px; color:#14532D; line-height:1.5;">
+              You can log in to the Medikto mobile app with your registered email (<strong>${to}</strong>) and your <strong>existing password</strong>.
+            </p>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    const nextStepsHtml = `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:24px;">
+        <tr>
+          <td style="padding-bottom:10px;">
+            <span style="font-size:13px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:0.5px;">
+              Next Steps
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
+              <tr>
+                <td style="padding:12px 16px; border-bottom:1px solid #E2E8F0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td style="width:24px; vertical-align:middle; text-align:center; padding-right:12px;">
+                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">1</span>
+                      </td>
+                      <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
+                        Open the Medikto mobile app
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px; border-bottom:1px solid #E2E8F0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td style="width:24px; vertical-align:middle; text-align:center; padding-right:12px;">
+                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">2</span>
+                      </td>
+                      <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
+                        Log in using your existing email and password
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td style="width:24px; vertical-align:middle; text-align:center; padding-right:12px;">
+                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">3</span>
+                      </td>
+                      <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
+                        View ${cleanPatient}'s medication schedule, vital signs, and health updates
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    const emailBodyHtml = generateEmailTemplate({
+      headerBadge: "CARETAKER ACCESS",
+      headerTitle: "Access Connected",
+      headerSubtitle: `You are connected to ${cleanPatient}'s profile`,
+      greetingName: `Hello ${guardianName || "Guardian"},`,
+      bodyParagraph: `<strong>${cleanPatient}</strong> has connected you as their <strong>${cleanRelation}</strong> on the Medikto platform. You have secure, view-only access to monitor their health records.`,
+      infoCardHtml,
+      credentialsCardHtml: credentialsNoticeHtml,
+      nextStepsHtml,
+      ctaButtonHtml: ""
+    });
+
+    const emailBodyText = `Hello ${guardianName || "Guardian"},
+
+${cleanPatient} has connected you as their ${cleanRelation} on Medikto.
+
+You can log in to the Medikto mobile application using your registered email (${to}) and your existing password.
+
+Next Steps:
+1. Open the Medikto mobile app.
+2. Log in with your existing password.
+3. Access ${cleanPatient}'s permitted health records and updates.
+
+Need help? Contact support at: ${senderEmail}
+`;
+
+    if (isSmtpConfigured) {
+      const transporter = createTransporter();
+
+      const info = await transporter.sendMail({
+        from: `"Medikto Healthcare" <${senderEmail}>`,
+        replyTo: senderEmail,
+        to,
+        subject: emailSubject,
+        text: emailBodyText,
+        html: emailBodyHtml
+      });
+
+      console.log(`[Email] Guardian access re-granted notice sent to ${to}. ID:`, info.messageId);
+      return { success: true, messageId: info.messageId };
+    } else {
+      console.log(`[DEV EMAIL MOCK] Guardian access re-granted notice for ${to}`);
+      return { success: true, provider: "mock" };
+    }
+  } catch (err) {
+    console.error("[Email Error] sendGuardianAccessGrantedEmail:", err.message);
+    return { success: false, error: err.message };
+  }
+};
+
+/**
+ * =========================================================================
  * 2. HOSPITAL ADMIN CREDENTIALS EMAIL
  * =========================================================================
  */

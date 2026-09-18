@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const Hospital = require("../models/hospitalModel");
 const CaretakerInvite = require("../models/caretakerInviteModel");
-const { sendGuardianCredentials } = require("../utils/emailHelper");
+const { sendGuardianCredentials, sendGuardianAccessGrantedEmail } = require("../utils/emailHelper");
 
 // ================= CREATE GUARDIAN =================
 exports.createGuardian = async (req, res) => {
@@ -144,6 +144,17 @@ exports.createGuardian = async (req, res) => {
         console.log(`[Email] Caretaker credentials dispatched to ${guardian.email}:`, emailRes?.success !== false);
       }).catch(emailErr => {
         console.error("[Email] Caretaker credentials dispatch failed:", emailErr.message);
+      });
+    } else if (!isNewUser) {
+      sendGuardianAccessGrantedEmail(
+        guardian.email,
+        guardian.firstName,
+        patient.firstName,
+        relation || "Guardian"
+      ).then(emailRes => {
+        console.log(`[Email] Caretaker access granted notification sent to ${guardian.email}:`, emailRes?.success !== false);
+      }).catch(emailErr => {
+        console.error("[Email] Caretaker access notification failed:", emailErr.message);
       });
     }
 
