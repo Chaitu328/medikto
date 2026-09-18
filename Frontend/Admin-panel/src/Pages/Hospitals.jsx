@@ -654,25 +654,19 @@ const HospitalManagement = () => {
         });
         toast.success("Hospital updated successfully");
       } else {
-      const res = await api.post("/hospitals/create-with-admin", {
-  hospitalName: formData.name,
-  hospitalAddress: formData.address,
-  adminFirstName: formData.adminName,
-  adminPhone: formData.phone,
-  adminEmail: formData.email,
-});
+        const res = await api.post("/hospitals/create-with-admin", {
+          hospitalName: formData.name,
+          hospitalAddress: formData.address,
+          adminFirstName: formData.adminName,
+          adminPhone: formData.phone,
+          adminEmail: formData.email,
+        });
 
-toast.success("Hospital created successfully");
-
-alert(`
-Hospital Created Successfully
-
-Email:
-${res.data.admin.email}
-
-Temporary Password:
-${res.data.temporaryPassword}
-`);
+        if (res.data?.emailSent !== false) {
+          toast.success(res.data?.message || "Hospital and admin created successfully. Login email sent.");
+        } else {
+          toast.warn("Hospital created successfully, but login email could not be sent.");
+        }
       }
       setFormModalOpen(false);
       setEditingHospital(null);

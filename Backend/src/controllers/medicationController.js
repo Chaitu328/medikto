@@ -662,11 +662,6 @@ exports.markAsTaken = async (req, res) => {
     }
 
     const tz = (dose.user && dose.user.timezone) || "Asia/Kolkata";
-    if (isDoseInFuture(dose.date, dose.time, tz)) {
-      return res.status(400).json({
-        message: "Cannot mark a future dose as taken before its scheduled time"
-      });
-    }
 
     if (isDoseExpired(dose.date, dose.time, tz)) {
       dose.status = "missed";
@@ -745,11 +740,6 @@ exports.verifyWithSelfie = async (req, res) => {
     }
 
     const tz = (dose.user && dose.user.timezone) || "Asia/Kolkata";
-    if (isDoseInFuture(dose.date, dose.time, tz)) {
-      return res.status(400).json({
-        message: "Cannot mark a future dose as taken before its scheduled time"
-      });
-    }
 
     if (isDoseExpired(dose.date, dose.time, tz)) {
       dose.status = "missed";

@@ -44,6 +44,14 @@ class DioClient {
 
 Future<void> logoutUser() async {
     final prefs = await SharedPreferences.getInstance();
+    final currentToken = prefs.getString(StorageKeys.token);
+    if (currentToken == null || currentToken.isEmpty) {
+      // User is already logged out or not authenticated yet. Do not force route to LoginScreen.
+      token = "";
+      activePatientId = null;
+      _dio?.options.headers.clear();
+      return;
+    }
 
     /// CLEAR STORED DATA
     await prefs.remove(StorageKeys.token);
@@ -52,10 +60,6 @@ Future<void> logoutUser() async {
 
     /// CLEAR CACHE
     SecureHistoryCache.instance.clearAll();
-
-    /// OPTIONAL
-    /// keep onboarding so user won't see onboarding again
-    /// if you want full reset use prefs.clear()
 
     /// CLEAR IN-MEMORY TOKEN
     token = "";

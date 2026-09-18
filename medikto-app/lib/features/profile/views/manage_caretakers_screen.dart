@@ -81,7 +81,6 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
-    final passwordController = TextEditingController();
     String selectedRelation = "Father";
     final relations = ["Father", "Mother", "Brother", "Sister", "Friend", "Doctor", "Guardian", "Other"];
 
@@ -151,17 +150,6 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                   textInputType: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),
-                AppTextFormFieldTitled(
-                  title: "Caretaker Password",
-                  hintText: "Enter password",
-                  controller: passwordController,
-                  focusColor: themeColors.accentPrimary,
-                  fillColor: themeColors.bg,
-                  color: themeColors.textPrimary,
-                  borderColor: themeColors.border,
-                  obscureText: true,
-                ),
-                const SizedBox(height: 16),
                 Text(
                   "Relation",
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: themeColors.textSecondary),
@@ -201,7 +189,6 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                     final name = nameController.text.trim();
                     final email = emailController.text.trim();
                     final phone = phoneController.text.trim();
-                    final password = passwordController.text.trim();
 
                     if (name.isEmpty) {
                       AppToasts.showError(context, "Name is required");
@@ -209,14 +196,6 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                     }
                     if (email.isEmpty) {
                       AppToasts.showError(context, "Email is required");
-                      return;
-                    }
-                    if (phone.isEmpty) {
-                      AppToasts.showError(context, "Phone number is required");
-                      return;
-                    }
-                    if (password.isEmpty) {
-                      AppToasts.showError(context, "Password is required");
                       return;
                     }
 
@@ -235,8 +214,7 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                             name: name,
                             email: email,
                             relation: selectedRelation,
-                            phone: phone,
-                            password: password,
+                            phone: phone.isNotEmpty ? phone : null,
                           );
 
                       if (mounted) {

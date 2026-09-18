@@ -28,6 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> checkAppFlow() async {
     await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
 

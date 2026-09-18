@@ -492,29 +492,30 @@ class ProfileManager {
     required String email,
     required String relation,
     required String name,
-    required String password,
     String? phone,
   }) async {
     Response response;
     try {
       response = await dioClient.ref!.post(
-        "/profile/caretakers/invite",
+        "/guardians/create",
         data: {
-          "email": email,
+          "email": email.trim().toLowerCase(),
           "relation": relation,
-          "name": name,
-          "password": password,
-          "phone": phone,
+          "firstName": name.trim(),
+          "name": name.trim(),
+          "phone": phone?.trim(),
         },
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final message = response.data['message'] ??
+            "Caretaker added successfully. Login details have been sent to the caretaker's email.";
         return ResponseData(
-          "Caretaker invited successfully",
+          message,
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       }
-      return ResponseData("Failed to invite caretaker", ResponseStatus.FAILED);
+      return ResponseData("Failed to add caretaker", ResponseStatus.FAILED);
     } on DioException catch (e) {
       return ResponseData(
         e.response?.data?['message'] ?? "Something went wrong",

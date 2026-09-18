@@ -7,12 +7,16 @@ import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/theme/theme_provider.dart';
 import 'package:medikto/core/network/notification_manager.dart';
 import 'package:medikto/core/security/app_lock_wrapper.dart';
+import 'package:medikto/core/security/screen_security_service.dart';
 import 'package:medikto/splash_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize screen capture security on startup
+  ScreenSecurityService().enableSecurity();
 
   try {
     await Firebase.initializeApp(

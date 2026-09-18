@@ -11,18 +11,22 @@ const { sendGuardianCredentials } = require("../utils/emailHelper");
 exports.createGuardian = async (req, res) => {
   try {
     const {
-      patientId,
-      firstName,
+      patientId: bodyPatientId,
+      firstName: bodyFirstName,
+      name,
       email,
       phone,
       relation,
       hospital
     } = req.body;
 
+    const patientId = bodyPatientId || req.user?.id;
+    const firstName = bodyFirstName || name;
+
     if (!patientId || !firstName || !email) {
       return res.status(400).json({
         success: false,
-        message: "patientId, firstName and email are required"
+        message: "patientId, firstName (or name), and email are required"
       });
     }
 
@@ -110,20 +114,30 @@ exports.createGuardian = async (req, res) => {
       status: "pending"
     });
 
-    // Send Email
-    await sendGuardianCredentials(
-      guardian.email,
-      guardian.firstName,
-      patient.firstName,
-      temporaryPassword,
-      relation || "Guardian"
-    );
+    // Send Email (isolated error handling to preserve DB integrity)
+    let emailSent = false;
+    try {
+      const emailRes = await sendGuardianCredentials(
+        guardian.email,
+        guardian.firstName,
+        patient.firstName,
+        temporaryPassword,
+        relation || "Guardian"
+      );
+      emailSent = emailRes?.success !== false;
+    } catch (emailErr) {
+      console.error("Email dispatch failed in createGuardian:", emailErr.message);
+    }
 
     res.status(201).json({
 
       success: true,
 
-      message: "Guardian created successfully",
+      message: emailSent
+        ? "Caretaker added successfully. Login details have been sent to the caretaker's email."
+        : "Caretaker added successfully, but email delivery encountered an issue.",
+
+      emailSent,
 
       guardian,
 
@@ -675,9 +689,8 @@ exports.resendGuardianCredentials = async (req, res) => {
         guardian.email,
         guardian.firstName,
         patientName,
-        relation,
-        guardian.email,
-        temporaryPassword
+        temporaryPassword,
+        relation
       );
     } catch (emailErr) {
       console.error("Email dispatch error in resendGuardianCredentials:", emailErr.message);

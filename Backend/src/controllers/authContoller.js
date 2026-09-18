@@ -2,8 +2,9 @@ const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
 const User = require("../models/userModel");
 const CaretakerInvite = require("../models/caretakerInviteModel");
-const { sendInviteEmail } = require("../utils/emailHelper");
+const { sendInviteEmail, sendGuardianCredentials } = require("../utils/emailHelper");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 
 // ================= VERIFY OTP / FIREBASE LOGIN =================
 exports.verifyOTP = async (req, res) => {
@@ -114,12 +115,13 @@ exports.register = async (req, res) => {
     });
 
     // If caretaker details are provided during patient registration
-    const { caretakerEmail, caretakerName, caretakerRelation, caretakerPhone, caretakerPassword } = req.body;
+    const { caretakerEmail, caretakerName, caretakerRelation, caretakerPhone } = req.body;
     if (caretakerEmail && caretakerName) {
       try {
         let caretaker = await User.findOne({ email: caretakerEmail.trim().toLowerCase() });
+        const temporaryPassword = crypto.randomBytes(4).toString("hex") + "@1";
         if (!caretaker) {
-          const hashedPassword = caretakerPassword ? await bcrypt.hash(caretakerPassword, 10) : undefined;
+          const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
           caretaker = await User.create({
             firstName: caretakerName,
             email: caretakerEmail.trim().toLowerCase(),
@@ -127,6 +129,8 @@ exports.register = async (req, res) => {
             password: hashedPassword,
             role: "guardian",
             isVerified: true,
+            mustChangePassword: true,
+            isFirstLogin: true,
             accountStatus: "pending"
           });
         }
@@ -138,7 +142,13 @@ exports.register = async (req, res) => {
           relation: caretakerRelation || "Caretaker",
           status: "pending"
         });
-        await sendInviteEmail(caretakerEmail.trim().toLowerCase(), name, caretakerRelation || "Caretaker");
+        await sendGuardianCredentials(
+          caretakerEmail.trim().toLowerCase(),
+          caretakerName,
+          name,
+          temporaryPassword,
+          caretakerRelation || "Caretaker"
+        );
       } catch (inviteErr) {
         console.error("Caretaker invite dispatch failed during signup:", inviteErr.message);
       }

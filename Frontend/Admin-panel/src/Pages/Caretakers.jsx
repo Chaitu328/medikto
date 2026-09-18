@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import api from "../Api/axios.js";
+import { toast } from "react-toastify";
 import {
   Search,
   RefreshCcw,
@@ -827,7 +828,7 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
   const handleInvite = async (formData) => {
     setInviteLoading(true);
     try {
-      await api.post("/guardians/create", {
+      const res = await api.post("/guardians/create", {
         patientId: selectedPatient,
         firstName: formData.name,
         email: formData.email,
@@ -837,9 +838,10 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
       });
       await fetchData();
       setInviteModalOpen(false);
+      toast.success(res.data?.message || "Guardian created successfully. Credentials sent to email.");
     } catch (err) {
       console.error("Failed to create guardian:", err);
-      alert(err.response?.data?.message || "Failed to create guardian. Please try again.");
+      toast.error(err.response?.data?.message || "Failed to create guardian. Please try again.");
     } finally {
       setInviteLoading(false);
     }
@@ -870,42 +872,29 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
       setEditLoading(false);
       setEditModalOpen(false);
       setEditingCaretaker(null);
-      setEditLoading(false);
-      setEditModalOpen(false);
-      setEditingCaretaker(null);
   };
 
   const handleResendCredentials = async (caretaker) => {
     setResendLoading((prev) => ({ ...prev, [caretaker.id]: true }));
     try {
-      await api.post(`/guardians/${caretaker.id}/resend`);
+      const res = await api.post(`/guardians/${caretaker.id}/resend`);
+      toast.success(res.data?.message || "Guardian credentials resent successfully.");
     } catch (err) {
       console.error("Failed to resend credentials:", err);
-      alert(err.response?.data?.message || "Failed to resend credentials.");
+      toast.error(err.response?.data?.message || "Failed to resend credentials.");
     } finally {
       setResendLoading((prev) => ({ ...prev, [caretaker.id]: false }));
     }
   };
 
-  // const handleResetPassword = async (caretaker) => {
-  //   setResetLoading((prev) => ({ ...prev, [caretaker.id]: true }));
-  //   try {
-  //     await api.post(`/guardians/${caretaker.id}/reset-password`);
-  //   } catch (err) {
-  //     console.error("Failed to reset password:", err);
-  //     alert(err.response?.data?.message || "Failed to reset password.");
-  //   } finally {
-  //     setResetLoading((prev) => ({ ...prev, [caretaker.id]: false }));
-  //   }
-  // };
-
   const handleUpdateStatus = async (id, status) => {
     try {
-      await api.patch(`/guardians/${id}/status`, { status });
+      const res = await api.patch(`/guardians/${id}/status`, { status });
       await fetchData();
+      toast.success(res.data?.message || `Guardian status updated to ${status}.`);
     } catch (err) {
       console.error("Failed to update status:", err);
-      alert(err.response?.data?.message || "Failed to update status.");
+      toast.error(err.response?.data?.message || "Failed to update status.");
     }
   };
 
@@ -918,13 +907,14 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
   const handleConfirmDelete = async () => {
     setDeleteLoading(true);
     try {
-      await api.delete(`/guardians/${deletingCaretaker.id}`);
+      const res = await api.delete(`/guardians/${deletingCaretaker.id}`);
       await fetchData();
       setDeleteModalOpen(false);
       setDeletingCaretaker(null);
+      toast.success(res.data?.message || "Guardian removed successfully.");
     } catch (err) {
       console.error("Failed to delete guardian:", err);
-      alert(err.response?.data?.message || "Failed to remove guardian. Please try again.");
+      toast.error(err.response?.data?.message || "Failed to remove guardian. Please try again.");
     } finally {
       setDeleteLoading(false);
     }

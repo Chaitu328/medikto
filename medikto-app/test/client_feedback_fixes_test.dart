@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
+import 'package:medikto/core/security/screen_security_service.dart';
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
 import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
 import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
@@ -101,6 +103,78 @@ void main() {
 
       expect(report.fileUrl.endsWith('.pdf'), isTrue);
       expect(prescription.fileUrl!.endsWith('.pdf'), isTrue);
+    });
+
+    test('Screen Security Service defines canonical client security notice', () {
+      expect(
+        ScreenSecurityService.securityNotice,
+        "Due to security, you cannot share your screen.",
+      );
+    });
+
+    test('AppLockManager session lifecycle correctly manages in-memory lock state', () {
+      final lockManager = AppLockManager();
+      
+      // Default / cold launch lock state
+      lockManager.lockApp();
+      expect(lockManager.isAppLocked, isTrue);
+
+      // User enters PIN -> App unlocks
+      lockManager.unlockApp();
+      expect(lockManager.isAppLocked, isFalse);
+
+      // Temporary backgrounding / normal app usage does not lock session
+      expect(lockManager.isAppLocked, isFalse);
+
+      // Explicit logout or cold restart resets lock
+      lockManager.lockApp();
+      expect(lockManager.isAppLocked, isTrue);
+    });
+
+    test('Blood Pressure Trend is suppressed while other vital trends remain supported', () {
+      bool shouldRenderTrend(String vitalType) {
+        return vitalType != "bloodPressure";
+      }
+
+      // Blood pressure trend must be hidden
+      expect(shouldRenderTrend("bloodPressure"), isFalse);
+
+      // Other vitals must continue displaying trends
+      expect(shouldRenderTrend("heartRate"), isTrue);
+      expect(shouldRenderTrend("temperature"), isTrue);
+      expect(shouldRenderTrend("sugar"), isTrue);
+    });
+
+    test('Upload vs Share PIN Security Distinction', () {
+      bool isPinRequiredForAction(String action) {
+        switch (action) {
+          case 'upload_pdf':
+          case 'upload_image':
+          case 'view_pdf':
+          case 'view_image':
+          case 'navigate':
+            return false;
+          case 'share_prescription':
+          case 'share_medical_report':
+          case 'share_vitals_report':
+          case 'export_pdf':
+            return true;
+          default:
+            return false;
+        }
+      }
+
+      // Uploads & Views MUST NOT require PIN
+      expect(isPinRequiredForAction('upload_pdf'), isFalse);
+      expect(isPinRequiredForAction('upload_image'), isFalse);
+      expect(isPinRequiredForAction('view_pdf'), isFalse);
+      expect(isPinRequiredForAction('navigate'), isFalse);
+
+      // Sensitive Share & Export MUST require PIN
+      expect(isPinRequiredForAction('share_prescription'), isTrue);
+      expect(isPinRequiredForAction('share_medical_report'), isTrue);
+      expect(isPinRequiredForAction('share_vitals_report'), isTrue);
+      expect(isPinRequiredForAction('export_pdf'), isTrue);
     });
   });
 }

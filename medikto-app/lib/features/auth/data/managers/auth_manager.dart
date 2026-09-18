@@ -351,7 +351,15 @@ Future<void> logout(BuildContext context) async {
   try {
     await FirebaseAuth.instance.signOut();
   } catch (_) {}
-  await (await SharedPreferences.getInstance()).clear();
+
+  // ✅ Only remove session-specific keys.
+  // Do NOT call prefs.clear() — that would erase onboarding_done,
+  // causing returning users to be forced through onboarding again.
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove(StorageKeys.token);
+  await prefs.remove(StorageKeys.refreshToken);
+  await prefs.remove(StorageKeys.userId);
+
   if (context.mounted) {
     Navigator.pushAndRemoveUntil(
       context,

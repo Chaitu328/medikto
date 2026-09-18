@@ -9,7 +9,9 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:medikto/main.dart';
 import 'package:medikto/bottom_bar.dart';
 import 'package:medikto/core/security/app_lock_manager.dart';
+import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/features/auth/pin/pin_lock_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Android notification channel specification
 const AndroidNotificationChannel mediktoNotificationChannel =
@@ -258,7 +260,16 @@ class NotificationManager {
         print("Retrieved FCM Token: $token");
       }
 
-      // Check if dioClient has a base authorization token (user is authenticated)
+      // Only upload FCM token to backend if user is authenticated
+      final prefs = await SharedPreferences.getInstance();
+      final userToken = prefs.getString(StorageKeys.token);
+      if (userToken == null || userToken.isEmpty) {
+        if (kDebugMode) {
+          print("Skipping FCM token backend registration: User is not authenticated yet.");
+        }
+        return;
+      }
+
       if (dioClient.ref != null) {
         String timezone = "Asia/Kolkata";
         try {

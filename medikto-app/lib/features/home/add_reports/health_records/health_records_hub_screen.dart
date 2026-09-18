@@ -396,8 +396,10 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
               const SizedBox(height: 12),
 
-              // Optional Trend Graph (if a specific vital is selected or records exist)
-              if (_selectedVitalFilter != "All" && _showTrendChart) ...[
+              // Optional Trend Graph (if a specific vital is selected or records exist; hidden for bloodPressure)
+              if (_selectedVitalFilter != "All" &&
+                  _selectedVitalFilter != "bloodPressure" &&
+                  _showTrendChart) ...[
                 _buildCentralTrendChart(
                   filteredRecords
                       .where((e) => e.type == _selectedVitalFilter)
@@ -702,8 +704,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildCentralTrendChart(List<VitalsModel> records, String vitalType) {
+    if (vitalType == "bloodPressure" || records.isEmpty) return const SizedBox.shrink();
     final themeColors = context.themeColors;
-    if (records.isEmpty) return const SizedBox();
 
     final chartRecords = records.take(10).toList().reversed.toList();
     List<FlSpot> mainSpots = [];

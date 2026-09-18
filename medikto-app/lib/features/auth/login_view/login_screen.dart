@@ -9,6 +9,7 @@ import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/features/auth/data/providers/auth_providers.dart';
 import 'package:medikto/features/auth/login_view/otp_screen.dart';
 import 'package:medikto/features/auth/register_view/register_screen.dart';
+import 'package:medikto/features/onboarding/views/welcome_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -181,14 +182,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               SizedBox(height: size.height * 0.06),
 
               InkWell(
-                onTap: () => Navigator.pop(context),
-                child: Icon(
-                  Icons.arrow_back_ios_new,
-                  size: 22,
-                  color: colors.iconColor,
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                    );
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 22,
+                    color: colors.iconColor,
+                  ),
                 ),
               ),
-
               SizedBox(height: size.height * 0.02),
 
               Text(

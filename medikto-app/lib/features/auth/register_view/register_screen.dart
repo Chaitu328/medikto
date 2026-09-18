@@ -40,7 +40,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final caretakerNameController = TextEditingController();
   final caretakerEmailController = TextEditingController();
   final caretakerPhoneController = TextEditingController();
-  final caretakerPasswordController = TextEditingController();
   String selectedCaretakerRelation = "Son";
 
   String selectedGender = "Male";
@@ -49,7 +48,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   String selectedCountryCode = "+91";
 
   bool inviteCaretaker = false;
-  bool obscureCaretakerPassword = true;
   bool isConsentChecked = false;
 
   void _showCountryCodePicker() {
@@ -148,7 +146,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     caretakerNameController.dispose();
     caretakerEmailController.dispose();
     caretakerPhoneController.dispose();
-    caretakerPasswordController.dispose();
     super.dispose();
   }
 
@@ -179,10 +176,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
       if (caretakerPhoneController.text.trim().length != 10) {
         AppToasts.showError(context, "Please enter valid 10-digit caretaker phone number");
-        return;
-      }
-      if (caretakerPasswordController.text.trim().length < 6) {
-        AppToasts.showError(context, "Caretaker password must be at least 6 characters");
         return;
       }
     }
@@ -340,7 +333,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   "caretakerName": caretakerNameController.text.trim(),
                                   "caretakerRelation": selectedCaretakerRelation,
                                   "caretakerPhone": caretakerPhoneController.text.trim(),
-                                  "caretakerPassword": caretakerPasswordController.text.trim(),
                                 },
                               };
 
@@ -367,7 +359,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 caretakerNameController.clear();
                                 caretakerEmailController.clear();
                                 caretakerPhoneController.clear();
-                                caretakerPasswordController.clear();
                                 setState(() {
                                   selectedImage = null;
                                   inviteCaretaker = false;
@@ -666,26 +657,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(10),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      _buildCaretakerField(
-                        "Caretaker Password",
-                        "Enter caretaker password",
-                        caretakerPasswordController,
-                        colors,
-                        obscureText: obscureCaretakerPassword,
-                        suffix: Icon(
-                          obscureCaretakerPassword
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: colors.textSecondary,
-                          size: 20,
-                        ),
-                        suffixIconOnTap: () {
-                          setState(() {
-                            obscureCaretakerPassword = !obscureCaretakerPassword;
-                          });
-                        },
                       ),
                       const SizedBox(height: 15),
                       Text(

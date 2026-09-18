@@ -9,6 +9,8 @@
 <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <application
         android:label="Medikto"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:requestLegacyExternalStorage="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"

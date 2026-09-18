@@ -13,8 +13,6 @@ class AppLockManager {
   static final AppLockManager _instance = AppLockManager._internal();
 
   bool _isAppLocked = true;
-  DateTime? _lastBackgroundedAt;
-
   bool get isAppLocked => _isAppLocked;
 
   void lockApp() {
@@ -25,20 +23,6 @@ class AppLockManager {
     _isAppLocked = false;
   }
 
-  void recordBackgrounded() {
-    _lastBackgroundedAt = DateTime.now();
-  }
-
-  bool shouldLockOnResume({int timeoutSeconds = 0}) {
-    if (_isAppLocked) return true;
-    if (_lastBackgroundedAt == null) return false;
-    final diff = DateTime.now().difference(_lastBackgroundedAt!).inSeconds;
-    return diff >= timeoutSeconds;
-  }
-
-  void clearBackgroundedTimestamp() {
-    _lastBackgroundedAt = null;
-  }
 
   String _hashKey(String userId) => 'medikto_pin_hash_$userId';
   String _saltKey(String userId) => 'medikto_pin_salt_$userId';

@@ -708,7 +708,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 SizedBox(height: screenSize.height * 0.02),
 
-                /// 🔹 Settings Section
+                /// 🔹 Settings Section (Consolidated: Appearance, Notifications, Change PIN, Reset PIN)
                 _buildSection(
                   title: "Settings",
                   colors: colors,
@@ -844,15 +844,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                     ),
-                  ],
-                ),
+                    Divider(color: colors.borderSubtle, height: 1),
 
-                /// 🔹 Medikto App Security (4-Digit PIN)
-                SizedBox(height: screenSize.height * 0.02),
-                _buildSection(
-                  title: "Medikto App Security",
-                  colors: colors,
-                  children: [
+                    /// Change App PIN
                     _ListItem(
                       onTap: () {
                         Navigator.push(
@@ -867,6 +861,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       subtitle: "Update your 4-digit security PIN",
                       trailing: Icons.arrow_forward_ios,
                     ),
+                    Divider(color: colors.borderSubtle, height: 1),
+
+                    /// Reset App PIN
                     _ListItem(
                       onTap: () {
                         Navigator.push(
@@ -886,9 +883,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                 SizedBox(height: screenSize.height * 0.02),
 
-                /// 🔹 Connected Hospitals
+                /// 🔹 Access Section (Consolidated: Hospital Access & Caretaker Access)
                 _buildSection(
-                  title: "Hospital Access",
+                  title: "Access",
                   colors: colors,
                   children: [
                     _ListItem(
@@ -904,16 +901,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       title: "Manage Hospital Access",
                       trailing: Icons.arrow_forward_ios,
                     ),
-                  ],
-                ),
-
-                SizedBox(height: screenSize.height * 0.02),
-
-                /// 🔹 Caretakers Access
-                _buildSection(
-                  title: "Caretaker Access",
-                  colors: colors,
-                  children: [
+                    Divider(color: colors.borderSubtle, height: 1),
                     _ListItem(
                       onTap: () {
                         Navigator.push(

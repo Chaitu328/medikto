@@ -3,6 +3,7 @@ const Hospital = require("../models/hospitalModel");
 const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
 const Notification = require("../models/notificationModel");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const axios = require("axios");
 const { sendPushNotification } = require("../utils/notificationHelper");
 const { sendHospitalAdminCredentials } = require("../utils/emailHelper");
@@ -489,14 +490,14 @@ exports.createHospitalWithAdmin = async (req, res) => {
     }
 
     // 5. Generate and hash temporary password for admin
-    const temporaryPassword = "Admin@123";
+    const temporaryPassword = crypto.randomBytes(4).toString("hex") + "@1";
     const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 
     // 6. Create Hospital Admin User with password
     const adminUser = await User.create({
       firstName: adminFirstName,
       phone: adminPhone,
-      email: adminEmail || undefined,
+      email: adminEmail ? adminEmail.trim().toLowerCase() : undefined,
       password: hashedPassword,
       role: "admin",
       isVerified: true
@@ -515,21 +516,27 @@ exports.createHospitalWithAdmin = async (req, res) => {
     await adminUser.save();
 
     // 8. Send hospital admin credentials via email (non-blocking)
-    try {
-      await sendHospitalAdminCredentials(
-        adminUser.email,
-        adminUser.firstName,
-        hospital.name,
-        temporaryPassword
-      );
-    } catch (emailErr) {
-      console.error("Email sending failed in createHospitalWithAdmin:", emailErr.message);
-      // Do not crash the parent process if email fails
+    let emailSent = false;
+    if (adminUser.email) {
+      try {
+        const emailRes = await sendHospitalAdminCredentials(
+          adminUser.email,
+          adminUser.firstName,
+          hospital.name,
+          temporaryPassword
+        );
+        emailSent = emailRes?.success !== false;
+      } catch (emailErr) {
+        console.error("Email sending failed in createHospitalWithAdmin:", emailErr.message);
+      }
     }
 
     res.status(201).json({
       success: true,
-      message: "Hospital and admin created successfully",
+      message: emailSent
+        ? "Hospital and admin created successfully. Login email sent."
+        : "Hospital and admin created successfully.",
+      emailSent,
       hospital: {
         _id: hospital._id,
         name: hospital.name,
@@ -543,8 +550,7 @@ exports.createHospitalWithAdmin = async (req, res) => {
         firstName: adminUser.firstName,
         phone: adminUser.phone,
         email: adminUser.email,
-        role: adminUser.role,
-        temporaryPassword: temporaryPassword
+        role: adminUser.role
       }
     });
 

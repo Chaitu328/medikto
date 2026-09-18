@@ -78,18 +78,13 @@ DoseUIActionState evaluateDoseState(TodayScheduleModel dose, {DateTime? referenc
     return DoseUIActionState.missed;
   }
 
-  // 3. FUTURE EVALUATION
-  if (isDoseInFuture(dose.date, dose.time, referenceNow: now)) {
-    return DoseUIActionState.upcoming;
-  }
-
-  // 4. ACTION WINDOW (Scheduled Time Reached and within 60 minutes)
+  // 3. ACTION WINDOW (Available before scheduled time and up to 60 minutes after)
   return DoseUIActionState.actionable;
 }
 
 void main() {
   group('Medikto Medication Reminder & 60-Minute Dose Action Window Tests', () {
-    test('Test 1: Scheduled 11:30 AM, current 11:15 AM -> Upcoming, no take action yet', () {
+    test('Test 1: Scheduled 11:30 AM, current 11:15 AM -> Action window open for early taking', () {
       final refTime = DateTime(2026, 9, 6, 11, 15);
       final dose = TodayScheduleModel(
         id: "dose-1",
@@ -101,7 +96,7 @@ void main() {
       );
 
       final state = evaluateDoseState(dose, referenceNow: refTime);
-      expect(state, equals(DoseUIActionState.upcoming));
+      expect(state, equals(DoseUIActionState.actionable));
     });
 
     test('Test 2: Scheduled 11:30 AM, current 11:30 AM -> Action window starts, Mark as Taken & Verify with Selfie available', () {
@@ -195,7 +190,7 @@ void main() {
       expect(state, equals(DoseUIActionState.taken));
     });
 
-    test('Test 8: Future dose (05:30 PM at 01:36 PM) -> Upcoming, no actions', () {
+    test('Test 8: Future dose (05:30 PM at 01:36 PM) -> Action window open for early taking', () {
       final refTime = DateTime(2026, 9, 6, 13, 36);
       final dose = TodayScheduleModel(
         id: "dose-8",
@@ -207,7 +202,7 @@ void main() {
       );
 
       final state = evaluateDoseState(dose, referenceNow: refTime);
-      expect(state, equals(DoseUIActionState.upcoming));
+      expect(state, equals(DoseUIActionState.actionable));
     });
 
     test('Test 9: Yesterday pending dose (2026-09-05 12:30 PM at 2026-09-06 08:35 AM) -> Expired / Missed, no actions', () {

@@ -154,9 +154,11 @@ class VitalTrendHistoryView extends ConsumerWidget {
               _buildLatestReadingCard(context, latest),
               const SizedBox(height: 16),
 
-              // 2. Trend Graph Card
-              _buildTrendChartCard(context, records),
-              const SizedBox(height: 20),
+              // 2. Trend Graph Card (Hidden for Blood Pressure per client requirement)
+              if (vitalType != "bloodPressure") ...[
+                _buildTrendChartCard(context, records),
+                const SizedBox(height: 20),
+              ],
 
               // 3. Historical Log Header & Share
               Row(
@@ -320,6 +322,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
   }
 
   Widget _buildTrendChartCard(BuildContext context, List<VitalsModel> records) {
+    if (vitalType == "bloodPressure") return const SizedBox.shrink();
     final theme = context.themeColors;
     final chartRecords = records.take(10).toList().reversed.toList();
 

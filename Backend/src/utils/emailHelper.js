@@ -400,11 +400,13 @@ exports.sendGuardianCredentials = async (
       </table>
     `;
 
+    const dashboardUrl = process.env.GUARDIAN_URL || process.env.ADMIN_URL || "https://admin.medikto.com";
+
     const ctaButtonHtml = `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 8px 0;">
         <tr>
           <td align="center" style="padding:0 0 32px 0;">
-            <a href="#" style="display:inline-block; padding:14px 40px; background:linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); letter-spacing:0.2px;">
+            <a href="${dashboardUrl}" style="display:inline-block; padding:14px 40px; background:linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); letter-spacing:0.2px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                 <tr>
                   <td style="padding-right:8px; vertical-align:middle;">
@@ -659,11 +661,13 @@ exports.sendHospitalAdminCredentials = async (to, adminName, hospitalName, tempo
       </table>
     `;
 
+    const adminPortalUrl = process.env.ADMIN_URL || "https://admin.medikto.com";
+
     const ctaButtonHtml = `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 8px 0;">
         <tr>
           <td align="center" style="padding:0 0 32px 0;">
-            <a href="#" style="display:inline-block; padding:14px 40px; background:linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); letter-spacing:0.2px;">
+            <a href="${adminPortalUrl}" style="display:inline-block; padding:14px 40px; background:linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); letter-spacing:0.2px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                 <tr>
                   <td style="padding-right:8px; vertical-align:middle;">

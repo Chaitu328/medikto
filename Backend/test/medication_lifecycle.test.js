@@ -83,12 +83,7 @@ const isActionWindowEligible = (dose, referenceNow, timezone = "Asia/Kolkata") =
     return false;
   }
 
-  // 2. Future check
-  if (isDoseInFuture(dose.date, dose.time, referenceNow, timezone)) {
-    return false;
-  }
-
-  // 3. Expiration check (60 minutes past scheduled time)
+  // 2. Expiration check (60 minutes past scheduled time)
   if (isDoseExpired(dose.date, dose.time, referenceNow, timezone)) {
     return false;
   }
@@ -160,13 +155,13 @@ console.log("✅ parseTimeToMinutes passed\n");
 console.log("2. Running the 10 User Test Scenarios for Medication Lifecycle & Action Window...\n");
 
 // Test 1: Scheduled 11:30 AM, current 11:15 AM IST (05:45 UTC)
-// Expected: Pre-reminder eligible, No take action yet (Upcoming)
+// Expected: Pre-reminder sent, Mark as Taken / Verify with Selfie available early
 const ref_1115AM = new Date("2026-09-06T05:45:00.000Z");
 const dose1 = { date: "2026-09-06", time: "11:30 AM", status: "pending", preReminderSent: false, scheduledReminderSent: false, postReminderSent: false, missedReminderSent: false };
 const res1 = simulateMultiStageReminderCron(dose1, ref_1115AM);
 assert.strictEqual(res1.preAlert, true, "Test 1: Pre-reminder must fire at 11:15 AM for 11:30 AM dose");
-assert.strictEqual(isActionWindowEligible(dose1, ref_1115AM), false, "Test 1: Action window must NOT be open at 11:15 AM");
-console.log("✅ Test 1: Scheduled 11:30 AM at 11:15 AM -> Pre-reminder sent, No take action yet");
+assert.strictEqual(isActionWindowEligible(dose1, ref_1115AM), true, "Test 1: Action window must be OPEN for early taking at 11:15 AM");
+console.log("✅ Test 1: Scheduled 11:30 AM at 11:15 AM -> Pre-reminder sent, Action window open for early taking");
 
 // Test 2: Scheduled 11:30 AM, current 11:30 AM IST (06:00 UTC)
 // Expected: Scheduled notification, Mark as Taken / Verify with Selfie available
@@ -219,12 +214,12 @@ assert.strictEqual(isActionWindowEligible(takenDose, ref_1245PM), false);
 console.log("✅ Test 7: Dose already taken -> Taken, No actions regardless of time");
 
 // Test 8: Future dose at 5:30 PM while current time is 1:36 PM IST
-// Expected: Upcoming, No actions
+// Expected: Action window open for early taking
 const ref_0136PM = new Date("2026-09-06T08:06:00.000Z");
 const futureDose = { date: "2026-09-06", time: "05:30 PM", status: "pending" };
 assert.strictEqual(isDoseInFuture("2026-09-06", "05:30 PM", ref_0136PM), true);
-assert.strictEqual(isActionWindowEligible(futureDose, ref_0136PM), false);
-console.log("✅ Test 8: Future dose at 05:30 PM at 01:36 PM -> Upcoming, No actions");
+assert.strictEqual(isActionWindowEligible(futureDose, ref_0136PM), true);
+console.log("✅ Test 8: Future dose at 05:30 PM at 01:36 PM -> Action window open for early taking");
 
 // Test 9: Yesterday's pending dose (2026-09-05 12:30 PM at 2026-09-06 08:35 AM IST)
 // Expected: Expired, auto-missed, No actions
