@@ -60,16 +60,13 @@ exports.createGuardian = async (req, res) => {
       email: email.toLowerCase().trim()
     });
 
-    let temporaryPassword = null;
+    // Always generate a fresh temporary password for web portal access
+    const temporaryPassword = crypto.randomBytes(4).toString("hex") + "@1";
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
     let isNewUser = false;
 
     if (!guardian) {
       isNewUser = true;
-      // Generate temporary password
-      temporaryPassword = crypto.randomBytes(4).toString("hex") + "@1";
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 
       // Create guardian directly with active status (no hospital approval gate needed)
       guardian = await User.create({
@@ -94,10 +91,11 @@ exports.createGuardian = async (req, res) => {
         });
       }
 
-      // If existing guardian was pending, activate account
-      if (guardian.accountStatus === "pending") {
-        guardian.accountStatus = "active";
-      }
+      // Update credentials and status for fresh login
+      guardian.password = hashedPassword;
+      guardian.mustChangePassword = true;
+      guardian.isFirstLogin = true;
+      guardian.accountStatus = "active";
 
       // Link patientId to guardianFor if not already present
       const alreadyLinked = (guardian.guardianFor || []).some(
@@ -132,38 +130,23 @@ exports.createGuardian = async (req, res) => {
       await invite.save();
     }
 
-    // Send Email asynchronously in background so client request is not blocked by SMTP latency
-    if (isNewUser && temporaryPassword) {
-      sendGuardianCredentials(
-        guardian.email,
-        guardian.firstName,
-        patient.firstName,
-        temporaryPassword,
-        relation || "Guardian"
-      ).then(emailRes => {
-        console.log(`[Email] Caretaker credentials dispatched to ${guardian.email}:`, emailRes?.success !== false);
-      }).catch(emailErr => {
-        console.error("[Email] Caretaker credentials dispatch failed:", emailErr.message);
-      });
-    } else if (!isNewUser) {
-      sendGuardianAccessGrantedEmail(
-        guardian.email,
-        guardian.firstName,
-        patient.firstName,
-        relation || "Guardian"
-      ).then(emailRes => {
-        console.log(`[Email] Caretaker access granted notification sent to ${guardian.email}:`, emailRes?.success !== false);
-      }).catch(emailErr => {
-        console.error("[Email] Caretaker access notification failed:", emailErr.message);
-      });
-    }
+    // Send Web Portal Credentials email asynchronously in background
+    sendGuardianCredentials(
+      guardian.email,
+      guardian.firstName,
+      patient.firstName,
+      temporaryPassword,
+      relation || "Guardian"
+    ).then(emailRes => {
+      console.log(`[Email] Caretaker web credentials dispatched to ${guardian.email}:`, emailRes?.success !== false);
+    }).catch(emailErr => {
+      console.error("[Email] Caretaker web credentials dispatch failed:", emailErr.message);
+    });
 
     res.status(201).json({
       success: true,
-      message: isNewUser
-        ? "Caretaker added successfully. Login details have been sent to the caretaker's email."
-        : "Caretaker connected successfully to your account.",
-      emailSent: isNewUser,
+      message: "Caretaker added successfully. Login details have been sent to the caretaker's email.",
+      emailSent: true,
       guardian,
       invite
     });

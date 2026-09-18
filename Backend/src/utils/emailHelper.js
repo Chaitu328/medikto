@@ -147,7 +147,7 @@ const generateEmailTemplate = ({
 
 /**
  * =========================================================================
- * 1. GUARDIAN CREDENTIALS EMAIL
+ * 1. GUARDIAN WEB PORTAL CREDENTIALS EMAIL
  * =========================================================================
  */
 exports.sendGuardianCredentials = async (
@@ -164,12 +164,17 @@ exports.sendGuardianCredentials = async (
       process.env.SMTP_USER &&
       process.env.SMTP_PASS;
 
-    const emailSubject = "Your Medikto Guardian Account Details";
+    const emailSubject = "Your Medikto Caretaker Portal Login Details";
     const senderEmail = getSenderEmail();
-    const cleanRelation = relation || "Guardian";
+    const cleanRelation = relation || "Caretaker";
     const cleanPatient = patientName || "Patient";
+    const portalUrl =
+      process.env.GUARDIAN_PORTAL_URL ||
+      (process.env.ADMIN_URL
+        ? `${process.env.ADMIN_URL}/guardian/login`
+        : "https://portal.medikto.com/guardian/login");
 
-    // Info Card: Patient & Relation (Pure CSS, clean badges)
+    // Info Card: Patient & Relation
     const infoCardHtml = `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:20px; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
         <tr>
@@ -183,7 +188,7 @@ exports.sendGuardianCredentials = async (
           </td>
           <td style="padding:16px 20px; width:50%; vertical-align:top;">
             <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
-              RELATION
+              RELATIONSHIP
             </span>
             <span style="display:inline-block; padding:2px 10px; background-color:#EFF6FF; border:1px solid #DBEAFE; border-radius:6px; font-size:14px; font-weight:700; color:#1D4ED8;">
               ${cleanRelation}
@@ -193,13 +198,13 @@ exports.sendGuardianCredentials = async (
       </table>
     `;
 
-    // Credentials Card
+    // Credentials & Portal Link Card
     const credentialsCardHtml = `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:24px; background-color:#FFFFFF; border:1px solid #BFDBFE; border-radius:12px; overflow:hidden;">
         <tr>
           <td style="padding:12px 20px; background-color:#EFF6FF; border-bottom:1px solid #DBEAFE;">
             <span style="font-size:12px; font-weight:700; color:#1E40AF; text-transform:uppercase; letter-spacing:0.5px;">
-              &#128274; Login Credentials
+              &#128274; Web Portal Login Details
             </span>
           </td>
         </tr>
@@ -208,7 +213,15 @@ exports.sendGuardianCredentials = async (
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
               <tr>
                 <td style="padding-bottom:14px; border-bottom:1px solid #F1F5F9;">
-                  <span style="display:block; font-size:12px; color:#64748B; margin-bottom:3px;">Email Address</span>
+                  <span style="display:block; font-size:12px; color:#64748B; margin-bottom:3px;">Portal Link</span>
+                  <a href="${portalUrl}" target="_blank" style="font-size:14px; font-weight:600; color:#2563EB; text-decoration:underline; word-break:break-all;">
+                    ${portalUrl}
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-top:14px; padding-bottom:14px; border-bottom:1px solid #F1F5F9;">
+                  <span style="display:block; font-size:12px; color:#64748B; margin-bottom:3px;">Login Email</span>
                   <span style="display:block; font-size:15px; font-weight:600; color:#0F172A;">${to}</span>
                 </td>
               </tr>
@@ -228,13 +241,26 @@ exports.sendGuardianCredentials = async (
       </table>
     `;
 
-    // Next Steps Checklist (Numbered CSS badges)
+    // CTA Button to Open Web Portal
+    const ctaButtonHtml = `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 24px auto;">
+        <tr>
+          <td align="center">
+            <a href="${portalUrl}" target="_blank" style="display:inline-block; padding:14px 36px; background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', Arial, sans-serif; font-size:15px; font-weight:700; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(37,99,235,0.25);">
+              Open Caretaker Web Portal &rarr;
+            </a>
+          </td>
+        </tr>
+      </table>
+    `;
+
+    // Next Steps Checklist for Web Portal
     const nextStepsHtml = `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:24px;">
         <tr>
           <td style="padding-bottom:10px;">
             <span style="font-size:13px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:0.5px;">
-              Next Steps
+              How to Access Your Portal
             </span>
           </td>
         </tr>
@@ -249,7 +275,7 @@ exports.sendGuardianCredentials = async (
                         <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">1</span>
                       </td>
                       <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
-                        Log in to your Medikto Guardian Account in the mobile app
+                        Click the portal link above: <strong>${portalUrl}</strong>
                       </td>
                     </tr>
                   </table>
@@ -263,7 +289,21 @@ exports.sendGuardianCredentials = async (
                         <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">2</span>
                       </td>
                       <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
-                        Update your temporary password upon first login
+                        Log in with your email (<strong>${to}</strong>) and temporary password
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px; border-bottom:1px solid #E2E8F0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td style="width:24px; vertical-align:middle; text-align:center; padding-right:12px;">
+                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">3</span>
+                      </td>
+                      <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
+                        Create your own permanent password upon first login
                       </td>
                     </tr>
                   </table>
@@ -274,10 +314,10 @@ exports.sendGuardianCredentials = async (
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                     <tr>
                       <td style="width:24px; vertical-align:middle; text-align:center; padding-right:12px;">
-                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">3</span>
+                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">4</span>
                       </td>
                       <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
-                        Monitor permitted health records, medications, and vitals
+                        View ${cleanPatient}'s medications, vitals, prescriptions, and health reports
                       </td>
                     </tr>
                   </table>
@@ -290,30 +330,32 @@ exports.sendGuardianCredentials = async (
     `;
 
     const emailBodyHtml = generateEmailTemplate({
-      headerBadge: "GUARDIAN ACCESS",
+      headerBadge: "CARETAKER PORTAL ACCESS",
       headerTitle: "Welcome to Medikto",
-      headerSubtitle: "Your Guardian Account is Ready",
-      greetingName: `Hello ${guardianName || "Guardian"},`,
-      bodyParagraph: `You have been added as a health guardian for <strong>${cleanPatient}</strong>. You now have secure access to monitor daily health updates through the Medikto platform.`,
+      headerSubtitle: "Your Caretaker Portal Account is Ready",
+      greetingName: `Hello ${guardianName || "Caretaker"},`,
+      bodyParagraph: `You have been added as a health caretaker for <strong>${cleanPatient}</strong>. You now have secure, view-only web access to monitor their health records on the Medikto portal.`,
       infoCardHtml,
       credentialsCardHtml,
-      nextStepsHtml,
-      ctaButtonHtml: ""
+      ctaButtonHtml,
+      nextStepsHtml
     });
 
-    // Clean Plaintext Fallback (Crucial for 100% spam filter compliance)
-    const emailBodyText = `Welcome to Medikto, ${guardianName || "Guardian"}!
+    // Clean Plaintext Fallback
+    const emailBodyText = `Welcome to Medikto, ${guardianName || "Caretaker"}!
 
-You have been added as a guardian for: ${cleanPatient} (${cleanRelation}).
+You have been added as a caretaker for: ${cleanPatient} (${cleanRelation}).
 
-Your Login Credentials:
+Your Web Portal Login Details:
+Portal Link: ${portalUrl}
 Email: ${to}
 Temporary Password: ${temporaryPassword}
 
-Next Steps:
-1. Open the Medikto mobile app and log in with your email and temporary password.
-2. Change your temporary password upon first login for security.
-3. Access permitted medication schedules, vital signs, and health reports.
+How to Access:
+1. Open the portal link: ${portalUrl}
+2. Log in with your email and temporary password.
+3. Update your temporary password upon first login.
+4. View ${cleanPatient}'s medications, vitals, and health reports.
 
 Need assistance? Contact support at: ${senderEmail}
 `;
@@ -330,10 +372,10 @@ Need assistance? Contact support at: ${senderEmail}
         html: emailBodyHtml
       });
 
-      console.log(`[Email] Guardian credentials dispatched to ${to}. ID:`, info.messageId);
+      console.log(`[Email] Guardian web credentials dispatched to ${to}. ID:`, info.messageId);
       return { success: true, messageId: info.messageId };
     } else {
-      console.log(`[DEV EMAIL MOCK] Guardian credentials for ${to}: Password: ${temporaryPassword}`);
+      console.log(`[DEV EMAIL MOCK] Guardian web credentials for ${to}: Link: ${portalUrl}, Password: ${temporaryPassword}`);
       return { success: true, provider: "mock" };
     }
   } catch (err) {
