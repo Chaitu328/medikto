@@ -67,12 +67,13 @@ const SkeletonCard = () => (
 const SkeletonTableRow = () => (
   <tr className="border-b border-slate-50">
     <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full bg-slate-200 animate-pulse" /><div className="space-y-1.5"><div className="w-28 h-4 rounded bg-slate-200 animate-pulse" /><div className="w-16 h-3 rounded bg-slate-200 animate-pulse" /></div></div></td>
+    <td className="px-6 py-4"><div className="w-24 h-5 rounded-lg bg-slate-200 animate-pulse" /></td>
     <td className="px-6 py-4"><div className="w-20 h-5 rounded-full bg-slate-200 animate-pulse" /></td>
     <td className="px-6 py-4"><div className="w-28 h-4 rounded bg-slate-200 animate-pulse" /></td>
-    <td className="px-6 py-4"><div className="w-32 h-4 rounded bg-slate-200 animate-pulse" /></td>
     <td className="px-6 py-4"><div className="w-24 h-4 rounded bg-slate-200 animate-pulse" /></td>
-    <td className="px-6 py-4"><div className="w-16 h-6 rounded-full bg-slate-200 animate-pulse" /></td>
-    <td className="px-6 py-4"><div className="w-24 h-4 rounded bg-slate-200 animate-pulse" /></td>
+    <td className="px-6 py-4"><div className="w-20 h-6 rounded-full bg-slate-200 animate-pulse" /></td>
+    <td className="px-6 py-4"><div className="w-24 h-6 rounded-full bg-slate-200 animate-pulse" /></td>
+    <td className="px-6 py-4"><div className="w-20 h-4 rounded bg-slate-200 animate-pulse" /></td>
   </tr>
 );
 
@@ -307,8 +308,17 @@ const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, onApp
                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Guardian Account</h4>
                 <div className="space-y-4">
                   <DrawerInfo icon={ShieldCheck} label="Invitation Status" value={caretaker.status} />
-                  <DrawerInfo icon={Lock} label="Account Status" value={caretaker.accountStatus || "Pending Invitation"} />
-                  <DrawerInfo icon={User} label="Patient Name" value={caretaker.patientName || "—"} />
+                  <DrawerInfo icon={User} label="Connected Patient(s)" value={caretaker.patientName || "—"} />
+                  {caretaker.connectedPatients?.length > 1 && (
+                    <div className="mt-2 space-y-1.5 pl-11">
+                      {caretaker.connectedPatients.map((cp, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs bg-slate-50 p-2 rounded-lg border border-slate-100">
+                          <span className="font-medium text-slate-800">{cp.patientName}</span>
+                          <span className="text-slate-500 font-medium">({cp.relation})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <DrawerInfo icon={User} label="Created By" value={caretaker.createdBy || "—"} />
                   <DrawerInfo icon={Building} label="Hospital" value={caretaker.hospital || "—"} />
                   <DrawerInfo icon={CheckCircle2} label="Temporary Password Sent" value={caretaker.tempPasswordSent ? "Yes" : "No"} />
@@ -668,6 +678,7 @@ isFirstLogin: item.isFirstLogin,
 profilePic: item.profilePic || "",
 createdAt: item.createdAt,
 patientName: item.patientName || "",
+connectedPatients: item.connectedPatients || [],
 createdBy: item.createdBy || "",
 hospital: item.hospital || "",
 tempPasswordSent: item.tempPasswordSent || false,
@@ -1130,7 +1141,7 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/50">
-                    {["Guardian", "Relation", "Phone", "Created Date", "Invitation Status", "Account Status", "Actions"].map((h) => (
+                    {["Guardian", "Patient", "Relation", "Phone", "Created Date", "Invitation Status", "Account Status", "Actions"].map((h) => (
                       <th key={h} className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -1148,6 +1159,7 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
                     <tr className="border-b border-slate-100 bg-slate-50/80 backdrop-blur-sm">
                       {[
                         { key: "name", label: "Guardian" },
+                        { key: "patientName", label: "Patient" },
                         { key: "relation", label: "Relation" },
                         { key: "phone", label: "Phone" },
                         { key: "createdAt", label: "Created Date" },
@@ -1195,12 +1207,27 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
                               </div>
                               <div className="min-w-0 flex flex-col justify-center">
                                 <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{caretaker.name}</p>
+                                <p className="text-xs text-slate-400 truncate max-w-[160px]">{caretaker.email}</p>
                                 {caretaker.isGuardian && (
                                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 w-fit">
                                     <ShieldCheck size={8} /> Guardian
                                   </span>
                                 )}
                               </div>
+                            </div>
+                          </td>
+
+                          {/* Patient */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 flex-wrap max-w-[180px]">
+                              {caretaker.patientName && caretaker.patientName !== "—" ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100">
+                                  <User size={12} className="text-blue-500" />
+                                  {caretaker.patientName}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400">—</span>
+                              )}
                             </div>
                           </td>
 

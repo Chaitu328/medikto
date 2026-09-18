@@ -446,11 +446,34 @@ exports.getCaretakers = async (req, res) => {
     }
     const patientObjectId = new mongoose.Types.ObjectId(patientId);
     
-    // Find all accepted caretakers
-    const acceptedCaretakers = await User.find({
+    // Find all accepted caretaker invites for this patient
+    const invites = await CaretakerInvite.find({
+      patientId: patientObjectId,
+      status: "accepted"
+    }).populate("caretakerId", "-password");
+
+    const acceptedCaretakers = invites
+      .filter(inv => inv.caretakerId)
+      .map(inv => {
+        const cObj = inv.caretakerId.toObject();
+        cObj.relation = inv.relation || "Guardian";
+        cObj.inviteId = inv._id;
+        return cObj;
+      });
+
+    // Also include any caretakers in guardianFor not covered by invites
+    const existingIds = new Set(acceptedCaretakers.map(c => c._id.toString()));
+    const otherGuardians = await User.find({
       role: "guardian",
-      guardianFor: patientObjectId
+      guardianFor: patientObjectId,
+      _id: { $nin: Array.from(existingIds).map(id => new mongoose.Types.ObjectId(id)) }
     }).select("-password");
+
+    otherGuardians.forEach(g => {
+      const gObj = g.toObject();
+      gObj.relation = "Guardian";
+      acceptedCaretakers.push(gObj);
+    });
 
     // Find all pending invites
     const pendingInvites = await CaretakerInvite.find({
@@ -473,27 +496,32 @@ exports.deleteCaretaker = async (req, res) => {
     const patientId = req.user.id;
     const { id } = req.params; // Caretaker user ID or invite ID
 
-    // Try deleting invite if pending
-    const inviteDeleted = await CaretakerInvite.findOneAndDelete({
-      _id: id,
-      patientId
-    });
-
-    if (inviteDeleted) {
-      return res.json({ success: true, message: "Pending invitation cancelled successfully" });
+    if (!id) {
+      return res.status(400).json({ message: "Caretaker or invite ID is required" });
     }
 
-    // Otherwise, remove patientId from caretaker's guardianFor list
-    const caretaker = await User.findById(id);
-    if (!caretaker) {
-      return res.status(404).json({ message: "Caretaker not found" });
+    const patientObjectId = new mongoose.Types.ObjectId(patientId);
+    const targetObjectId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
+
+    // Delete any invite linking this patient to this caretaker or matching invite ID
+    if (targetObjectId) {
+      await CaretakerInvite.deleteMany({
+        patientId: patientObjectId,
+        $or: [
+          { _id: targetObjectId },
+          { caretakerId: targetObjectId }
+        ]
+      });
+
+      // Also remove patientId from caretaker's guardianFor list
+      const caretaker = await User.findById(targetObjectId);
+      if (caretaker) {
+        caretaker.guardianFor = (caretaker.guardianFor || []).filter(
+          (pId) => pId.toString() !== patientId
+        );
+        await caretaker.save();
+      }
     }
-
-    caretaker.guardianFor = (caretaker.guardianFor || []).filter(
-      (pId) => pId.toString() !== patientId
-    );
-
-    await caretaker.save();
 
     res.json({
       success: true,

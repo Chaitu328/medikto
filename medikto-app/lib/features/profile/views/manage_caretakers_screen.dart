@@ -83,6 +83,7 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
     final phoneController = TextEditingController();
     String selectedRelation = "Father";
     final relations = ["Father", "Mother", "Brother", "Sister", "Friend", "Doctor", "Guardian", "Other"];
+    bool isInviting = false;
 
     showModalBottomSheet(
       context: context,
@@ -91,13 +92,13 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => StatefulBuilder(
+      builder: (sheetCtx) => StatefulBuilder(
         builder: (context, setModalState) => Padding(
           padding: EdgeInsets.only(
             left: 20,
             right: 20,
             top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 20,
           ),
           child: SingleChildScrollView(
             child: Column(
@@ -113,7 +114,7 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                     ),
                     IconButton(
                       icon: Icon(Icons.close, color: themeColors.textSecondary),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: isInviting ? null : () => Navigator.pop(sheetCtx),
                     ),
                   ],
                 ),
@@ -169,13 +170,15 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                       isExpanded: true,
                       style: TextStyle(color: themeColors.textPrimary, fontSize: 16),
                       icon: Icon(Icons.arrow_drop_down, color: themeColors.accentPrimary),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() {
-                            selectedRelation = val;
-                          });
-                        }
-                      },
+                      onChanged: isInviting
+                          ? null
+                          : (val) {
+                              if (val != null) {
+                                setModalState(() {
+                                  selectedRelation = val;
+                                });
+                              }
+                            },
                       items: relations.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
                     ),
                   ),
@@ -184,60 +187,57 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                 CustomButton(
                   buttonText: "Send Invitation",
                   buttonColor: themeColors.accentPrimary,
+                  isLoading: isInviting,
                   textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    final email = emailController.text.trim();
-                    final phone = phoneController.text.trim();
+                  onPressed: isInviting
+                      ? null
+                      : () async {
+                          final name = nameController.text.trim();
+                          final email = emailController.text.trim();
+                          final phone = phoneController.text.trim();
 
-                    if (name.isEmpty) {
-                      AppToasts.showError(context, "Name is required");
-                      return;
-                    }
-                    if (email.isEmpty) {
-                      AppToasts.showError(context, "Email is required");
-                      return;
-                    }
+                          if (name.isEmpty) {
+                            AppToasts.showError(sheetCtx, "Name is required");
+                            return;
+                          }
+                          if (email.isEmpty) {
+                            AppToasts.showError(sheetCtx, "Email is required");
+                            return;
+                          }
 
-                    Navigator.pop(context); // Close bottom sheet
+                          setModalState(() => isInviting = true);
 
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => Center(
-                        child: CircularProgressIndicator(color: themeColors.accentPrimary),
-                      ),
-                    );
+                          try {
+                            final response = await ref.read(profileProvider).inviteCaretaker(
+                                  name: name,
+                                  email: email,
+                                  relation: selectedRelation,
+                                  phone: phone.isNotEmpty ? phone : null,
+                                );
 
-                    try {
-                      final response = await ref.read(profileProvider).inviteCaretaker(
-                            name: name,
-                            email: email,
-                            relation: selectedRelation,
-                            phone: phone.isNotEmpty ? phone : null,
-                          );
+                            if (sheetCtx.mounted) {
+                              Navigator.pop(sheetCtx); // Close bottom sheet
+                            }
 
-                      if (mounted) {
-                        Navigator.pop(context); // Close loader
-                      }
-
-                      if (response.status == ResponseStatus.SUCCESS) {
-                        if (mounted) {
-                          AppToasts.showSuccess(context, response.message);
-                          _fetchCaretakers();
-                        }
-                      } else {
-                        if (mounted) {
-                          AppToasts.showError(context, response.message);
-                        }
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        Navigator.pop(context);
-                        AppToasts.showError(context, "Error inviting caretaker: $e");
-                      }
-                    }
-                  },
+                            if (response.status == ResponseStatus.SUCCESS) {
+                              if (mounted) {
+                                AppToasts.showSuccess(context, response.message);
+                                _fetchCaretakers();
+                              }
+                            } else {
+                              if (mounted) {
+                                AppToasts.showError(context, response.message);
+                              }
+                            }
+                          } catch (e) {
+                            if (sheetCtx.mounted) {
+                              Navigator.pop(sheetCtx);
+                            }
+                            if (mounted) {
+                              AppToasts.showError(context, "Error inviting caretaker: $e");
+                            }
+                          }
+                        },
                 ),
               ],
             ),

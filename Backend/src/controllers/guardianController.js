@@ -20,7 +20,8 @@ exports.createGuardian = async (req, res) => {
       hospital
     } = req.body;
 
-    const patientId = bodyPatientId || req.user?.id;
+    // Enforce patient ownership: A patient can only add a caretaker for themselves
+    const patientId = req.user?.role === "patient" ? req.user.id : (bodyPatientId || req.user?.id);
     const firstName = bodyFirstName || name;
 
     if (!patientId || !firstName || !email) {
@@ -40,28 +41,6 @@ exports.createGuardian = async (req, res) => {
       });
     }
 
-    // Existing guardian?
-    const existingGuardian = await User.findOne({
-      email: email.toLowerCase().trim()
-    });
-
-    if (existingGuardian) {
-      return res.status(400).json({
-        success: false,
-        message: "Guardian already exists with this email"
-      });
-    }
-
-    // Generate temporary password
-    const temporaryPassword =
-      crypto.randomBytes(4).toString("hex") + "@1";
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(
-      temporaryPassword,
-      10
-    );
-
     // Resolve hospital if created by clinic admin
     let resolvedHospital = hospital;
     if (!resolvedHospital && req.user?.role === "admin") {
@@ -76,73 +55,106 @@ exports.createGuardian = async (req, res) => {
       }
     }
 
-    // Create guardian
-    const guardian = await User.create({
-      firstName,
-      email: email.toLowerCase().trim(),
-      phone,
-      password: hashedPassword,
-
-      role: "guardian",
-
-      isVerified: true,
-
-      mustChangePassword: true,
-
-      isFirstLogin: true,
-
-      accountStatus: "pending",
-      hospital: resolvedHospital || undefined,
-      guardianFor: [patientId]
+    // Existing guardian?
+    let guardian = await User.findOne({
+      email: email.toLowerCase().trim()
     });
 
-    // Create invite
-    const invite = await CaretakerInvite.create({
+    let temporaryPassword = null;
+    let isNewUser = false;
 
+    if (!guardian) {
+      isNewUser = true;
+      // Generate temporary password
+      temporaryPassword = crypto.randomBytes(4).toString("hex") + "@1";
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+
+      // Create guardian directly with active status (no hospital approval gate needed)
+      guardian = await User.create({
+        firstName,
+        email: email.toLowerCase().trim(),
+        phone,
+        password: hashedPassword,
+        role: "guardian",
+        isVerified: true,
+        mustChangePassword: true,
+        isFirstLogin: true,
+        accountStatus: "active",
+        hospital: resolvedHospital || undefined,
+        guardianFor: [patientId]
+      });
+    } else {
+      // Existing user: Ensure they are a guardian
+      if (guardian.role !== "guardian") {
+        return res.status(400).json({
+          success: false,
+          message: "This email is registered with an account that cannot be added as a caretaker."
+        });
+      }
+
+      // If existing guardian was pending, activate account
+      if (guardian.accountStatus === "pending") {
+        guardian.accountStatus = "active";
+      }
+
+      // Link patientId to guardianFor if not already present
+      const alreadyLinked = (guardian.guardianFor || []).some(
+        pId => pId.toString() === patientId.toString()
+      );
+      if (!alreadyLinked) {
+        guardian.guardianFor = [...(guardian.guardianFor || []), patientId];
+      }
+      await guardian.save();
+    }
+
+    // Create or update invite record for explicit relationship tracking
+    let invite = await CaretakerInvite.findOne({
       patientId,
-
-      caretakerId: guardian._id,
-
-      createdBy: req.user.id,
-
-      email: email.toLowerCase().trim(),
-
-      phone,
-
-      relation: relation || "Guardian",
-
-      status: "pending"
+      caretakerId: guardian._id
     });
 
-    // Send Email (isolated error handling to preserve DB integrity)
-    let emailSent = false;
-    try {
-      const emailRes = await sendGuardianCredentials(
+    if (!invite) {
+      invite = await CaretakerInvite.create({
+        patientId,
+        caretakerId: guardian._id,
+        createdBy: req.user.id,
+        email: email.toLowerCase().trim(),
+        phone: phone || guardian.phone,
+        relation: relation || "Guardian",
+        status: "accepted" // Directly active
+      });
+    } else {
+      invite.status = "accepted";
+      invite.relation = relation || invite.relation || "Guardian";
+      if (phone) invite.phone = phone;
+      await invite.save();
+    }
+
+    // Send Email asynchronously in background so client request is not blocked by SMTP latency
+    if (isNewUser && temporaryPassword) {
+      sendGuardianCredentials(
         guardian.email,
         guardian.firstName,
         patient.firstName,
         temporaryPassword,
         relation || "Guardian"
-      );
-      emailSent = emailRes?.success !== false;
-    } catch (emailErr) {
-      console.error("Email dispatch failed in createGuardian:", emailErr.message);
+      ).then(emailRes => {
+        console.log(`[Email] Caretaker credentials dispatched to ${guardian.email}:`, emailRes?.success !== false);
+      }).catch(emailErr => {
+        console.error("[Email] Caretaker credentials dispatch failed:", emailErr.message);
+      });
     }
 
     res.status(201).json({
-
       success: true,
-
-      message: emailSent
+      message: isNewUser
         ? "Caretaker added successfully. Login details have been sent to the caretaker's email."
-        : "Caretaker added successfully, but email delivery encountered an issue.",
-
-      emailSent,
-
+        : "Caretaker connected successfully to your account.",
+      emailSent: isNewUser,
       guardian,
-
       invite
-
     });
 
   } catch (err) {
@@ -596,22 +608,50 @@ exports.getAllGuardians = async (req, res) => {
       .populate("createdBy", "firstName lastName")
       .sort({ createdAt: -1 });
 
-    const inviteMap = {};
+    const invitesByCaretaker = {};
     for (const inv of invites) {
-      if (inv.caretakerId && !inviteMap[inv.caretakerId.toString()]) {
-        inviteMap[inv.caretakerId.toString()] = inv;
+      if (inv.caretakerId) {
+        const cId = inv.caretakerId.toString();
+        if (!invitesByCaretaker[cId]) {
+          invitesByCaretaker[cId] = [];
+        }
+        invitesByCaretaker[cId].push(inv);
       }
     }
 
     const guardians = rawGuardians.map(g => {
       const gObj = g.toObject();
-      const inv = inviteMap[g._id.toString()];
+      const gInvites = invitesByCaretaker[g._id.toString()] || [];
 
-      gObj.relation = inv?.relation || "Other";
-      gObj.patientName = inv?.patientId
-        ? `${inv.patientId.firstName || ""} ${inv.patientId.lastName || ""}`.trim()
-        : (g.guardianFor?.[0] ? `${g.guardianFor[0].firstName || ""} ${g.guardianFor[0].lastName || ""}`.trim() : "");
-      gObj.createdBy = inv?.createdBy ? `${inv.createdBy.firstName || ""} ${inv.createdBy.lastName || ""}`.trim() : "";
+      // Collect all connected patient names and relations
+      const patientNames = [];
+      const relations = [];
+
+      gInvites.forEach(inv => {
+        if (inv.patientId) {
+          const pName = `${inv.patientId.firstName || ""} ${inv.patientId.lastName || ""}`.trim();
+          if (pName) patientNames.push(pName);
+          if (inv.relation) relations.push(inv.relation);
+        }
+      });
+
+      // Fallback to guardianFor if no invites
+      if (patientNames.length === 0 && g.guardianFor?.length) {
+        g.guardianFor.forEach(p => {
+          const pName = `${p.firstName || ""} ${p.lastName || ""}`.trim();
+          if (pName) patientNames.push(pName);
+        });
+      }
+
+      gObj.relation = relations.length ? [...new Set(relations)].join(", ") : "Guardian";
+      gObj.patientName = patientNames.length ? [...new Set(patientNames)].join(", ") : "—";
+      gObj.connectedPatients = gInvites.map(inv => ({
+        patientId: inv.patientId?._id,
+        patientName: inv.patientId ? `${inv.patientId.firstName || ""} ${inv.patientId.lastName || ""}`.trim() : "—",
+        relation: inv.relation || "Guardian",
+        status: inv.status
+      }));
+      gObj.createdBy = gInvites[0]?.createdBy ? `${gInvites[0].createdBy.firstName || ""} ${gInvites[0].createdBy.lastName || ""}`.trim() : "";
       gObj.hospital = g.hospital?.name || "";
       gObj.tempPasswordSent = true;
       gObj.passwordChanged = !g.mustChangePassword;
