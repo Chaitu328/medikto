@@ -3,27 +3,48 @@ const nodemailer = require("nodemailer");
 /**
  * ===========================================
  * MEDIKTO EMAIL TEMPLATE SYSTEM
- * Premium Healthcare Email Templates
- * Table-based layout with inline CSS only
+ * Bulletproof, Zero-External-Image Dependencies
  * Compatible with Gmail, Outlook, Yahoo, Apple Mail
+ * High Deliverability & Spam-Filter Optimized
  * ===========================================
  */
 
+// Helper to get configured sender address
+const getSenderEmail = () => {
+  return process.env.SMTP_USER || "healthreportsapp7@gmail.com";
+};
+
+// Helper to create Nodemailer transporter
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: parseInt(process.env.SMTP_PORT || "587") === 465,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+};
+
 /**
- * Generates the reusable Medikto email template wrapper.
- * All emails share the same design, only content changes.
- * 
- * @param {string} headerTitle - "Welcome to Medikto"
- * @param {string} headerSubtitle - Dynamic subtitle
- * @param {string} greetingName - "Hello {{NAME}}"
- * @param {string} bodyParagraph - Main body paragraph
- * @param {string} infoCardHtml - Info card HTML (patient/relation or hospital info)
- * @param {string} credentialsCardHtml - Credentials or invitation steps card
- * @param {string} nextStepsHtml - Next steps checklist
- * @param {string} ctaButtonHtml - Primary CTA button
- * @param {string} footerNote - Optional footer note (e.g. invitation-specific)
+ * Generates the master Medikto email wrapper.
+ * Uses 100% inline CSS and pure HTML elements so it never relies on fragile external icon CDNs.
  */
-const generateEmailTemplate = (headerTitle, headerSubtitle, greetingName, bodyParagraph, infoCardHtml, credentialsCardHtml, nextStepsHtml, ctaButtonHtml, footerNote = "") => {
+const generateEmailTemplate = ({
+  headerBadge = "MEDIKTO HEALTHCARE",
+  headerTitle = "Welcome to Medikto",
+  headerSubtitle = "Healthcare Management Platform",
+  greetingName = "Hello",
+  bodyParagraph = "",
+  infoCardHtml = "",
+  credentialsCardHtml = "",
+  nextStepsHtml = "",
+  ctaButtonHtml = "",
+  footerNote = ""
+}) => {
+  const supportEmail = getSenderEmail();
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,152 +62,82 @@ const generateEmailTemplate = (headerTitle, headerSubtitle, greetingName, bodyPa
   </noscript>
   <![endif]-->
 </head>
-<body style="margin:0; padding:0; background-color:#F4F6F9; font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; background-color:#F4F6F9;">
+<body style="margin:0; padding:0; background-color:#F1F5F9; font-family:'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; background-color:#F1F5F9; padding:24px 0;">
     <tr>
-      <td align="center" style="padding:24px 12px;">
-        <!-- Main Container -->
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="border-collapse:collapse; width:600px; max-width:600px; background-color:#FFFFFF; border-radius:16px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.06);">
+      <td align="center" style="padding:32px 16px;">
+        <!-- Main Email Container -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; max-width:580px; width:100%; background-color:#FFFFFF; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(15,23,42,0.08); border:1px solid #E2E8F0;">
 
           <!-- Header / Hero Banner -->
           <tr>
-            <td style="background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); background-color:#2563EB; padding:0; text-align:center; border-radius:16px 16px 0 0;">
-              <!--[if gte mso 9]>
-              <v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:180px;" fillcolor="#2563EB">
-                <v:fill type="gradient" color="#2563EB" color2="#1E40AF" angle="135"/>
-                <v:textbox inset="0,0,0,0">
-              <![endif]-->
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+            <td style="background-color:#2563EB; background:linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); padding:36px 32px 32px 32px; text-align:center; color:#FFFFFF;">
+              
+              <!-- Brand Emblem (Pure CSS - Never Breaks) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 16px auto;">
                 <tr>
-                  <td align="center" style="padding:36px 32px 28px 32px;">
-                    <!-- Logo Circle -->
-                   <!-- Logo -->
-<table
-  role="presentation"
-  cellpadding="0"
-  cellspacing="0"
-  border="0"
-  align="center"
-  style="margin:0 auto 20px auto;"
->
-  <tr>
-    <td align="center">
-      <div
-        style="
-          width:120px;
-          height:120px;
-          border-radius:50%;
-          background:#ffffff;
-          padding:4px;
-          display:inline-block;
-          box-shadow:0 3px 10px rgba(0,0,0,0.08);
-        "
-      >
-        <img
-          src="https://res.cloudinary.com/t5njdeek/image/upload/v1783439119/Medikto1.logo_ojwpoz.png"
-          alt="Medikto"
-          style="
-            width:118px;
-            height:118px;
-            border-radius:50%;
-            display:block;
-            object-fit:cover;
-          "
-        />
-      </div>
-    </td>
-  </tr>
-</table>
-                    <!-- Header Title -->
-                    <h1 style="margin:20px 0 6px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:26px; font-weight:700; color:#FFFFFF; letter-spacing:-0.3px; line-height:1.2;">${headerTitle}</h1>
-                    <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:400; color:rgba(255,255,255,0.85); line-height:1.5;">${headerSubtitle}</p>
+                  <td align="center" style="width:54px; height:54px; background-color:#FFFFFF; border-radius:14px; text-align:center; vertical-align:middle; box-shadow:0 4px 12px rgba(0,0,0,0.12);">
+                    <span style="font-family:'Segoe UI', Arial, sans-serif; font-size:28px; font-weight:800; color:#2563EB; line-height:54px; display:inline-block;">+</span>
                   </td>
                 </tr>
               </table>
-              <!--[if gte mso 9]></v:textbox></v:rect><![endif]-->
+
+              <!-- Badge -->
+              <div style="display:inline-block; padding:4px 12px; background-color:rgba(255,255,255,0.18); border-radius:20px; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#FFFFFF; margin-bottom:12px;">
+                ${headerBadge}
+              </div>
+
+              <!-- Header Title & Subtitle -->
+              <h1 style="margin:0 0 8px 0; font-family:'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size:24px; font-weight:700; color:#FFFFFF; line-height:1.3; letter-spacing:-0.4px;">
+                ${headerTitle}
+              </h1>
+              <p style="margin:0; font-family:'Segoe UI', Arial, sans-serif; font-size:14px; font-weight:400; color:#DBEAFE; line-height:1.5;">
+                ${headerSubtitle}
+              </p>
             </td>
           </tr>
 
-          <!-- Body Content -->
+          <!-- Body Content Area -->
           <tr>
-            <td style="padding:36px 40px 0 40px;">
-              <!-- Greeting -->
-              <h2 style="margin:0 0 12px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:22px; font-weight:700; color:#1E293B; letter-spacing:-0.3px; line-height:1.3;">${greetingName}</h2>
-              <p style="margin:0 0 28px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:400; color:#475569; line-height:1.7;">${bodyParagraph}</p>
+            <td style="padding:32px 32px 24px 32px; background-color:#FFFFFF;">
+              
+              <!-- Greeting & Body Text -->
+              <h2 style="margin:0 0 10px 0; font-family:'Segoe UI', -apple-system, Arial, sans-serif; font-size:19px; font-weight:700; color:#0F172A; letter-spacing:-0.2px;">
+                ${greetingName}
+              </h2>
+              <p style="margin:0 0 24px 0; font-family:'Segoe UI', Arial, sans-serif; font-size:15px; font-weight:400; color:#475569; line-height:1.65;">
+                ${bodyParagraph}
+              </p>
 
-              <!-- Info Card -->
+              <!-- Optional Cards & Sections -->
               ${infoCardHtml}
-
-              <!-- Credentials / Invitation Card -->
               ${credentialsCardHtml}
-
-              <!-- Next Steps -->
               ${nextStepsHtml}
-
-              <!-- CTA Button -->
               ${ctaButtonHtml}
-
-              <!-- Footer Note -->
               ${footerNote}
+
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Footer Area -->
           <tr>
-            <td style="padding:32px 40px 24px 40px; background-color:#F8FAFC; border-top:1px solid #E2E8F0; border-radius:0 0 16px 16px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
-                <tr>
-                  <td style="padding-bottom:16px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                      <tr>
-                        <td style="padding-right:8px; vertical-align:middle;">
-                          <img src="https://res.cloudinary.com/t5njdeek/image/upload/v1783439119/Medikto1.logo_ojwpoz.png" alt="Medikto" width="28" height="28" style="display:block; border:0;" />
-                        </td>
-                        <td style="vertical-align:middle;">
-                          <span style="font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:16px; font-weight:700; color:#2563EB; letter-spacing:-0.2px;">Medikto</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-bottom:16px;">
-                    <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:400; color:#94A3B8; line-height:1.6;">
-                      &copy; 2026 Medikto Healthcare Platform. All rights reserved.<br/>
-                      This is an automated email. Please do not reply to this message.<br/>
-                      Need help? Contact us at <a href="mailto:support@medikto.com" style="color:#2563EB; text-decoration:none; font-weight:500;">support@medikto.com</a>
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                      <tr>
-                        <td style="padding-right:12px;">
-                          <a href="#" style="display:inline-block; width:28px; height:28px; background-color:#E2E8F0; border-radius:50%; text-align:center; vertical-align:middle; text-decoration:none;">
-                            <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="14" height="14" style="display:inline-block; border:0; margin-top:7px;" />
-                          </a>
-                        </td>
-                        <td style="padding-right:12px;">
-                          <a href="#" style="display:inline-block; width:28px; height:28px; background-color:#E2E8F0; border-radius:50%; text-align:center; vertical-align:middle; text-decoration:none;">
-                            <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" alt="Twitter" width="14" height="14" style="display:inline-block; border:0; margin-top:7px;" />
-                          </a>
-                        </td>
-                        <td>
-                          <a href="#" style="display:inline-block; width:28px; height:28px; background-color:#E2E8F0; border-radius:50%; text-align:center; vertical-align:middle; text-decoration:none;">
-                            <img src="https://cdn-icons-png.flaticon.com/512/733/733561.png" alt="LinkedIn" width="14" height="14" style="display:inline-block; border:0; margin-top:7px;" />
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:24px 32px; background-color:#F8FAFC; border-top:1px solid #E2E8F0; text-align:center;">
+              <p style="margin:0 0 8px 0; font-family:'Segoe UI', Arial, sans-serif; font-size:13px; font-weight:600; color:#334155;">
+                Medikto Health Platform
+              </p>
+              <p style="margin:0 0 12px 0; font-family:'Segoe UI', Arial, sans-serif; font-size:12px; font-weight:400; color:#94A3B8; line-height:1.6;">
+                This is a secure automated notification regarding your Medikto account.<br/>
+                If you have questions or did not expect this message, contact us at
+                <a href="mailto:${supportEmail}" style="color:#2563EB; text-decoration:none; font-weight:500;">${supportEmail}</a>
+              </p>
+              <p style="margin:0; font-family:'Segoe UI', Arial, sans-serif; font-size:11px; font-weight:400; color:#CBD5E1;">
+                &copy; ${new Date().getFullYear()} Medikto. All rights reserved.
+              </p>
             </td>
           </tr>
 
         </table>
-        <!-- End Main Container -->
+        <!-- End Main Email Container -->
       </td>
     </tr>
   </table>
@@ -195,9 +146,9 @@ const generateEmailTemplate = (headerTitle, headerSubtitle, greetingName, bodyPa
 };
 
 /**
- * ===========================================
+ * =========================================================================
  * 1. GUARDIAN CREDENTIALS EMAIL
- * ===========================================
+ * =========================================================================
  */
 exports.sendGuardianCredentials = async (
   to,
@@ -213,118 +164,62 @@ exports.sendGuardianCredentials = async (
       process.env.SMTP_USER &&
       process.env.SMTP_PASS;
 
-    const emailSubject = "Your Medikto Guardian Account";
+    const emailSubject = "Your Medikto Guardian Account Details";
+    const senderEmail = getSenderEmail();
+    const cleanRelation = relation || "Guardian";
+    const cleanPatient = patientName || "Patient";
 
+    // Info Card: Patient & Relation (Pure CSS, clean badges)
     const infoCardHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:20px; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
         <tr>
-          <td style="padding:20px 24px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
-              <tr>
-                <td style="width:50%; padding-right:12px; vertical-align:top;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:40px; height:40px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Patient" width="20" height="20" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8; text-transform:uppercase; letter-spacing:0.5px;">Patient</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:700; color:#1E293B;">${patientName}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-                <td style="width:50%; padding-left:12px; vertical-align:top; border-left:1px solid #E2E8F0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:40px; height:40px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/681/681494.png" alt="Relation" width="20" height="20" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8; text-transform:uppercase; letter-spacing:0.5px;">Relation</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:700; color:#1E293B;">${relation}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
+          <td style="padding:16px 20px; width:50%; vertical-align:top; border-right:1px solid #E2E8F0;">
+            <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
+              PATIENT
+            </span>
+            <span style="display:block; font-size:16px; font-weight:700; color:#0F172A;">
+              ${cleanPatient}
+            </span>
+          </td>
+          <td style="padding:16px 20px; width:50%; vertical-align:top;">
+            <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
+              RELATION
+            </span>
+            <span style="display:inline-block; padding:2px 10px; background-color:#EFF6FF; border:1px solid #DBEAFE; border-radius:6px; font-size:14px; font-weight:700; color:#1D4ED8;">
+              ${cleanRelation}
+            </span>
           </td>
         </tr>
       </table>
     `;
 
+    // Credentials Card
     const credentialsCardHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:24px; background-color:#FFFFFF; border:1px solid #BFDBFE; border-radius:12px; overflow:hidden;">
         <tr>
-          <td style="padding:20px 24px 16px 24px; border-bottom:1px solid #E2E8F0;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-              <tr>
-                <td style="padding-right:8px; vertical-align:middle;">
-                  <img src="https://cdn-icons-png.flaticon.com/512/2889/2889676.png" alt="Lock" width="18" height="18" style="display:block; border:0;" />
-                </td>
-                <td style="vertical-align:middle;">
-                  <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:700; color:#2563EB; letter-spacing:-0.2px;">Login Credentials</p>
-                </td>
-              </tr>
-            </table>
+          <td style="padding:12px 20px; background-color:#EFF6FF; border-bottom:1px solid #DBEAFE;">
+            <span style="font-size:12px; font-weight:700; color:#1E40AF; text-transform:uppercase; letter-spacing:0.5px;">
+              &#128274; Login Credentials
+            </span>
           </td>
         </tr>
         <tr>
-          <td style="padding:20px 24px;">
+          <td style="padding:20px;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
               <tr>
-                <td style="padding-bottom:16px; border-bottom:1px solid #F1F5F9;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:14px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:36px; height:36px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/542/542689.png" alt="Email" width="16" height="16" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8;">Email</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; color:#1E293B;">${to}</p>
-                      </td>
-                    </tr>
-                  </table>
+                <td style="padding-bottom:14px; border-bottom:1px solid #F1F5F9;">
+                  <span style="display:block; font-size:12px; color:#64748B; margin-bottom:3px;">Email Address</span>
+                  <span style="display:block; font-size:15px; font-weight:600; color:#0F172A;">${to}</span>
                 </td>
               </tr>
               <tr>
-                <td style="padding-top:16px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:14px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:36px; height:36px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/2889/2889676.png" alt="Password" width="16" height="16" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8;">Temporary Password</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:20px; font-weight:700; color:#2563EB; letter-spacing:1px;">${temporaryPassword}</p>
-                      </td>
-                    </tr>
-                  </table>
+                <td style="padding-top:14px;">
+                  <span style="display:block; font-size:12px; color:#64748B; margin-bottom:6px;">Temporary Password</span>
+                  <div style="display:inline-block; padding:8px 18px; background-color:#F8FAFC; border:1px dashed #2563EB; border-radius:8px;">
+                    <span style="font-family:'Courier New', Courier, monospace; font-size:20px; font-weight:800; color:#1D4ED8; letter-spacing:1.5px;">
+                      ${temporaryPassword}
+                    </span>
+                  </div>
                 </td>
               </tr>
             </table>
@@ -333,62 +228,56 @@ exports.sendGuardianCredentials = async (
       </table>
     `;
 
+    // Next Steps Checklist (Numbered CSS badges)
     const nextStepsHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 28px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:24px;">
         <tr>
-          <td style="padding-bottom:12px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-              <tr>
-                <td style="padding-right:8px; vertical-align:middle;">
-                  <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Check" width="18" height="18" style="display:block; border:0;" />
-                </td>
-                <td style="vertical-align:middle;">
-                  <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:700; color:#2563EB; letter-spacing:-0.2px;">Next Steps</p>
-                </td>
-              </tr>
-            </table>
+          <td style="padding-bottom:10px;">
+            <span style="font-size:13px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:0.5px;">
+              Next Steps
+            </span>
           </td>
         </tr>
         <tr>
           <td>
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
               <tr>
-                <td style="padding:14px 20px; border-bottom:1px solid #E2E8F0;">
+                <td style="padding:12px 16px; border-bottom:1px solid #E2E8F0;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                     <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
+                      <td style="width:24px; vertical-align:middle; text-align:center; padding-right:12px;">
+                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">1</span>
                       </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">Login to your Medikto Guardian Account</p>
+                      <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
+                        Log in to your Medikto Guardian Account in the mobile app
                       </td>
                     </tr>
                   </table>
                 </td>
               </tr>
               <tr>
-                <td style="padding:14px 20px; border-bottom:1px solid #E2E8F0;">
+                <td style="padding:12px 16px; border-bottom:1px solid #E2E8F0;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                     <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
+                      <td style="width:24px; vertical-align:middle; text-align:center; padding-right:12px;">
+                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">2</span>
                       </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">Change your temporary password for security</p>
+                      <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
+                        Update your temporary password upon first login
                       </td>
                     </tr>
                   </table>
                 </td>
               </tr>
               <tr>
-                <td style="padding:14px 20px;">
+                <td style="padding:12px 16px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                     <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
+                      <td style="width:24px; vertical-align:middle; text-align:center; padding-right:12px;">
+                        <span style="display:inline-block; width:22px; height:22px; background-color:#2563EB; color:#FFFFFF; border-radius:50%; font-size:12px; font-weight:700; line-height:22px; text-align:center;">3</span>
                       </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">Start monitoring the patient's medications, vitals, reports and prescriptions</p>
+                      <td style="vertical-align:middle; font-size:14px; font-weight:500; color:#334155;">
+                        Monitor permitted health records, medications, and vitals
                       </td>
                     </tr>
                   </table>
@@ -400,192 +289,130 @@ exports.sendGuardianCredentials = async (
       </table>
     `;
 
-    const dashboardUrl = process.env.GUARDIAN_URL || process.env.ADMIN_URL || "https://admin.medikto.com";
-
-    const ctaButtonHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 8px 0;">
-        <tr>
-          <td align="center" style="padding:0 0 32px 0;">
-            <a href="${dashboardUrl}" style="display:inline-block; padding:14px 40px; background:linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); letter-spacing:0.2px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                <tr>
-                  <td style="padding-right:8px; vertical-align:middle;">
-                    <img src="https://cdn-icons-png.flaticon.com/512/1828/1828817.png" alt="Open" width="16" height="16" style="display:block; border:0;" />
-                  </td>
-                  <td style="vertical-align:middle;">Open Medikto</td>
-                </tr>
-              </table>
-            </a>
-          </td>
-        </tr>
-      </table>
-    `;
-
-    const emailBody = generateEmailTemplate(
-      "Welcome to Medikto",
-      "Your Guardian Account is Ready",
-      `Hello ${guardianName},`,
-      `Your guardian account has been successfully created. You now have secure access to monitor your patient's health information through the Medikto platform.`,
+    const emailBodyHtml = generateEmailTemplate({
+      headerBadge: "GUARDIAN ACCESS",
+      headerTitle: "Welcome to Medikto",
+      headerSubtitle: "Your Guardian Account is Ready",
+      greetingName: `Hello ${guardianName || "Guardian"},`,
+      bodyParagraph: `You have been added as a health guardian for <strong>${cleanPatient}</strong>. You now have secure access to monitor daily health updates through the Medikto platform.`,
       infoCardHtml,
       credentialsCardHtml,
       nextStepsHtml,
-      ctaButtonHtml
-    );
+      ctaButtonHtml: ""
+    });
+
+    // Clean Plaintext Fallback (Crucial for 100% spam filter compliance)
+    const emailBodyText = `Welcome to Medikto, ${guardianName || "Guardian"}!
+
+You have been added as a guardian for: ${cleanPatient} (${cleanRelation}).
+
+Your Login Credentials:
+Email: ${to}
+Temporary Password: ${temporaryPassword}
+
+Next Steps:
+1. Open the Medikto mobile app and log in with your email and temporary password.
+2. Change your temporary password upon first login for security.
+3. Access permitted medication schedules, vital signs, and health reports.
+
+Need assistance? Contact support at: ${senderEmail}
+`;
 
     if (isSmtpConfigured) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT),
-        secure: Number(process.env.SMTP_PORT) === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
+      const transporter = createTransporter();
 
-      await transporter.sendMail({
-        from: `"Medikto" <${process.env.SMTP_USER}>`,
+      const info = await transporter.sendMail({
+        from: `"Medikto Healthcare" <${senderEmail}>`,
+        replyTo: senderEmail,
         to,
         subject: emailSubject,
-        html: emailBody
+        text: emailBodyText,
+        html: emailBodyHtml
       });
+
+      console.log(`[Email] Guardian credentials dispatched to ${to}. ID:`, info.messageId);
+      return { success: true, messageId: info.messageId };
     } else {
-      console.log("Guardian Email");
-      console.log(emailBody);
+      console.log(`[DEV EMAIL MOCK] Guardian credentials for ${to}: Password: ${temporaryPassword}`);
+      return { success: true, provider: "mock" };
     }
-
-    return { success: true };
-
   } catch (err) {
+    console.error("[Email Error] sendGuardianCredentials:", err.message);
     return { success: false, error: err.message };
   }
 };
 
 /**
- * ===========================================
+ * =========================================================================
  * 2. HOSPITAL ADMIN CREDENTIALS EMAIL
- * ===========================================
+ * =========================================================================
  */
-exports.sendHospitalAdminCredentials = async (to, adminName, hospitalName, temporaryPassword) => {
+exports.sendHospitalAdminCredentials = async (
+  to,
+  adminName,
+  hospitalName,
+  temporaryPassword
+) => {
   try {
-    const isSmtpConfigured = 
-      process.env.SMTP_HOST && 
-      process.env.SMTP_PORT && 
-      process.env.SMTP_USER && 
+    const isSmtpConfigured =
+      process.env.SMTP_HOST &&
+      process.env.SMTP_PORT &&
+      process.env.SMTP_USER &&
       process.env.SMTP_PASS;
 
     const emailSubject = `Your Medikto Hospital Admin Account - ${hospitalName}`;
+    const senderEmail = getSenderEmail();
+    const adminPortalUrl = process.env.ADMIN_URL || "https://admin.medikto.com";
 
     const infoCardHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:20px; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
         <tr>
-          <td style="padding:20px 24px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
-              <tr>
-                <td style="width:50%; padding-right:12px; vertical-align:top;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:40px; height:40px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/2964/2964514.png" alt="Hospital" width="20" height="20" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8; text-transform:uppercase; letter-spacing:0.5px;">Hospital</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:700; color:#1E293B;">${hospitalName}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-                <td style="width:50%; padding-left:12px; vertical-align:top; border-left:1px solid #E2E8F0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:40px; height:40px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Admin" width="20" height="20" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8; text-transform:uppercase; letter-spacing:0.5px;">Admin</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:700; color:#1E293B;">${adminName}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
+          <td style="padding:16px 20px; width:50%; vertical-align:top; border-right:1px solid #E2E8F0;">
+            <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
+              HOSPITAL / CLINIC
+            </span>
+            <span style="display:block; font-size:16px; font-weight:700; color:#0F172A;">
+              ${hospitalName}
+            </span>
+          </td>
+          <td style="padding:16px 20px; width:50%; vertical-align:top;">
+            <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
+              ADMINISTRATOR
+            </span>
+            <span style="display:block; font-size:15px; font-weight:700; color:#0F172A;">
+              ${adminName}
+            </span>
           </td>
         </tr>
       </table>
     `;
 
     const credentialsCardHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:24px; background-color:#FFFFFF; border:1px solid #BFDBFE; border-radius:12px; overflow:hidden;">
         <tr>
-          <td style="padding:20px 24px 16px 24px; border-bottom:1px solid #E2E8F0;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-              <tr>
-                <td style="padding-right:8px; vertical-align:middle;">
-                  <img src="https://cdn-icons-png.flaticon.com/512/2889/2889676.png" alt="Lock" width="18" height="18" style="display:block; border:0;" />
-                </td>
-                <td style="vertical-align:middle;">
-                  <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:700; color:#2563EB; letter-spacing:-0.2px;">Login Credentials</p>
-                </td>
-              </tr>
-            </table>
+          <td style="padding:12px 20px; background-color:#EFF6FF; border-bottom:1px solid #DBEAFE;">
+            <span style="font-size:12px; font-weight:700; color:#1E40AF; text-transform:uppercase; letter-spacing:0.5px;">
+              &#128274; Portal Credentials
+            </span>
           </td>
         </tr>
         <tr>
-          <td style="padding:20px 24px;">
+          <td style="padding:20px;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
               <tr>
-                <td style="padding-bottom:16px; border-bottom:1px solid #F1F5F9;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:14px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:36px; height:36px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/542/542689.png" alt="Email" width="16" height="16" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8;">Email</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; color:#1E293B;">${to}</p>
-                      </td>
-                    </tr>
-                  </table>
+                <td style="padding-bottom:14px; border-bottom:1px solid #F1F5F9;">
+                  <span style="display:block; font-size:12px; color:#64748B; margin-bottom:3px;">Portal Email</span>
+                  <span style="display:block; font-size:15px; font-weight:600; color:#0F172A;">${to}</span>
                 </td>
               </tr>
               <tr>
-                <td style="padding-top:16px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:14px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:36px; height:36px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/2889/2889676.png" alt="Password" width="16" height="16" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8;">Temporary Password</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:20px; font-weight:700; color:#2563EB; letter-spacing:1px;">${temporaryPassword}</p>
-                      </td>
-                    </tr>
-                  </table>
+                <td style="padding-top:14px;">
+                  <span style="display:block; font-size:12px; color:#64748B; margin-bottom:6px;">Temporary Password</span>
+                  <div style="display:inline-block; padding:8px 18px; background-color:#F8FAFC; border:1px dashed #2563EB; border-radius:8px;">
+                    <span style="font-family:'Courier New', Courier, monospace; font-size:20px; font-weight:800; color:#1D4ED8; letter-spacing:1.5px;">
+                      ${temporaryPassword}
+                    </span>
+                  </div>
                 </td>
               </tr>
             </table>
@@ -593,445 +420,165 @@ exports.sendHospitalAdminCredentials = async (to, adminName, hospitalName, tempo
         </tr>
       </table>
     `;
-
-    const nextStepsHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 28px 0;">
-        <tr>
-          <td style="padding-bottom:12px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-              <tr>
-                <td style="padding-right:8px; vertical-align:middle;">
-                  <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Check" width="18" height="18" style="display:block; border:0;" />
-                </td>
-                <td style="vertical-align:middle;">
-                  <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:700; color:#2563EB; letter-spacing:-0.2px;">Next Steps</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
-              <tr>
-                <td style="padding:14px 20px; border-bottom:1px solid #E2E8F0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">Log in to your admin portal using the credentials above</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px; border-bottom:1px solid #E2E8F0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">Change your temporary password immediately for security</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">Set up your hospital profile and manage hospital operations</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    `;
-
-    const adminPortalUrl = process.env.ADMIN_URL || "https://admin.medikto.com";
 
     const ctaButtonHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 8px 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 20px auto;">
         <tr>
-          <td align="center" style="padding:0 0 32px 0;">
-            <a href="${adminPortalUrl}" style="display:inline-block; padding:14px 40px; background:linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); letter-spacing:0.2px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                <tr>
-                  <td style="padding-right:8px; vertical-align:middle;">
-                    <img src="https://cdn-icons-png.flaticon.com/512/1828/1828817.png" alt="Open" width="16" height="16" style="display:block; border:0;" />
-                  </td>
-                  <td style="vertical-align:middle;">Open Admin Portal</td>
-                </tr>
-              </table>
+          <td align="center">
+            <a href="${adminPortalUrl}" target="_blank" style="display:inline-block; padding:12px 32px; background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', Arial, sans-serif; font-size:15px; font-weight:700; text-decoration:none; border-radius:8px;">
+              Open Admin Portal
             </a>
           </td>
         </tr>
       </table>
     `;
 
-    const emailBody = generateEmailTemplate(
-      "Welcome to Medikto",
-      "Your Hospital Admin Account is Ready",
-      `Hello ${adminName},`,
-      `Your hospital admin account has been successfully created for <strong style="color:#1E293B;">${hospitalName}</strong>. You now have secure access to manage hospital operations, staff, and patient records through the Medikto platform.`,
+    const emailBodyHtml = generateEmailTemplate({
+      headerBadge: "HOSPITAL ADMIN",
+      headerTitle: "Welcome to Medikto",
+      headerSubtitle: "Your Hospital Admin Account is Ready",
+      greetingName: `Hello ${adminName},`,
+      bodyParagraph: `Your hospital administrator account for <strong>${hospitalName}</strong> has been configured. You can now log in to the admin portal to manage patients, staff, and medical records.`,
       infoCardHtml,
       credentialsCardHtml,
-      nextStepsHtml,
+      nextStepsHtml: "",
       ctaButtonHtml
-    );
+    });
+
+    const emailBodyText = `Welcome to Medikto, ${adminName}!
+
+Your hospital admin account for ${hospitalName} is ready.
+
+Login Credentials:
+Portal URL: ${adminPortalUrl}
+Email: ${to}
+Temporary Password: ${temporaryPassword}
+
+Please log in and update your password immediately.
+Support: ${senderEmail}
+`;
 
     if (isSmtpConfigured) {
-      console.log(`Sending hospital admin credentials email to ${to} via SMTP...`);
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT),
-        secure: parseInt(process.env.SMTP_PORT) === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
+      const transporter = createTransporter();
 
       const info = await transporter.sendMail({
-        from: `"Medikto Care" <${process.env.SMTP_USER}>`,
-        to: to,
+        from: `"Medikto Healthcare" <${senderEmail}>`,
+        replyTo: senderEmail,
+        to,
         subject: emailSubject,
-        html: emailBody
+        text: emailBodyText,
+        html: emailBodyHtml
       });
 
-      console.log("Hospital admin credentials email sent successfully. Message ID:", info.messageId);
-      return { success: true, provider: "smtp", messageId: info.messageId };
+      console.log(`[Email] Hospital admin credentials sent to ${to}. ID:`, info.messageId);
+      return { success: true, messageId: info.messageId };
+    } else {
+      console.log(`[DEV EMAIL MOCK] Hospital admin credentials for ${to}`);
+      return { success: true, provider: "mock" };
     }
-
-    console.log(`\n======================================================`);
-    console.log(`[DEV EMAIL LOG] Hospital Admin Credentials dispatch:`);
-    console.log(`[DEV EMAIL LOG] To: ${to}`);
-    console.log(`[DEV EMAIL LOG] Subject: ${emailSubject}`);
-    console.log(`[DEV EMAIL LOG] Admin Name: ${adminName}`);
-    console.log(`[DEV EMAIL LOG] Hospital: ${hospitalName}`);
-    console.log(`[DEV EMAIL LOG] Temporary Password: ${temporaryPassword}`);
-    console.log(`======================================================\n`);
-    return { success: true, provider: "mock" };
-
   } catch (err) {
-    console.error("Email Dispatch Helper Error:", err.message);
+    console.error("[Email Error] sendHospitalAdminCredentials:", err.message);
     return { success: false, error: err.message };
   }
 };
 
 /**
- * ===========================================
+ * =========================================================================
  * 3. CARETAKER INVITATION EMAIL
- * ===========================================
+ * =========================================================================
  */
 exports.sendInviteEmail = async (to, patientName, relation) => {
   try {
-    const isSmtpConfigured = 
-      process.env.SMTP_HOST && 
-      process.env.SMTP_PORT && 
-      process.env.SMTP_USER && 
+    const isSmtpConfigured =
+      process.env.SMTP_HOST &&
+      process.env.SMTP_PORT &&
+      process.env.SMTP_USER &&
       process.env.SMTP_PASS;
 
-    const emailSubject = `Medikto Access Invite from ${patientName}`;
+    const emailSubject = `Medikto Access Invite from ${patientName || "Patient"}`;
+    const senderEmail = getSenderEmail();
+    const cleanPatient = patientName || "A patient";
+    const cleanRelation = relation || "Caretaker";
 
     const infoCardHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:24px; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
         <tr>
-          <td style="padding:20px 24px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
-              <tr>
-                <td style="width:50%; padding-right:12px; vertical-align:top;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:40px; height:40px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Patient" width="20" height="20" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8; text-transform:uppercase; letter-spacing:0.5px;">Patient</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:700; color:#1E293B;">${patientName}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-                <td style="width:50%; padding-left:12px; vertical-align:top; border-left:1px solid #E2E8F0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:40px; height:40px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/681/681494.png" alt="Relation" width="20" height="20" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8; text-transform:uppercase; letter-spacing:0.5px;">Relation</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:700; color:#1E293B;">${relation}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
+          <td style="padding:16px 20px; width:50%; vertical-align:top; border-right:1px solid #E2E8F0;">
+            <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
+              INVITING PATIENT
+            </span>
+            <span style="display:block; font-size:16px; font-weight:700; color:#0F172A;">
+              ${cleanPatient}
+            </span>
+          </td>
+          <td style="padding:16px 20px; width:50%; vertical-align:top;">
+            <span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748B; margin-bottom:4px;">
+              RELATIONSHIP
+            </span>
+            <span style="display:inline-block; padding:2px 10px; background-color:#EFF6FF; border:1px solid #DBEAFE; border-radius:6px; font-size:14px; font-weight:700; color:#1D4ED8;">
+              ${cleanRelation}
+            </span>
           </td>
         </tr>
       </table>
     `;
 
-    const credentialsCardHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-        <tr>
-          <td style="padding:20px 24px 16px 24px; border-bottom:1px solid #E2E8F0;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-              <tr>
-                <td style="padding-right:8px; vertical-align:middle;">
-                  <img src="https://cdn-icons-png.flaticon.com/512/2964/2964514.png" alt="App" width="18" height="18" style="display:block; border:0;" />
-                </td>
-                <td style="vertical-align:middle;">
-                  <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:700; color:#2563EB; letter-spacing:-0.2px;">Get Started with Medikto</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:20px 24px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
-              <tr>
-                <td style="padding-bottom:16px; border-bottom:1px solid #F1F5F9;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:14px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:36px; height:36px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/2926/2926319.png" alt="Download" width="16" height="16" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8;">Step 1</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; color:#1E293B;">Download the Medikto App</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding-top:16px; border-bottom:1px solid #F1F5F9;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:14px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:36px; height:36px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/542/542689.png" alt="Email" width="16" height="16" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8;">Step 2</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; color:#1E293B;">Register using <strong style="color:#2563EB;">${to}</strong></p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding-top:16px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:14px; vertical-align:middle;">
-                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse; width:36px; height:36px; background-color:#EFF6FF; border-radius:50%; text-align:center;">
-                          <tr>
-                            <td style="vertical-align:middle; text-align:center;">
-                              <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Accept" width="16" height="16" style="display:inline-block; border:0;" />
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0 0 2px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:500; color:#94A3B8;">Step 3</p>
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; color:#1E293B;">Accept the invitation automatically</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    `;
-
-    const nextStepsHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 28px 0;">
-        <tr>
-          <td style="padding-bottom:12px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-              <tr>
-                <td style="padding-right:8px; vertical-align:middle;">
-                  <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Check" width="18" height="18" style="display:block; border:0;" />
-                </td>
-                <td style="vertical-align:middle;">
-                  <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:700; color:#2563EB; letter-spacing:-0.2px;">What You'll Get Access To</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
-              <tr>
-                <td style="padding:14px 20px; border-bottom:1px solid #E2E8F0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">View-only access to daily medications compliance</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px; border-bottom:1px solid #E2E8F0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">Monitor vitals logs and health trends in real-time</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:14px 20px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>
-                      <td style="padding-right:12px; vertical-align:middle;">
-                        <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="Done" width="18" height="18" style="display:block; border:0;" />
-                      </td>
-                      <td style="vertical-align:middle;">
-                        <p style="margin:0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:14px; font-weight:500; color:#334155;">Access prescriptions and health reports securely</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    `;
-
-    const ctaButtonHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 8px 0;">
-        <tr>
-          <td align="center" style="padding:0 0 32px 0;">
-            <a href="#" style="display:inline-block; padding:14px 40px; background:linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); background-color:#2563EB; color:#FFFFFF; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; font-weight:600; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(37,99,235,0.3); letter-spacing:0.2px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                <tr>
-                  <td style="padding-right:8px; vertical-align:middle;">
-                    <img src="https://cdn-icons-png.flaticon.com/512/2926/2926319.png" alt="Download" width="16" height="16" style="display:block; border:0;" />
-                  </td>
-                  <td style="vertical-align:middle;">Download Medikto</td>
-                </tr>
-              </table>
-            </a>
-          </td>
-        </tr>
-      </table>
-    `;
-
-    const footerNote = `
-      <p style="margin:0 0 8px 0; font-family:'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:13px; font-weight:400; color:#64748B; line-height:1.6; text-align:center;">
-        As an observer, you will have secure, view-only access to monitor health records from your own device.
-      </p>
-    `;
-
-    const emailBody = generateEmailTemplate(
-      "Welcome to Medikto",
-      "You Have Been Invited",
-      "Hello,",
-      `<strong style="color:#1E293B;">${patientName}</strong> has invited you as their caretaker/relative (<strong style="color:#1E293B;">${relation}</strong>) to monitor their health records on the <strong style="color:#1E293B;">Medikto</strong> platform.`,
+    const emailBodyHtml = generateEmailTemplate({
+      headerBadge: "CARETAKER INVITATION",
+      headerTitle: "Medikto Access Invitation",
+      headerSubtitle: "Connect to Patient Health Records",
+      greetingName: "Hello,",
+      bodyParagraph: `<strong>${cleanPatient}</strong> has invited you as their <strong>${cleanRelation}</strong> on the Medikto health platform. You will be able to stay informed about their health updates, medications, and wellness records.`,
       infoCardHtml,
-      credentialsCardHtml,
-      nextStepsHtml,
-      ctaButtonHtml,
-      footerNote
-    );
+      credentialsCardHtml: "",
+      nextStepsHtml: `
+        <div style="padding:16px; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:20px; font-size:14px; color:#475569; line-height:1.6;">
+          Download the Medikto mobile app and register or log in using <strong>${to}</strong> to automatically connect to ${cleanPatient}'s profile.
+        </div>
+      `,
+      ctaButtonHtml: ""
+    });
+
+    const emailBodyText = `Hello,
+
+${cleanPatient} has invited you as their ${cleanRelation} to monitor their health records on the Medikto mobile application.
+
+To get started:
+1. Download the Medikto app on your smartphone.
+2. Sign up or log in using this email address: ${to}
+3. You will have view-only access to help support their healthcare journey.
+
+Need help? Contact: ${senderEmail}
+`;
 
     if (isSmtpConfigured) {
-      console.log(`Sending invite email to ${to} via SMTP...`);
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT),
-        secure: parseInt(process.env.SMTP_PORT) === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
+      const transporter = createTransporter();
 
       const info = await transporter.sendMail({
-        from: `"Medikto Care" <${process.env.SMTP_USER}>`,
-        to: to,
+        from: `"Medikto Healthcare" <${senderEmail}>`,
+        replyTo: senderEmail,
+        to,
         subject: emailSubject,
-        html: emailBody
+        text: emailBodyText,
+        html: emailBodyHtml
       });
 
-      console.log("Email invitation sent successfully. Message ID:", info.messageId);
-      return { success: true, provider: "smtp", messageId: info.messageId };
+      console.log(`[Email] Caretaker invite sent to ${to}. ID:`, info.messageId);
+      return { success: true, messageId: info.messageId };
+    } else {
+      console.log(`[DEV EMAIL MOCK] Caretaker invite for ${to}`);
+      return { success: true, provider: "mock" };
     }
-
-    console.log(`\n======================================================`);
-    console.log(`[DEV EMAIL LOG] Invitation dispatch:`);
-    console.log(`[DEV EMAIL LOG] To: ${to}`);
-    console.log(`[DEV EMAIL LOG] Subject: ${emailSubject}`);
-    console.log(`[DEV EMAIL LOG] Content: ${patientName} invited you as a ${relation}.`);
-    console.log(`======================================================\n`);
-    return { success: true, provider: "mock" };
-
   } catch (err) {
-    console.error("Email Dispatch Helper Error:", err.message);
+    console.error("[Email Error] sendInviteEmail:", err.message);
     return { success: false, error: err.message };
   }
 };
 
 /**
- * ===========================================
- * SEND ISSUE REPORT EMAIL TO SUPPORT
- * Destination: shahmedikto@gmail.com
- * ===========================================
+ * =========================================================================
+ * 4. SEND ISSUE REPORT EMAIL TO SUPPORT
+ * =========================================================================
  */
 exports.sendIssueReportEmail = async ({
   userId,
@@ -1045,23 +592,24 @@ exports.sendIssueReportEmail = async ({
   platform
 }) => {
   try {
-    const supportEmail = "shahmedikto@gmail.com";
+    const supportDestination = "shahmedikto@gmail.com";
     const emailSubject = `[Medikto Support Issue] - ${category || "General Inquiry"} - ${userName || "User"}`;
+    const senderEmail = getSenderEmail();
 
     const infoCardHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:16px; background-color:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px;">
         <tr>
-          <td style="padding:20px 24px;">
-            <p style="margin:0 0 8px 0; font-family:'Segoe UI', sans-serif; font-size:14px; font-weight:600; color:#1E293B;">User Details:</p>
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; font-family:'Segoe UI', sans-serif; font-size:13px; color:#475569;">
-              <tr><td style="padding:4px 0; width:120px; font-weight:600;">Name:</td><td style="padding:4px 0;">${userName || "N/A"}</td></tr>
+          <td style="padding:16px 20px;">
+            <p style="margin:0 0 10px 0; font-size:14px; font-weight:700; color:#0F172A;">User & Device Details:</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; font-size:13px; color:#475569;">
+              <tr><td style="padding:4px 0; width:130px; font-weight:600;">Name:</td><td style="padding:4px 0;">${userName || "N/A"}</td></tr>
               <tr><td style="padding:4px 0; font-weight:600;">User ID:</td><td style="padding:4px 0;">${userId || "N/A"}</td></tr>
               <tr><td style="padding:4px 0; font-weight:600;">Email:</td><td style="padding:4px 0;">${userEmail || "N/A"}</td></tr>
               <tr><td style="padding:4px 0; font-weight:600;">Phone:</td><td style="padding:4px 0;">${userPhone || "N/A"}</td></tr>
               <tr><td style="padding:4px 0; font-weight:600;">Role:</td><td style="padding:4px 0;">${userRole || "patient"}</td></tr>
               <tr><td style="padding:4px 0; font-weight:600;">Category:</td><td style="padding:4px 0; color:#2563EB; font-weight:600;">${category || "General"}</td></tr>
-              <tr><td style="padding:4px 0; font-weight:600;">Platform / Version:</td><td style="padding:4px 0;">${platform || "Mobile"} / v${appVersion || "1.0.0"}</td></tr>
-              <tr><td style="padding:4px 0; font-weight:600;">Submitted At:</td><td style="padding:4px 0;">${new Date().toISOString()}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">Platform / App:</td><td style="padding:4px 0;">${platform || "Mobile"} / v${appVersion || "1.0.0"}</td></tr>
+              <tr><td style="padding:4px 0; font-weight:600;">Submitted:</td><td style="padding:4px 0;">${new Date().toISOString()}</td></tr>
             </table>
           </td>
         </tr>
@@ -1069,68 +617,59 @@ exports.sendIssueReportEmail = async ({
     `;
 
     const descriptionCardHtml = `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin:0 0 24px 0; background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; margin-bottom:20px; background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:12px;">
         <tr>
-          <td style="padding:20px 24px;">
-            <p style="margin:0 0 8px 0; font-family:'Segoe UI', sans-serif; font-size:14px; font-weight:700; color:#1E40AF;">Issue Description:</p>
-            <p style="margin:0; font-family:'Segoe UI', sans-serif; font-size:14px; color:#1E293B; line-height:1.6; white-space:pre-wrap;">${description}</p>
+          <td style="padding:16px 20px;">
+            <p style="margin:0 0 6px 0; font-size:13px; font-weight:700; color:#1E40AF;">Issue Description:</p>
+            <p style="margin:0; font-size:14px; color:#0F172A; line-height:1.6; white-space:pre-wrap;">${description || "No description provided."}</p>
           </td>
         </tr>
       </table>
     `;
 
-    const emailBody = generateEmailTemplate(
-      "Medikto Support",
-      "New User Issue Reported",
-      "Hello Support Team,",
-      "A user has submitted an issue report from the Medikto mobile application. Details are provided below:",
+    const emailBodyHtml = generateEmailTemplate({
+      headerBadge: "USER REPORT",
+      headerTitle: "Support Issue Ticket",
+      headerSubtitle: "New inquiry from Medikto App",
+      greetingName: "Support Team,",
+      bodyParagraph: `A user has submitted an issue report from the mobile application. Full details are attached below:`,
       infoCardHtml,
-      descriptionCardHtml,
-      "",
-      ""
-    );
+      credentialsCardHtml: descriptionCardHtml,
+      nextStepsHtml: "",
+      ctaButtonHtml: ""
+    });
 
-    const isSmtpConfigured =
-      process.env.SMTP_HOST &&
-      process.env.SMTP_PORT &&
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS;
+    const emailBodyText = `New Support Ticket from ${userName || "User"}:
+Category: ${category || "General"}
+User Email: ${userEmail || "N/A"}
+Phone: ${userPhone || "N/A"}
+Role: ${userRole || "patient"}
+Platform: ${platform || "Mobile"} v${appVersion || "1.0.0"}
 
-    if (isSmtpConfigured) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT),
-        secure: parseInt(process.env.SMTP_PORT) === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
+Description:
+${description}
+`;
+
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      const transporter = createTransporter();
 
       const info = await transporter.sendMail({
-        from: `"Medikto App Support" <${process.env.SMTP_USER}>`,
-        to: supportEmail,
-        replyTo: userEmail || undefined,
+        from: `"Medikto App Support" <${senderEmail}>`,
+        replyTo: userEmail || senderEmail,
+        to: supportDestination,
         subject: emailSubject,
-        html: emailBody
+        text: emailBodyText,
+        html: emailBodyHtml
       });
 
-      console.log("Support issue email dispatched successfully. Message ID:", info.messageId);
-      return { success: true, provider: "smtp", messageId: info.messageId };
+      console.log(`[Email] Support ticket dispatched. ID:`, info.messageId);
+      return { success: true, messageId: info.messageId };
+    } else {
+      console.log(`[DEV EMAIL MOCK] Support issue ticket for ${supportDestination}`);
+      return { success: true, provider: "mock" };
     }
-
-    console.log(`\n======================================================`);
-    console.log(`[DEV EMAIL LOG] Support Issue Report:`);
-    console.log(`[DEV EMAIL LOG] To: ${supportEmail}`);
-    console.log(`[DEV EMAIL LOG] Subject: ${emailSubject}`);
-    console.log(`[DEV EMAIL LOG] User: ${userName} (${userEmail || userPhone})`);
-    console.log(`[DEV EMAIL LOG] Category: ${category}`);
-    console.log(`[DEV EMAIL LOG] Description: ${description}`);
-    console.log(`======================================================\n`);
-    return { success: true, provider: "mock" };
-
   } catch (err) {
-    console.error("Support Issue Email Error:", err.message);
+    console.error("[Email Error] sendIssueReportEmail:", err.message);
     return { success: false, error: err.message };
   }
 };
