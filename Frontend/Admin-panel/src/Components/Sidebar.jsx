@@ -164,47 +164,12 @@ const guardianMenu = [
   {
     icon: LayoutDashboard,
     label: "Dashboard",
-    path: "/",
-  },
-  {
-    icon: Users,
-    label: "My Patients",
-    path: "/patients",
-  },
-   {
-    icon: ClipboardList,
-    label: "Pending Requests",
-    path: "/pendingrequests"
-  },
-  {
-    icon: Pill,
-    label: "Medications",
-    path: "/medications",
+    path: "/guardian",
   },
   {
     icon: Calendar,
-    label: "Schedule",
-    path: "/today-schedule",
-  },
-  {
-    icon: FileText,
-    label: "Prescriptions",
-    path: "/prescriptions",
-  },
-  {
-    icon: ClipboardList,
-    label: "Reports",
-    path: "/reports",
-  },
-  {
-    icon: HeartPulse,
-    label: "Vitals",
-    path: "/vitals",
-  },
-  {
-    icon: Settings,
-    label: "Settings",
-    path: "/settings",
+    label: "Medication History",
+    path: "/guardian/history",
   },
 ];
 
@@ -236,7 +201,11 @@ export default function Sidebar() {
           </h1>
 
           <p className="text-sm text-gray-500">
-            Clinician Portal
+            {role === "guardian"
+              ? "Guardian Portal"
+              : role === "superadmin"
+              ? "Super Admin Portal"
+              : "Clinician Portal"}
           </p>
         </div>
       </div>

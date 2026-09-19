@@ -595,13 +595,9 @@ const MediktoLogin = () => {
     localStorage.setItem("user", JSON.stringify(user));
 
     if (mustChangePassword) {
-
-      navigate("/");
-
+      navigate("/guardian/change-password");
     } else {
-
-      navigate("/");
-
+      navigate("/guardian");
     }
 
   } catch (err) {

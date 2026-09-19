@@ -250,30 +250,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       try {
                         final response = await ProfileManager().deleteAccount();
 
-                        if (dialogCtx.mounted) {
-                          Navigator.of(dialogCtx).pop();
-                        }
-
                         if (response.status == ResponseStatus.SUCCESS) {
+                          // Fetch userId BEFORE closing dialog / clearing session
                           final prefs = await SharedPreferences.getInstance();
                           final currentUserId = prefs.getString(StorageKeys.userId);
 
+                          // Close the dialog first using its own context
+                          if (dialogCtx.mounted) {
+                            Navigator.of(dialogCtx).pop();
+                          }
+
+                          // Show toast while the ProfileScreen widget is still mounted
+                          // (logoutUser() will replace the entire navigator stack immediately after)
                           if (mounted) {
                             AppToasts.showSuccess(context, "Account deleted successfully");
                           }
 
+                          // Clear session + navigate to Login via navigatorKey (safe after widget disposal)
                           await dioClient.logoutUser(force: true, userId: currentUserId);
                         } else {
+                          // API returned a non-success response – keep session, reset spinner
+                          if (dialogCtx.mounted) {
+                            setDialogState(() => isDeleting = false);
+                          }
                           if (mounted) {
                             AppToasts.showError(context, response.message);
                           }
                         }
                       } catch (err) {
-                        if (builderCtx.mounted) {
+                        // Network / unexpected error – always reset the spinner so user isn't stuck
+                        if (dialogCtx.mounted) {
                           setDialogState(() => isDeleting = false);
                         }
                         if (mounted) {
-                          AppToasts.showError(context, "An error occurred while deleting account.");
+                          AppToasts.showError(
+                            context,
+                            "An error occurred while deleting account. Please try again.",
+                          );
                         }
                       }
                     },
