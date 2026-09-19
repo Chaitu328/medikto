@@ -1,4 +1,5 @@
 const Dose = require("../models/doseModel");
+const Medication = require("../models/medicationModel");
 const {
   buildUserAccessFilter,
   shouldPopulateUser,
@@ -30,9 +31,17 @@ exports.getAdherence = async (req, res) => {
     const todayIST = getISTDateStr(now);
     const sevenDaysAgoIST = getISTDateStr(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000));
 
-    // Filter for last 7 days using Asia/Kolkata date strings
+    // Filter for user/patient access
     const accessFilter = await buildUserAccessFilter(req, req.query.patientId);
 
+    // Check count of currently active medications
+    const activeMedications = await Medication.countDocuments({
+      ...accessFilter,
+      status: "active"
+    });
+    const hasActiveMedications = activeMedications > 0;
+
+    // Filter for last 7 days using Asia/Kolkata date strings
     const filter = {
       ...accessFilter,
       date: {
@@ -68,19 +77,29 @@ exports.getAdherence = async (req, res) => {
         dose.status === "missed"
     ).length;
 
-    const adherence =
-      totalDoses > 0
-        ? Math.round((takenDoses / totalDoses) * 100)
-        : 0;
+    let adherence = null;
+    let weeklyStatus = "No Regimen";
 
-    let weeklyStatus = "Poor";
-
-    if (adherence >= 90) {
-      weeklyStatus = "Excellent";
-    } else if (adherence >= 75) {
-      weeklyStatus = "Good";
-    } else if (adherence >= 50) {
-      weeklyStatus = "Average";
+    if (!hasActiveMedications) {
+      // User has no active medications (brand new user or removed/deleted all medications)
+      adherence = null;
+      weeklyStatus = "No Regimen";
+    } else if (totalDoses === 0) {
+      // User has active medications, but no past doses in the 7-day window yet (just started)
+      adherence = null;
+      weeklyStatus = "Starting";
+    } else {
+      // Active regimen with scheduled doses in the window
+      adherence = Math.round((takenDoses / totalDoses) * 100);
+      if (adherence >= 90) {
+        weeklyStatus = "Excellent";
+      } else if (adherence >= 75) {
+        weeklyStatus = "Good";
+      } else if (adherence >= 50) {
+        weeklyStatus = "Average";
+      } else {
+        weeklyStatus = "Poor";
+      }
     }
 
     res.status(200).json({
@@ -91,6 +110,8 @@ exports.getAdherence = async (req, res) => {
       totalDoses,
       takenDoses,
       missedDoses,
+      hasActiveMedications,
+      activeMedications,
       data: doses,
     });
 

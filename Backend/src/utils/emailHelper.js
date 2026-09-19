@@ -172,7 +172,7 @@ exports.sendGuardianCredentials = async (
       process.env.GUARDIAN_PORTAL_URL ||
       (process.env.ADMIN_URL
         ? `${process.env.ADMIN_URL}/guardian/login`
-        : "https://portal.medikto.com/guardian/login");
+        : "https://admin.medikto.com/guardian/login");
 
     // Info Card: Patient & Relation
     const infoCardHtml = `

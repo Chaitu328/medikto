@@ -450,7 +450,57 @@ const todayDosesOnly = allDoses.filter(d => d.date === "2026-09-07");
 assert.strictEqual(todayDosesOnly.length, 1);
 assert.strictEqual(todayDosesOnly[0].date, "2026-09-07");
 assert.ok(!todayDosesOnly.some(d => d.date === "2026-09-06"));
-console.log("✅ Test 28: Today-only schedule -> Yesterday's doses NEVER appear in today's Activity view\n");
+console.log("✅ Test 28: Today-only schedule -> Yesterday's doses NEVER appear in today's Activity view");
 
-console.log("ALL 28 BACKEND LIFECYCLE, ACTION WINDOW, TIMEZONE, AND MULTI-DAY TESTS PASSED SUCCESSFULLY! 🎉");
+// Helper function simulating getAdherence logic
+const calculateAdherenceScore = ({ activeMedications, totalDoses, takenDoses }) => {
+  const hasActiveMedications = activeMedications > 0;
+  let adherence = null;
+  let weeklyStatus = "No Regimen";
+
+  if (!hasActiveMedications) {
+    adherence = null;
+    weeklyStatus = "No Regimen";
+  } else if (totalDoses === 0) {
+    adherence = null;
+    weeklyStatus = "Starting";
+  } else {
+    adherence = Math.round((takenDoses / totalDoses) * 100);
+    if (adherence >= 90) {
+      weeklyStatus = "Excellent";
+    } else if (adherence >= 75) {
+      weeklyStatus = "Good";
+    } else if (adherence >= 50) {
+      weeklyStatus = "Average";
+    } else {
+      weeklyStatus = "Poor";
+    }
+  }
+
+  return { adherence, weeklyStatus, hasActiveMedications };
+};
+
+// Test 29: Brand new user or user who removed all medications (0 active meds)
+const zeroMedsResult = calculateAdherenceScore({ activeMedications: 0, totalDoses: 0, takenDoses: 0 });
+assert.strictEqual(zeroMedsResult.adherence, null);
+assert.strictEqual(zeroMedsResult.weeklyStatus, "No Regimen");
+assert.strictEqual(zeroMedsResult.hasActiveMedications, false);
+console.log("✅ Test 29: Zero medications -> Adherence is null with 'No Regimen' (never 0% Poor)");
+
+// Test 30: User who just added medications (active medications > 0, 0 past doses in 7-day window)
+const newRegimenResult = calculateAdherenceScore({ activeMedications: 2, totalDoses: 0, takenDoses: 0 });
+assert.strictEqual(newRegimenResult.adherence, null);
+assert.strictEqual(newRegimenResult.weeklyStatus, "Starting");
+assert.strictEqual(newRegimenResult.hasActiveMedications, true);
+console.log("✅ Test 30: New regimen with 0 past doses -> Status is 'Starting' with hasActiveMedications=true");
+
+// Test 31: Active regimen with doses taken (e.g., 9 taken out of 10)
+const activeRegimenResult = calculateAdherenceScore({ activeMedications: 1, totalDoses: 10, takenDoses: 9 });
+assert.strictEqual(activeRegimenResult.adherence, 90);
+assert.strictEqual(activeRegimenResult.weeklyStatus, "Excellent");
+assert.strictEqual(activeRegimenResult.hasActiveMedications, true);
+console.log("✅ Test 31: Active regimen with doses -> Adherence is 90% with status 'Excellent'\n");
+
+console.log("ALL 31 BACKEND LIFECYCLE, ACTION WINDOW, TIMEZONE, AND ADHERENCE TESTS PASSED SUCCESSFULLY! 🎉");
+
 

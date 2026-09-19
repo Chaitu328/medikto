@@ -6,6 +6,8 @@ class AdherenceModel {
   final int? totalDoses;
   final int? takenDoses;
   final int? missedDoses;
+  final bool? hasActiveMedications;
+  final int? activeMedications;
 
   AdherenceModel({
     this.success,
@@ -15,6 +17,8 @@ class AdherenceModel {
     this.totalDoses,
     this.takenDoses,
     this.missedDoses,
+    this.hasActiveMedications,
+    this.activeMedications,
   });
 
   factory AdherenceModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,8 @@ class AdherenceModel {
       totalDoses: json['totalDoses'],
       takenDoses: json['takenDoses'],
       missedDoses: json['missedDoses'],
+      hasActiveMedications: json['hasActiveMedications'],
+      activeMedications: json['activeMedications'],
     );
   }
 
@@ -38,6 +44,8 @@ class AdherenceModel {
       "totalDoses": totalDoses,
       "takenDoses": takenDoses,
       "missedDoses": missedDoses,
+      "hasActiveMedications": hasActiveMedications,
+      "activeMedications": activeMedications,
     };
   }
 }
