@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:medikto/core/cache/secure_history_cache.dart';
 import 'package:medikto/core/constants/api_urls.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
 import 'package:medikto/core/utils/storage_keys.dart';
 import 'package:medikto/features/auth/login_view/login_screen.dart';
 import 'package:medikto/main.dart';
@@ -42,16 +43,23 @@ class DioClient {
   }
 
 
-Future<void> logoutUser() async {
+Future<void> logoutUser({bool force = false, String? userId}) async {
     final prefs = await SharedPreferences.getInstance();
     final currentToken = prefs.getString(StorageKeys.token);
-    if (currentToken == null || currentToken.isEmpty) {
+    final currentUserId = userId ?? prefs.getString(StorageKeys.userId);
+
+    if (!force && (currentToken == null || currentToken.isEmpty)) {
       // User is already logged out or not authenticated yet. Do not force route to LoginScreen.
       token = "";
       activePatientId = null;
       _dio?.options.headers.clear();
       return;
     }
+
+    if (currentUserId != null && currentUserId.isNotEmpty) {
+      await AppLockManager().removePin(currentUserId);
+    }
+    AppLockManager().lockApp();
 
     /// CLEAR STORED DATA
     await prefs.remove(StorageKeys.token);
@@ -74,7 +82,7 @@ Future<void> logoutUser() async {
       (route) => false,
     );
 
-    debugPrint("USER LOGGED OUT");
+    debugPrint("USER LOGGED OUT & SESSION CLEARED");
   }
   dynamic init() {
     _dio = Dio();

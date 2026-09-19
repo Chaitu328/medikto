@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
+import 'package:medikto/core/network/dio_client.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/theme/theme_provider.dart';
 import 'package:medikto/core/utils/storage_keys.dart';
@@ -201,7 +202,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       builder: (dialogCtx) {
         bool isDeleting = false;
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (builderCtx, setDialogState) {
             return AlertDialog(
               backgroundColor: colors.surface,
               shape: RoundedRectangleBorder(
@@ -246,38 +247,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onPressed: () async {
                       setDialogState(() => isDeleting = true);
 
-                      final response = await ProfileManager().deleteAccount();
+                      try {
+                        final response = await ProfileManager().deleteAccount();
 
-                      if (!mounted) return;
-                      Navigator.pop(dialogCtx);
-
-                      if (response.status == ResponseStatus.SUCCESS) {
-                        final prefs = await SharedPreferences.getInstance();
-                        final currentUserId = prefs.getString(StorageKeys.userId);
-
-                        if (currentUserId != null && currentUserId.isNotEmpty) {
-                          await AppLockManager().removePin(currentUserId);
+                        if (dialogCtx.mounted) {
+                          Navigator.of(dialogCtx).pop();
                         }
 
-                        await prefs.remove(StorageKeys.token);
-                        await prefs.remove(StorageKeys.refreshToken);
-                        await prefs.remove(StorageKeys.userId);
-                        AppLockManager().lockApp();
+                        if (response.status == ResponseStatus.SUCCESS) {
+                          final prefs = await SharedPreferences.getInstance();
+                          final currentUserId = prefs.getString(StorageKeys.userId);
 
-                        if (mounted) {
-                          AppToasts.showSuccess(context, "Account deleted successfully");
-                          await Future.delayed(const Duration(milliseconds: 500));
                           if (mounted) {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                              (route) => false,
-                            );
+                            AppToasts.showSuccess(context, "Account deleted successfully");
+                          }
+
+                          await dioClient.logoutUser(force: true, userId: currentUserId);
+                        } else {
+                          if (mounted) {
+                            AppToasts.showError(context, response.message);
                           }
                         }
-                      } else {
+                      } catch (err) {
+                        if (builderCtx.mounted) {
+                          setDialogState(() => isDeleting = false);
+                        }
                         if (mounted) {
-                          AppToasts.showError(context, response.message);
+                          AppToasts.showError(context, "An error occurred while deleting account.");
                         }
                       }
                     },

@@ -3,6 +3,8 @@ const {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
 } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const path = require("path");
@@ -89,6 +91,51 @@ const deleteS3Object = async (key) => {
 };
 
 /**
+ * Deletes all objects under a given S3 prefix (e.g. for complete user/patient data purge).
+ *
+ * @param {string} prefix - S3 key prefix (e.g. "patients/{userId}/" or "users/{userId}/")
+ * @returns {Promise<number>} Number of deleted objects
+ */
+const deleteS3Prefix = async (prefix) => {
+  if (!prefix) return 0;
+
+  let totalDeleted = 0;
+  let continuationToken = null;
+
+  try {
+    do {
+      const listCommand = new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      });
+
+      const listResponse = await s3Client.send(listCommand);
+
+      if (listResponse.Contents && listResponse.Contents.length > 0) {
+        const deleteCommand = new DeleteObjectsCommand({
+          Bucket: BUCKET_NAME,
+          Delete: {
+            Objects: listResponse.Contents.map((obj) => ({ Key: obj.Key })),
+            Quiet: true,
+          },
+        });
+
+        const deleteResponse = await s3Client.send(deleteCommand);
+        totalDeleted += listResponse.Contents.length;
+      }
+
+      continuationToken = listResponse.NextContinuationToken;
+    } while (continuationToken);
+
+    return totalDeleted;
+  } catch (err) {
+    console.error(`Failed to delete S3 objects under prefix "${prefix}":`, err.message);
+    return totalDeleted;
+  }
+};
+
+/**
  * Resolves a stored file value (either a legacy Cloudinary public URL or an S3 object key)
  * into an accessible URL for the client.
  *
@@ -142,9 +189,11 @@ module.exports = {
   uploadBufferToS3,
   getPresignedDownloadUrl,
   deleteS3Object,
+  deleteS3Prefix,
   resolveFileUrl,
   generateReportKey,
   generatePrescriptionKey,
   generateDoseProofKey,
   generateAvatarKey,
 };
+

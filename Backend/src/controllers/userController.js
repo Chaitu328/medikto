@@ -1,11 +1,23 @@
 const mongoose = require("mongoose");
 const User = require("../models/userModel");
 const Hospital = require("../models/hospitalModel");
+const Medication = require("../models/medicationModel");
+const Dose = require("../models/doseModel");
+const Vitals = require("../models/vitalsModel");
+const Report = require("../models/reportModel");
+const Prescription = require("../models/prescriptionModel");
+const Log = require("../models/logModel");
+const Notification = require("../models/notificationModel");
+const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
+const OTP = require("../models/authModel");
 const {
   uploadBufferToS3,
   generateAvatarKey,
   resolveFileUrl,
+  deleteS3Object,
+  deleteS3Prefix,
 } = require("../config/s3");
+const { delCache, invalidateUserDoseCache } = require("../utils/cache");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendInviteEmail } = require("../utils/emailHelper");
 const { sendPushNotification } = require("../utils/notificationHelper");
@@ -555,22 +567,92 @@ exports.deleteProfile = async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    const user = await User.findByIdAndDelete(userId);
+    const patientObjectId = new mongoose.Types.ObjectId(userId);
+
+    // 1. Verify user exists
+    const user = await User.findById(patientObjectId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Clean up associated caretaker invites
-    await CaretakerInvite.deleteMany({
-      $or: [{ patientId: userId }, { caretakerId: userId }]
-    });
+    const userPhone = user.phone;
+
+    // 2. Purge private S3 objects partitioned under this user
+    try {
+      await deleteS3Prefix(`patients/${userId}/`);
+      await deleteS3Prefix(`users/${userId}/`);
+      if (user.profilePic) {
+        await deleteS3Object(user.profilePic);
+      }
+    } catch (s3Err) {
+      console.error(`[deleteProfile] S3 purge error for user ${userId}:`, s3Err.message);
+    }
+
+    // 3. Delete all dependent medical and core records
+    await Promise.all([
+      Medication.deleteMany({ user: patientObjectId }),
+      Dose.deleteMany({ user: patientObjectId }),
+      Vitals.deleteMany({ user: patientObjectId }),
+      Report.deleteMany({ user: patientObjectId }),
+      Prescription.deleteMany({ user: patientObjectId }),
+      Log.deleteMany({ user: patientObjectId }),
+      Notification.deleteMany({
+        $or: [
+          { user: patientObjectId },
+          { "data.patientId": userId.toString() },
+          { "data.userId": userId.toString() }
+        ]
+      }),
+      CaretakerInvite.deleteMany({
+        $or: [
+          { patientId: patientObjectId },
+          { caretakerId: patientObjectId },
+          { createdBy: patientObjectId }
+        ]
+      }),
+    ]);
+
+    // 4. Remove this user from any other caretakers' guardianFor array
+    await User.updateMany(
+      { guardianFor: patientObjectId },
+      { $pull: { guardianFor: patientObjectId } }
+    );
+
+    // 5. If user was hospital admin, unlink adminId on the hospital
+    if (user.role === "admin") {
+      await Hospital.updateMany(
+        { adminId: patientObjectId },
+        { $unset: { adminId: 1 } }
+      );
+    }
+
+    // 6. Clean temporary OTPs for user's phone if present
+    if (userPhone) {
+      await Promise.all([
+        HospitalLinkOTP.deleteMany({ phone: userPhone }),
+        OTP.deleteMany({ phone: userPhone }),
+      ]);
+    }
+
+    // 7. Delete the primary User document
+    await User.findByIdAndDelete(patientObjectId);
+
+    // 8. Invalidate server-side cache
+    try {
+      await invalidateUserDoseCache(userId);
+      await delCache(userId);
+    } catch (cacheErr) {
+      console.warn(`[deleteProfile] Cache invalidation warning for user ${userId}:`, cacheErr.message);
+    }
 
     res.status(200).json({
       success: true,
-      message: "Account deleted successfully"
+      message: "Account and all associated medical data deleted permanently"
     });
   } catch (err) {
+    console.error("[deleteProfile] Error deleting account:", err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
