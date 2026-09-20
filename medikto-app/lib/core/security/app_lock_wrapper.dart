@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:medikto/core/widgets/push_token_debug_widget.dart';
 
 class AppLockWrapper extends StatelessWidget {
   final Widget child;
@@ -12,6 +13,16 @@ class AppLockWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return child;
+    return Stack(
+      children: [
+        child,
+        const Positioned(
+          bottom: 24,
+          left: 16,
+          right: 16,
+          child: PushTokenDebugWidget(),
+        ),
+      ],
+    );
   }
 }

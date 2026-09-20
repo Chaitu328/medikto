@@ -35,6 +35,12 @@ class NotificationManager {
   static String? pendingDoseId;
   static bool pendingOpenMedications = false;
 
+  // Debug token tracking for iOS/Android diagnosis
+  static String? apnsToken;
+  static String? fcmToken;
+  static String? permissionStatus;
+  static final ValueNotifier<int> tokenUpdateNotifier = ValueNotifier<int>(0);
+
   static Future<void> handleNotificationNavigation({String? doseId}) async {
     if (kDebugMode) {
       print("Handling notification navigation to MedicationsScreen with doseId: $doseId");
@@ -109,6 +115,9 @@ class NotificationManager {
         provisional: false,
         sound: true,
       );
+
+      permissionStatus = settings.authorizationStatus.name;
+      tokenUpdateNotifier.value++;
 
       if (kDebugMode) {
         print('User granted notification permission: ${settings.authorizationStatus}');
@@ -238,7 +247,7 @@ class NotificationManager {
     try {
       // On iOS, check APNs token availability
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        final apnsToken = await _fcm.getAPNSToken();
+        apnsToken = await _fcm.getAPNSToken();
         if (apnsToken == null) {
           if (kDebugMode) {
             print("APNs token is not ready yet. Registration will retry on token refresh or navigation.");
@@ -250,14 +259,16 @@ class NotificationManager {
         }
       }
 
-      final token = await _fcm.getToken();
-      if (token == null) {
+      fcmToken = await _fcm.getToken();
+      tokenUpdateNotifier.value++;
+
+      if (fcmToken == null) {
         if (kDebugMode) print("FCM Token is null");
         return;
       }
 
       if (kDebugMode) {
-        print("Retrieved FCM Token: $token");
+        print("Retrieved FCM Token: $fcmToken");
       }
 
       // Only upload FCM token to backend if user is authenticated
