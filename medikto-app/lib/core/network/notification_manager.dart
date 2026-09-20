@@ -293,7 +293,7 @@ class NotificationManager {
         final response = await dioClient.ref!.put(
           "/profile/fcm-token",
           data: {
-            "fcmToken": token,
+            "fcmToken": fcmToken,
             "timezone": timezone,
           },
         );
