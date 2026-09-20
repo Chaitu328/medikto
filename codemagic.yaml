@@ -65,7 +65,11 @@ workflows:
 
       - name: Build signed IPA
         script: |
+          LATEST_BUILD_NUMBER=$(app-store-connect fetch-build-number com.example.medikto || echo 1)
+          BUILD_NUM=$((LATEST_BUILD_NUMBER + 1))
+          echo "Building with incremented build number: $BUILD_NUM"
           flutter build ipa --release \
+            --build-number=$BUILD_NUM \
             --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
