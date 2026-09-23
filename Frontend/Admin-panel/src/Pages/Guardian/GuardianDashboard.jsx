@@ -19,6 +19,7 @@ import {
   Info
 } from "lucide-react";
 import api from "../../Api/axios";
+import { useGuardianPatient } from "./GuardianPatientContext";
 
 // Helper to format ISO or time string to readable 12-hour format
 function formatTimeTo12Hour(timeStr) {
@@ -67,9 +68,13 @@ function getTimeSlotIcon(timeStr) {
 }
 
 export default function GuardianDashboard() {
-  const [patients, setPatients] = useState([]);
-  const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const {
+    patients,
+    selectedPatientId,
+    setSelectedPatientId,
+    selectedPatient,
+    loadingPatients,
+  } = useGuardianPatient();
 
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,47 +84,6 @@ export default function GuardianDashboard() {
 
   // Proof image preview modal (view-only)
   const [previewImage, setPreviewImage] = useState(null);
-
-  // 1. Fetch Linked Patients on mount
-  useEffect(() => {
-    async function loadPatients() {
-      try {
-        const res = await api.get("/profile/caretakers/patients");
-        const list = Array.isArray(res.data) ? res.data : [];
-        setPatients(list);
-
-        if (list.length > 0) {
-          setSelectedPatientId(list[0]._id);
-          setSelectedPatient(list[0]);
-        } else {
-          // Check localStorage user.guardianFor as fallback
-          try {
-            const stored = JSON.parse(localStorage.getItem("user") || "{}");
-            if (Array.isArray(stored.guardianFor) && stored.guardianFor.length > 0) {
-              const first = stored.guardianFor[0];
-              const pId = typeof first === "object" ? first._id : first;
-              setSelectedPatientId(pId);
-              setSelectedPatient(typeof first === "object" ? first : { _id: pId, firstName: "Linked Patient" });
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading caretaker patients:", err);
-        setError("Failed to load linked patient information.");
-      }
-    }
-    loadPatients();
-  }, []);
-
-  // Update selected patient object when ID changes
-  useEffect(() => {
-    if (selectedPatientId && patients.length > 0) {
-      const found = patients.find((p) => p._id === selectedPatientId);
-      if (found) setSelectedPatient(found);
-    }
-  }, [selectedPatientId, patients]);
 
   // 2. Fetch Today's Schedules for selected patient
   const fetchTodaySchedule = useCallback(

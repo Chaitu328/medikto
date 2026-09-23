@@ -5,6 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
+import 'package:medikto/features/home/add_reports/utils/vitals_pdf_helper.dart';
+import 'package:medikto/features/profile/data/profile_provider.dart';
+import 'package:medikto/features/profile/models/profile_model.dart';
+import 'package:medikto/features/vitals/models/vital_metric_type.dart';
+import 'package:medikto/features/vitals/widgets/vitals_trend_card.dart';
 import 'package:share_plus/share_plus.dart';
 
 class VitalTrendHistoryView extends ConsumerWidget {
@@ -23,54 +28,23 @@ class VitalTrendHistoryView extends ConsumerWidget {
     required this.onAddTap,
   });
 
-  void _shareVitals(List<VitalsModel> records) {
+  Future<void> _shareVitals(WidgetRef ref, BuildContext context, List<VitalsModel> records) async {
     if (records.isEmpty) {
       Share.share("No $title records recorded yet in Medikto.");
       return;
     }
 
-    final buffer = StringBuffer();
-    buffer.writeln("📋 Medikto Health Record — $title");
-    buffer.writeln("--------------------------------------");
-
-    for (int i = 0; i < records.length && i < 15; i++) {
-      final r = records[i];
-      final dateStr = r.recordedAt != null
-          ? DateFormat("dd MMM yyyy, hh:mm a").format(r.recordedAt!.toLocal())
-          : "N/A";
-
-      String val = "";
-      String status = "";
-
-      switch (vitalType) {
-        case "bloodPressure":
-          val = "${r.systolic ?? '--'}/${r.diastolic ?? '--'} $unit";
-          status = r.bloodPressureStatus ?? "";
-          break;
-        case "heartRate":
-          val = "${r.heartRate ?? '--'} $unit";
-          status = r.heartRateStatus ?? "";
-          break;
-        case "temperature":
-          val = "${r.temperature ?? '--'} $unit";
-          status = r.temperatureStatus ?? "";
-          break;
-        case "sugar":
-          val = "${r.sugarLevel ?? '--'} $unit";
-          status = r.sugarStatus ?? "";
-          break;
-      }
-
-      buffer.writeln("• $dateStr: $val ${status.isNotEmpty ? '($status)' : ''}");
-      if (r.notes != null && r.notes!.isNotEmpty) {
-        buffer.writeln("  Notes: ${r.notes}");
-      }
+    final profileAsync = ref.read(getProfileProvider);
+    String? patientName;
+    if (profileAsync.value?.data is ProfileModel) {
+      final p = profileAsync.value!.data as ProfileModel;
+      patientName = p.firstName;
     }
 
-    buffer.writeln("--------------------------------------");
-    buffer.writeln("Generated via Medikto Health App");
-
-    Share.share(buffer.toString(), subject: "$title History Report");
+    await VitalsPdfHelper.generateAndShareVitalsPdf(
+      records: records,
+      patientName: patientName,
+    );
   }
 
   @override
@@ -154,11 +128,13 @@ class VitalTrendHistoryView extends ConsumerWidget {
               _buildLatestReadingCard(context, latest),
               const SizedBox(height: 16),
 
-              // 2. Trend Graph Card (Hidden for Blood Pressure per client requirement)
-              if (vitalType != "bloodPressure") ...[
-                _buildTrendChartCard(context, records),
-                const SizedBox(height: 20),
-              ],
+              // 2. Trend Graph Card
+              VitalsTrendCard(
+                initialConfig: VitalMetricRegistry.getConfigByKey(vitalType),
+                lockMetric: true,
+                customRecords: records,
+              ),
+              const SizedBox(height: 20),
 
               // 3. Historical Log Header & Share
               Row(
@@ -174,7 +150,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
                     ),
                   ),
                   InkWell(
-                    onTap: () => _shareVitals(records),
+                    onTap: () => _shareVitals(ref, context, records),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -188,10 +164,10 @@ class VitalTrendHistoryView extends ConsumerWidget {
                           Icon(Icons.share, color: accentColor, size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            "Share History",
+                            "Share",
                             style: TextStyle(
                               color: accentColor,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -203,17 +179,23 @@ class VitalTrendHistoryView extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
-              // 4. Readings List
-              ...records.map((r) => _buildReadingItem(context, r)),
-              const SizedBox(height: 30),
+              // 🔹 READINGS LIST
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: records.length,
+                itemBuilder: (context, index) {
+                  return _buildReadingItem(context, records[index]);
+                },
+              ),
             ],
           ),
         );
       },
       loading: () => Center(
-        child: CircularProgressIndicator(color: theme.accentPrimary),
+        child: CircularProgressIndicator(color: accentColor),
       ),
-      error: (err, _) => Center(
+      error: (err, st) => Center(
         child: Text(
           "Failed to load vital readings: $err",
           style: const TextStyle(color: Colors.redAccent),
@@ -225,24 +207,19 @@ class VitalTrendHistoryView extends ConsumerWidget {
   Widget _buildLatestReadingCard(BuildContext context, VitalsModel latest) {
     final theme = context.themeColors;
     String valueStr = "";
-    String statusStr = "";
 
     switch (vitalType) {
       case "bloodPressure":
         valueStr = "${latest.systolic ?? '--'}/${latest.diastolic ?? '--'}";
-        statusStr = latest.bloodPressureStatus ?? "Normal";
         break;
       case "heartRate":
         valueStr = "${latest.heartRate ?? '--'}";
-        statusStr = latest.heartRateStatus ?? "Normal";
         break;
       case "temperature":
         valueStr = "${latest.temperature ?? '--'}";
-        statusStr = latest.temperatureStatus ?? "Normal";
         break;
       case "sugar":
         valueStr = "${latest.sugarLevel ?? '--'}";
-        statusStr = latest.sugarStatus ?? "Normal";
         break;
     }
 
@@ -299,213 +276,35 @@ class VitalTrendHistoryView extends ConsumerWidget {
               ),
             ],
           ),
-          if (statusStr.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: accentColor.withAlpha(25),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: accentColor.withAlpha(80)),
-              ),
-              child: Text(
-                statusStr.toUpperCase(),
-                style: TextStyle(
-                  color: accentColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 
   Widget _buildTrendChartCard(BuildContext context, List<VitalsModel> records) {
-    if (vitalType == "bloodPressure") return const SizedBox.shrink();
-    final theme = context.themeColors;
-    final chartRecords = records.take(10).toList().reversed.toList();
-
-    List<FlSpot> mainSpots = [];
-    List<FlSpot> secondarySpots = [];
-
-    for (int i = 0; i < chartRecords.length; i++) {
-      final r = chartRecords[i];
-      switch (vitalType) {
-        case "bloodPressure":
-          if (r.systolic != null) mainSpots.add(FlSpot(i.toDouble(), r.systolic!.toDouble()));
-          if (r.diastolic != null) secondarySpots.add(FlSpot(i.toDouble(), r.diastolic!.toDouble()));
-          break;
-        case "heartRate":
-          if (r.heartRate != null) mainSpots.add(FlSpot(i.toDouble(), r.heartRate!.toDouble()));
-          break;
-        case "temperature":
-          if (r.temperature != null) mainSpots.add(FlSpot(i.toDouble(), r.temperature!));
-          break;
-        case "sugar":
-          if (r.sugarLevel != null) mainSpots.add(FlSpot(i.toDouble(), r.sugarLevel!.toDouble()));
-          break;
-      }
-    }
-
-    if (mainSpots.isEmpty) {
-      return const SizedBox();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "$title Trend",
-                style: TextStyle(
-                  color: theme.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (vitalType == "bloodPressure")
-                Row(
-                  children: [
-                    Container(width: 8, height: 8, decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle)),
-                    const SizedBox(width: 4),
-                    Text("Sys", style: TextStyle(color: theme.textSecondary, fontSize: 11)),
-                    const SizedBox(width: 8),
-                    Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFBA68C8), shape: BoxShape.circle)),
-                    const SizedBox(width: 4),
-                    Text("Dia", style: TextStyle(color: theme.textSecondary, fontSize: 11)),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 180,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (val) => FlLine(
-                    color: theme.chartGrid,
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 34,
-                      getTitlesWidget: (val, meta) => Text(
-                        val.toInt().toString(),
-                        style: TextStyle(color: theme.textMuted, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 22,
-                      getTitlesWidget: (val, meta) {
-                        final idx = val.toInt();
-                        if (idx >= 0 && idx < chartRecords.length) {
-                          final date = chartRecords[idx].recordedAt;
-                          if (date != null) {
-                            return Text(
-                              DateFormat("dd/MM").format(date.toLocal()),
-                              style: TextStyle(color: theme.textMuted, fontSize: 9),
-                            );
-                          }
-                        }
-                        return const SizedBox();
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: mainSpots,
-                    isCurved: true,
-                    color: accentColor,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                        radius: 4,
-                        color: accentColor,
-                        strokeWidth: 2,
-                        strokeColor: theme.card,
-                      ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: accentColor.withAlpha(35),
-                    ),
-                  ),
-                  if (secondarySpots.isNotEmpty)
-                    LineChartBarData(
-                      spots: secondarySpots,
-                      isCurved: true,
-                      color: const Color(0xFFBA68C8),
-                      barWidth: 3,
-                      isStrokeCapRound: true,
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                          radius: 4,
-                          color: const Color(0xFFBA68C8),
-                          strokeWidth: 2,
-                          strokeColor: theme.card,
-                        ),
-                      ),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: const Color(0xFFBA68C8).withAlpha(20),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+    return VitalsTrendCard(
+      initialConfig: VitalMetricRegistry.getConfigByKey(vitalType),
+      lockMetric: true,
+      customRecords: records,
     );
   }
 
   Widget _buildReadingItem(BuildContext context, VitalsModel record) {
     final theme = context.themeColors;
     String valStr = "";
-    String statusStr = "";
 
     switch (vitalType) {
       case "bloodPressure":
         valStr = "${record.systolic ?? '--'}/${record.diastolic ?? '--'} $unit";
-        statusStr = record.bloodPressureStatus ?? "";
         break;
       case "heartRate":
         valStr = "${record.heartRate ?? '--'} $unit";
-        statusStr = record.heartRateStatus ?? "";
         break;
       case "temperature":
         valStr = "${record.temperature ?? '--'} $unit";
-        statusStr = record.temperatureStatus ?? "";
         break;
       case "sugar":
         valStr = "${record.sugarLevel ?? '--'} $unit";
-        statusStr = record.sugarStatus ?? "";
         break;
     }
 
@@ -524,34 +323,13 @@ class VitalTrendHistoryView extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                valStr,
-                style: TextStyle(
-                  color: theme.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (statusStr.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    statusStr,
-                    style: TextStyle(
-                      color: accentColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
+          Text(
+            valStr,
+            style: TextStyle(
+              color: theme.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           Text(

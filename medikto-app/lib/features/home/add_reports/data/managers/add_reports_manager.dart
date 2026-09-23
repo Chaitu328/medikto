@@ -268,7 +268,14 @@ class AddReportsManager {
     Response response;
 
     try {
-      final fileName = file.path.split('/').last;
+      final pathStr = file.path;
+      String fileName = pathStr.split(RegExp(r'[/\\]')).last;
+      if (fileName.isEmpty) {
+        fileName = "report_${DateTime.now().millisecondsSinceEpoch}.pdf";
+      }
+      if (!fileName.contains('.')) {
+        fileName = "$fileName.jpg";
+      }
 
       FormData formData = FormData.fromMap({
         "title": title,
@@ -324,15 +331,27 @@ class AddReportsManager {
     Response response;
 
     try {
+      MultipartFile? multipartFile;
+      if (file != null) {
+        final pathStr = file.path;
+        String fileName = pathStr.split(RegExp(r'[/\\]')).last;
+        if (fileName.isEmpty) {
+          fileName = "prescription_${DateTime.now().millisecondsSinceEpoch}.jpg";
+        }
+        if (!fileName.contains('.')) {
+          fileName = "$fileName.jpg";
+        }
+        multipartFile = await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+        );
+      }
+
       FormData formData = FormData.fromMap({
         "medicineName": medicineName,
         "dosageInstructions": dosageInstructions ?? "",
         "reminders": jsonEncode(reminders),
-        if (file != null)
-          "file": await MultipartFile.fromFile(
-            file.path,
-            filename: file.path.split('/').last,
-          ),
+        if (multipartFile != null) "file": multipartFile,
       });
 
       response = await dioClient.ref!.post(
@@ -367,6 +386,58 @@ class AddReportsManager {
     } catch (e) {
       print("ERROR => $e");
 
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> deleteReport(String id) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.delete("${ApiUrls.uploadMedicalReport}/$id");
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ResponseData(
+          response.data?["message"] ?? "Report deleted successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      } else {
+        return ResponseData(
+          response.data?["message"] ?? "Failed to delete report",
+          ResponseStatus.FAILED,
+        );
+      }
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> deletePrescription(String id) async {
+    Response response;
+    try {
+      response = await dioClient.ref!.delete("${ApiUrls.addPrescription}/$id");
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ResponseData(
+          response.data?["message"] ?? "Prescription deleted successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      } else {
+        return ResponseData(
+          response.data?["message"] ?? "Failed to delete prescription",
+          ResponseStatus.FAILED,
+        );
+      }
+    } on DioException catch (e) {
+      return ResponseData(
+        e.response?.data?['message'] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
       return ResponseData("Please check your internet", ResponseStatus.FAILED);
     }
   }

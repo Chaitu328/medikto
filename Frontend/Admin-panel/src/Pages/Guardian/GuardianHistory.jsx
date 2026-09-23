@@ -19,6 +19,7 @@ import {
   Filter
 } from "lucide-react";
 import api from "../../Api/axios";
+import { useGuardianPatient } from "./GuardianPatientContext";
 
 // Helper to format 12-hour time
 function formatTimeTo12Hour(timeStr) {
@@ -74,9 +75,13 @@ function formatTakenTime(timestamp) {
 }
 
 export default function GuardianHistory() {
-  const [patients, setPatients] = useState([]);
-  const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const {
+    patients,
+    selectedPatientId,
+    setSelectedPatientId,
+    selectedPatient,
+    loadingPatients,
+  } = useGuardianPatient();
 
   const [timeframe, setTimeframe] = useState("week"); // "week", "14d", "month", "custom"
 
@@ -100,45 +105,6 @@ export default function GuardianHistory() {
   const [error, setError] = useState("");
 
   const [previewImage, setPreviewImage] = useState(null);
-
-  // 1. Fetch Monitored Patients
-  useEffect(() => {
-    async function loadPatients() {
-      try {
-        const res = await api.get("/profile/caretakers/patients");
-        const list = Array.isArray(res.data) ? res.data : [];
-        setPatients(list);
-
-        if (list.length > 0) {
-          setSelectedPatientId(list[0]._id);
-          setSelectedPatient(list[0]);
-        } else {
-          try {
-            const stored = JSON.parse(localStorage.getItem("user") || "{}");
-            if (Array.isArray(stored.guardianFor) && stored.guardianFor.length > 0) {
-              const first = stored.guardianFor[0];
-              const pId = typeof first === "object" ? first._id : first;
-              setSelectedPatientId(pId);
-              setSelectedPatient(typeof first === "object" ? first : { _id: pId, firstName: "Linked Patient" });
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading patients:", err);
-      }
-    }
-    loadPatients();
-  }, []);
-
-  // Update selected patient object
-  useEffect(() => {
-    if (selectedPatientId && patients.length > 0) {
-      const found = patients.find((p) => p._id === selectedPatientId);
-      if (found) setSelectedPatient(found);
-    }
-  }, [selectedPatientId, patients]);
 
   // Validate custom date range
   const validateCustomDates = (start, end) => {

@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
+import 'package:medikto/features/vitals/widgets/vitals_trend_card.dart';
 
 class VitalsTrackDetailsScreen extends StatefulWidget {
   const VitalsTrackDetailsScreen({super.key});
@@ -61,54 +61,11 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
         slivers: [
           SliverToBoxAdapter(child: SizedBox(height: size.height * 0.016)),
 
-          /// 🔹 Graph Card
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+          /// 🔹 Dynamic Vitals Trend Card
+          const SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
             sliver: SliverToBoxAdapter(
-              child: Stack(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: theme.card,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: theme.borderSubtle),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Body Temperature",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: theme.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          "°F",
-                          style: TextStyle(color: theme.textSecondary),
-                        ),
-                        const SizedBox(height: 25),
-                        SizedBox(height: 200, child: _buildHeartRateChart(context)),
-                      ],
-                    ),
-                  ),
-                  
-                  // 🔥 STAMP
-                  Positioned(
-                    top: 15,
-                    right: 15,
-                    child: Opacity(
-                      opacity: 0.7,
-                      child: Transform.rotate(
-                        angle: -0.15,
-                        child: const MediktoDigitalStamp(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: VitalsTrendCard(),
             ),
           ),
 
@@ -260,88 +217,6 @@ class _VitalsTrackDetailsScreenState extends State<VitalsTrackDetailsScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildHeartRateChart(BuildContext context) {
-    final theme = context.themeColors;
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: theme.chartGrid, strokeWidth: 1),
-        ),
-        titlesData: FlTitlesData(
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: 20,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) => Text(
-                value.toInt().toString(),
-                style: TextStyle(color: theme.textMuted, fontSize: 10),
-              ),
-            ),
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        lineBarsData: [
-          LineChartBarData(
-            spots: const [
-              FlSpot(0, 45),
-              FlSpot(2, 50),
-              FlSpot(4, 42),
-              FlSpot(6, 65),
-              FlSpot(8, 70),
-              FlSpot(10, 75),
-            ],
-            isCurved: true,
-            color: theme.accentPrimary,
-            barWidth: 4,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [
-                  theme.accentPrimary.withOpacity(0.2),
-                  theme.accentPrimary.withOpacity(0.0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        ],
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (touchedSpot) => theme.surface,
-            getTooltipItems: (spots) => spots
-                .map(
-                  (s) => LineTooltipItem(
-                    '${s.y.toInt()}°F',
-                    TextStyle(
-                      color: theme.accentPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-      ),
-    );
   }
 }
 

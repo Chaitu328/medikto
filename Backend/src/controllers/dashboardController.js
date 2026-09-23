@@ -77,17 +77,13 @@ exports.getAdherence = async (req, res) => {
         dose.status === "missed"
     ).length;
 
-    let adherence = null;
-    let weeklyStatus = "No Regimen";
+    let adherence = 0;
+    let weeklyStatus = "Active";
 
-    if (!hasActiveMedications) {
-      // User has no active medications (brand new user or removed/deleted all medications)
-      adherence = null;
-      weeklyStatus = "No Regimen";
-    } else if (totalDoses === 0) {
-      // User has active medications, but no past doses in the 7-day window yet (just started)
-      adherence = null;
-      weeklyStatus = "Starting";
+    if (totalDoses === 0) {
+      // 0 past doses in 7-day window (new user or before taking first dose)
+      adherence = 0;
+      weeklyStatus = "Active";
     } else {
       // Active regimen with scheduled doses in the window
       adherence = Math.round((takenDoses / totalDoses) * 100);

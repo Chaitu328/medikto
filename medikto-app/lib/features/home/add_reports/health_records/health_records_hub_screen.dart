@@ -3,6 +3,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:medikto/core/network/base_response.dart';
+import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/security/app_lock_manager.dart';
 import 'package:medikto/core/utils/file_share_helper.dart';
 import 'package:share_plus/share_plus.dart';
@@ -19,8 +21,11 @@ import 'package:medikto/features/home/add_reports/health_records/prescription_de
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
 import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
 import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
+import 'package:medikto/features/home/add_reports/utils/vitals_pdf_helper.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
+import 'package:medikto/features/vitals/models/vital_metric_type.dart';
+import 'package:medikto/features/vitals/widgets/vitals_trend_card.dart';
 
 class HealthRecordsHubScreen extends ConsumerStatefulWidget {
   final int initialTabIndex;
@@ -49,7 +54,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   // Filter state
   String _selectedVitalFilter = "All"; // All, bloodPressure, heartRate, sugar, temperature
   String _selectedReportCondition = "All"; // All, Critical, Moderate, Normal
-  String _selectedReportType = "All"; // All, Medical, Lab, Vaccination, Prescription
+  String _selectedReportType = "All"; // All, medical, prescription, test
   bool _showTrendChart = true;
 
   @override
@@ -58,7 +63,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     _tabController = TabController(
       length: 3,
       vsync: this,
-      initialIndex: widget.initialTabIndex.clamp(0, 2),
+      initialIndex: widget.initialTabIndex,
     );
     _tabController.addListener(() {
       if (mounted) setState(() {});
@@ -97,34 +102,177 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     if (!authenticated) return;
 
     if (records.isEmpty) {
-      Share.share("No health readings recorded yet in Medikto.");
+      AppToasts.showError(context, "No health readings recorded yet in Medikto.");
       return;
     }
 
-    final buffer = StringBuffer();
-    buffer.writeln("📋 Medikto Health Records Summary");
-    buffer.writeln("--------------------------------------");
-
-    for (int i = 0; i < records.length && i < 20; i++) {
-      final r = records[i];
-      final dateStr = r.recordedAt != null
-          ? DateFormat("dd MMM yyyy, hh:mm a").format(r.recordedAt!.toLocal())
-          : "N/A";
-
-      String title = _getVitalTitle(r.type);
-      String val = _getVitalValueWithUnit(r);
-      String status = _getVitalStatus(r);
-
-      buffer.writeln("• $dateStr — $title: $val ${status.isNotEmpty ? '($status)' : ''}");
-      if (r.notes != null && r.notes!.isNotEmpty) {
-        buffer.writeln("  Notes: ${r.notes}");
-      }
+    final profileAsync = ref.read(getProfileProvider);
+    String? patientName;
+    if (profileAsync.value?.data is ProfileModel) {
+      final p = profileAsync.value!.data as ProfileModel;
+      patientName = p.firstName;
     }
 
-    buffer.writeln("--------------------------------------");
-    buffer.writeln("Generated via Medikto Health App");
+    await VitalsPdfHelper.generateAndShareVitalsPdf(
+      records: records,
+      patientName: patientName,
+    );
+  }
 
-    Share.share(buffer.toString(), subject: "My Health Records & Vitals History");
+  Future<void> _deleteReport(MedicalReportModel report) async {
+    final colors = context.themeColors;
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_outline, color: AppColors.missedRed, size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "Delete Report?",
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          "Are you sure you want to delete this report?",
+          style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: colors.accentPrimary, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.missedRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true || !mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    final res = await ref.read(deleteReportProvider(report.id).future);
+
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (!mounted) return;
+
+    if (res.status == ResponseStatus.SUCCESS) {
+      AppToasts.showSuccess(context, "Report deleted successfully");
+      ref.invalidate(getReportsProvider);
+    } else {
+      AppToasts.showError(
+        context,
+        res.message.isNotEmpty ? res.message : "Failed to delete report",
+      );
+    }
+  }
+
+  Future<void> _deletePrescription(PrescriptionModel prescription) async {
+    final colors = context.themeColors;
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_outline, color: AppColors.missedRed, size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "Delete Prescription?",
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          "Are you sure you want to delete this prescription?",
+          style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: colors.accentPrimary, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.missedRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true || !mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    final res = await ref.read(deletePrescriptionProvider(prescription.id).future);
+
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (!mounted) return;
+
+    if (res.status == ResponseStatus.SUCCESS) {
+      AppToasts.showSuccess(context, "Prescription deleted successfully");
+      ref.invalidate(getPrescriptionsProvider);
+    } else {
+      AppToasts.showError(
+        context,
+        res.message.isNotEmpty ? res.message : "Failed to delete prescription",
+      );
+    }
   }
 
   String _getVitalTitle(String type) {
@@ -396,35 +544,38 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
 
               const SizedBox(height: 12),
 
-              // Optional Trend Graph (if a specific vital is selected or records exist; hidden for bloodPressure)
-              if (_selectedVitalFilter != "All" &&
-                  _selectedVitalFilter != "bloodPressure" &&
-                  _showTrendChart) ...[
-                _buildCentralTrendChart(
-                  filteredRecords
-                      .where((e) => e.type == _selectedVitalFilter)
-                      .toList(),
-                  _selectedVitalFilter,
-                ),
-                const SizedBox(height: 16),
-              ],
+              // Vitals Trend Graph Card (embedded inside Medical Documents Hub -> Vitals -> All Vitals & individual vital filters)
+              VitalsTrendCard(
+                key: ValueKey("vitals_trend_${_selectedVitalFilter}"),
+                initialConfig: _selectedVitalFilter == "All"
+                    ? VitalMetricRegistry.bloodPressure
+                    : (VitalMetricRegistry.getConfigByKey(_selectedVitalFilter) ??
+                        VitalMetricRegistry.bloodPressure),
+                customRecords: allVitals,
+              ),
+              const SizedBox(height: 16),
 
               // Previous Readings Header + Share
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _selectedVitalFilter == "All"
-                        ? "ALL PREVIOUS READINGS"
-                        : "${_getVitalTitle(_selectedVitalFilter).toUpperCase()} HISTORY",
-                    style: TextStyle(
-                      color: themeColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                  Expanded(
+                    child: Text(
+                      _selectedVitalFilter == "All"
+                          ? "ALL PREVIOUS READINGS"
+                          : "${_getVitalTitle(_selectedVitalFilter).toUpperCase()} HISTORY",
+                      style: TextStyle(
+                        color: themeColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (filteredRecords.isNotEmpty)
+                  if (filteredRecords.isNotEmpty) ...[
+                    const SizedBox(width: 8),
                     InkWell(
                       onTap: () => _shareAllVitals(filteredRecords),
                       borderRadius: BorderRadius.circular(10),
@@ -439,6 +590,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                           border: Border.all(color: themeColors.accentBorder),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.share_outlined, color: themeColors.accentMedium, size: 14),
                             const SizedBox(width: 4),
@@ -454,6 +606,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                         ),
                       ),
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 10),
@@ -582,22 +735,6 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                   ),
                 ],
               ),
-              if (status != null && status.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: themeColors.accentSubtle,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      color: themeColors.accentMedium,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
             ],
           ),
 
@@ -659,7 +796,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
       {"label": "Blood Pressure", "type": "bloodPressure"},
       {"label": "Heart Rate", "type": "heartRate"},
       {"label": "Blood Sugar", "type": "sugar"},
-      {"label": "Body Temp", "type": "temperature"},
+      {"label": "Body Temperature", "type": "temperature"},
     ];
 
     return SizedBox(
@@ -704,150 +841,9 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Widget _buildCentralTrendChart(List<VitalsModel> records, String vitalType) {
-    if (vitalType == "bloodPressure" || records.isEmpty) return const SizedBox.shrink();
-    final themeColors = context.themeColors;
-
-    final chartRecords = records.take(10).toList().reversed.toList();
-    List<FlSpot> mainSpots = [];
-    List<FlSpot> secondarySpots = [];
-
-    for (int i = 0; i < chartRecords.length; i++) {
-      final r = chartRecords[i];
-      switch (vitalType) {
-        case "bloodPressure":
-          if (r.systolic != null) {
-            mainSpots.add(FlSpot(i.toDouble(), r.systolic!.toDouble()));
-          }
-          if (r.diastolic != null) {
-            secondarySpots.add(FlSpot(i.toDouble(), r.diastolic!.toDouble()));
-          }
-          break;
-        case "heartRate":
-          if (r.heartRate != null) {
-            mainSpots.add(FlSpot(i.toDouble(), r.heartRate!.toDouble()));
-          }
-          break;
-        case "temperature":
-          if (r.temperature != null) {
-            mainSpots.add(FlSpot(i.toDouble(), r.temperature!));
-          }
-          break;
-        case "sugar":
-          if (r.sugarLevel != null) {
-            mainSpots.add(FlSpot(i.toDouble(), r.sugarLevel!.toDouble()));
-          }
-          break;
-      }
-    }
-
-    if (mainSpots.isEmpty) return const SizedBox();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: themeColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: themeColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "${_getVitalTitle(vitalType)} Trend",
-                style: TextStyle(
-                  color: themeColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (vitalType == "bloodPressure")
-                Row(
-                  children: [
-                    Text("• Sys", style: TextStyle(color: themeColors.accentMedium, fontSize: 11)),
-                    const SizedBox(width: 8),
-                    Text("• Dia", style: TextStyle(color: themeColors.textSecondary, fontSize: 11)),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 160,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (val) => FlLine(
-                    color: themeColors.chartGrid,
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      getTitlesWidget: (val, meta) => Text(
-                        val.toInt().toString(),
-                        style: TextStyle(color: themeColors.textMuted, fontSize: 9),
-                      ),
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 20,
-                      getTitlesWidget: (val, meta) {
-                        final idx = val.toInt();
-                        if (idx >= 0 && idx < chartRecords.length) {
-                          final date = chartRecords[idx].recordedAt;
-                          if (date != null) {
-                            return Text(
-                              DateFormat("dd/MM").format(date.toLocal()),
-                              style: TextStyle(color: themeColors.textMuted, fontSize: 9),
-                            );
-                          }
-                        }
-                        return const SizedBox();
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: mainSpots,
-                    isCurved: true,
-                    color: themeColors.accentPrimary,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: true),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: themeColors.accentSubtle,
-                    ),
-                  ),
-                  if (secondarySpots.isNotEmpty)
-                    LineChartBarData(
-                      spots: secondarySpots,
-                      isCurved: true,
-                      color: themeColors.textSecondary,
-                      barWidth: 2,
-                      isStrokeCapRound: true,
-                      dotData: const FlDotData(show: true),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+    return VitalsTrendCard(
+      initialConfig: VitalMetricRegistry.getConfigByKey(vitalType),
+      customRecords: records,
     );
   }
 
@@ -889,49 +885,33 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: themeColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          color: themeColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       valStr,
                       style: TextStyle(
                         color: themeColors.textPrimary,
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      dateStr,
-                      style: TextStyle(color: themeColors.textMuted, fontSize: 11),
-                    ),
-                    if (status.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: themeColors.accentSubtle,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            color: themeColors.accentMedium,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                  ],
+                Text(
+                  dateStr,
+                  style: TextStyle(color: themeColors.textMuted, fontSize: 11),
                 ),
                 if (record.notes != null && record.notes!.isNotEmpty) ...[
                   const SizedBox(height: 6),
@@ -1298,6 +1278,13 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                     );
                   },
                 ),
+
+              // Delete Button
+              IconButton(
+                icon: const Icon(Icons.delete_outline,
+                    color: AppColors.missedRed, size: 18),
+                onPressed: () => _deleteReport(report),
+              ),
             ],
           ),
         ),
@@ -1393,6 +1380,13 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                     );
                   },
                 ),
+
+              // Delete Button
+              IconButton(
+                icon: const Icon(Icons.delete_outline,
+                    color: AppColors.missedRed, size: 18),
+                onPressed: () => _deletePrescription(prescription),
+              ),
             ],
           ),
         ),

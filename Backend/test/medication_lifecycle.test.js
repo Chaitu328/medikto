@@ -455,15 +455,12 @@ console.log("✅ Test 28: Today-only schedule -> Yesterday's doses NEVER appear 
 // Helper function simulating getAdherence logic
 const calculateAdherenceScore = ({ activeMedications, totalDoses, takenDoses }) => {
   const hasActiveMedications = activeMedications > 0;
-  let adherence = null;
-  let weeklyStatus = "No Regimen";
+  let adherence = 0;
+  let weeklyStatus = "Active";
 
-  if (!hasActiveMedications) {
-    adherence = null;
-    weeklyStatus = "No Regimen";
-  } else if (totalDoses === 0) {
-    adherence = null;
-    weeklyStatus = "Starting";
+  if (totalDoses === 0) {
+    adherence = 0;
+    weeklyStatus = "Active";
   } else {
     adherence = Math.round((takenDoses / totalDoses) * 100);
     if (adherence >= 90) {
@@ -480,19 +477,19 @@ const calculateAdherenceScore = ({ activeMedications, totalDoses, takenDoses }) 
   return { adherence, weeklyStatus, hasActiveMedications };
 };
 
-// Test 29: Brand new user or user who removed all medications (0 active meds)
+// Test 29: Brand new user or user who removed all medications (0 active meds, 0 total doses)
 const zeroMedsResult = calculateAdherenceScore({ activeMedications: 0, totalDoses: 0, takenDoses: 0 });
-assert.strictEqual(zeroMedsResult.adherence, null);
-assert.strictEqual(zeroMedsResult.weeklyStatus, "No Regimen");
+assert.strictEqual(zeroMedsResult.adherence, 0);
+assert.strictEqual(zeroMedsResult.weeklyStatus, "Active");
 assert.strictEqual(zeroMedsResult.hasActiveMedications, false);
-console.log("✅ Test 29: Zero medications -> Adherence is null with 'No Regimen' (never 0% Poor)");
+console.log("✅ Test 29: Zero medications -> Adherence is 0% with single-word 'Active' status (never 'Poor')");
 
 // Test 30: User who just added medications (active medications > 0, 0 past doses in 7-day window)
 const newRegimenResult = calculateAdherenceScore({ activeMedications: 2, totalDoses: 0, takenDoses: 0 });
-assert.strictEqual(newRegimenResult.adherence, null);
-assert.strictEqual(newRegimenResult.weeklyStatus, "Starting");
+assert.strictEqual(newRegimenResult.adherence, 0);
+assert.strictEqual(newRegimenResult.weeklyStatus, "Active");
 assert.strictEqual(newRegimenResult.hasActiveMedications, true);
-console.log("✅ Test 30: New regimen with 0 past doses -> Status is 'Starting' with hasActiveMedications=true");
+console.log("✅ Test 30: New regimen with 0 past doses -> Status is 'Active' with adherence=0%");
 
 // Test 31: Active regimen with doses taken (e.g., 9 taken out of 10)
 const activeRegimenResult = calculateAdherenceScore({ activeMedications: 1, totalDoses: 10, takenDoses: 9 });

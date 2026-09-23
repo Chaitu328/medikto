@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:medikto/core/constants/app_themes.dart';
+import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
@@ -246,6 +247,7 @@ class MedicalReportsListScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
@@ -263,11 +265,94 @@ class MedicalReportsListScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: AppColors.missedRed, size: 20),
+                  onPressed: () => _deleteReport(context, ref, report),
+                ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _deleteReport(BuildContext context, WidgetRef ref, MedicalReportModel report) async {
+    final colors = context.themeColors;
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_outline, color: AppColors.missedRed, size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "Delete Report?",
+                style: TextStyle(
+                  color: colors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          "Are you sure you want to delete this report?",
+          style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: colors.accentPrimary, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.missedRed,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true || !context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    final res = await ref.read(deleteReportProvider(report.id).future);
+
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (!context.mounted) return;
+
+    if (res.status == ResponseStatus.SUCCESS) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Report deleted successfully")),
+      );
+      ref.invalidate(getReportsProvider);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message.isNotEmpty ? res.message : "Failed to delete report")),
+      );
+    }
   }
 }

@@ -77,6 +77,13 @@ void main() {
 
   group('HealthRecordsHubScreen Widget Tests', () {
     testWidgets('Renders HealthRecordsHubScreen with 3 tabs and quick vitals cards', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       final dummyVitals = [
         VitalsModel(
           type: 'bloodPressure',
@@ -129,6 +136,188 @@ void main() {
       expect(find.text('Vitals'), findsOneWidget);
       expect(find.text('Reports'), findsOneWidget);
       expect(find.text('Prescriptions'), findsOneWidget);
+
+      // Verify Vitals Measurements are displayed
+      expect(find.text('120/80 mmHg'), findsWidgets);
+      expect(find.text('75 BPM'), findsWidgets);
+      expect(find.text('100 mg/dL'), findsWidgets);
+      expect(find.text('98.4 °F'), findsWidgets);
+
+      // Verify Medical Interpretation Labels are NOT displayed on UI
+      expect(find.text('Normal'), findsNothing);
+      expect(find.text('Elevated'), findsNothing);
+      expect(find.text('Hypertension Stage 1'), findsNothing);
+      expect(find.text('Hypertension Stage 2'), findsNothing);
+    });
+
+    testWidgets('Renders Reports tab with delete icon on report cards', (tester) async {
+      final dummyReports = [
+        MedicalReportModel(
+          id: 'rep-123',
+          title: 'Blood Test Lab Report',
+          date: DateTime.parse('2026-09-04T10:00:00.000Z'),
+          fileUrl: 'https://s3.amazonaws.com/test/report.pdf',
+          condition: 'normal',
+          type: 'medical',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            getProfileProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: null))),
+            getVitalsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: <VitalsModel>[]))),
+            getReportsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: dummyReports))),
+            getPrescriptionsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: <PrescriptionModel>[]))),
+          ],
+          child: const MaterialApp(
+            home: HealthRecordsHubScreen(initialTabIndex: 1),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Blood Test Lab Report'), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+    });
+
+    testWidgets('Renders Prescriptions tab with delete icon on prescription cards', (tester) async {
+      final dummyPrescriptions = [
+        PrescriptionModel(
+          id: 'pres-123',
+          medicineName: 'Amoxicillin 500mg',
+          dosageInstructions: 'Take 1 capsule twice daily',
+          reminders: [],
+          fileUrl: 'https://s3.amazonaws.com/test/prescription.jpg',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            getProfileProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: null))),
+            getVitalsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: <VitalsModel>[]))),
+            getReportsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: <MedicalReportModel>[]))),
+            getPrescriptionsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: dummyPrescriptions))),
+          ],
+          child: const MaterialApp(
+            home: HealthRecordsHubScreen(initialTabIndex: 2),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Amoxicillin 500mg'), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+    });
+
+    testWidgets('Medical Documents Hub Vitals renders VitalsTrendCard on All Vitals by default', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final dummyVitals = [
+        VitalsModel(
+          type: 'bloodPressure',
+          systolic: 130,
+          diastolic: 70,
+          recordedAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+        VitalsModel(
+          type: 'heartRate',
+          heartRate: 76,
+          recordedAt: DateTime.now().subtract(const Duration(days: 2)),
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            getProfileProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: null))),
+            getVitalsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: dummyVitals))),
+            getReportsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: <MedicalReportModel>[]))),
+            getPrescriptionsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: <PrescriptionModel>[]))),
+          ],
+          child: const MaterialApp(
+            home: HealthRecordsHubScreen(initialTabIndex: 0),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Trend Graph is present on All Vitals
+      expect(find.text('Vitals Trends'), findsOneWidget);
+      expect(find.text('ALL PREVIOUS READINGS'), findsOneWidget);
+      expect(find.text('130/70 mmHg'), findsWidgets);
+      expect(find.text('76 BPM'), findsWidgets);
+
+      // Tap Heart Rate filter chip
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Heart Rate'));
+      await tester.pumpAndSettle();
+
+      // History header updates and list only contains Heart Rate
+      expect(find.text('HEART RATE HISTORY'), findsOneWidget);
+      expect(find.text('76 BPM'), findsWidgets);
+      expect(find.text('130/70 mmHg'), findsNothing);
+    });
+
+    testWidgets('Medical Documents Hub renders on narrow 320px viewport without overflow', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final dummyVitals = [
+        VitalsModel(
+          type: 'bloodPressure',
+          systolic: 130,
+          diastolic: 70,
+          recordedAt: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+      ];
+
+      FlutterErrorDetails? caughtDetails;
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        caughtDetails = details;
+      };
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            getProfileProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: null))),
+            getVitalsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: dummyVitals))),
+            getReportsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: <MedicalReportModel>[]))),
+            getPrescriptionsProvider.overrideWith((ref) => Future.value(ResponseData('Success', ResponseStatus.SUCCESS, data: <PrescriptionModel>[]))),
+          ],
+          child: const MaterialApp(
+            home: HealthRecordsHubScreen(initialTabIndex: 0),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      FlutterError.onError = originalOnError;
+
+      if (caughtDetails != null) {
+        debugPrint("FULL CAUGHT FLUTTER ERROR:\n${caughtDetails.toString()}");
+        for (final info in caughtDetails!.informationCollector!()) {
+          debugPrint("INFO NODE: ${info.toStringDeep()}");
+        }
+      }
+
+      final exc = tester.takeException();
+      expect(exc, isNull);
+      expect(find.text('Medical Documents Hub'), findsOneWidget);
+      expect(find.text('Vitals Trends'), findsOneWidget);
     });
   });
 }

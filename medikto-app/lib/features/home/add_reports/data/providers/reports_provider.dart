@@ -59,3 +59,11 @@ final getPrescriptionsProvider = FutureProvider<ResponseData>((ref) async {
 final getPrescriptionByIdProvider = FutureProvider.family<ResponseData, String>((ref, id) async {
   return ref.read(reportsProvider).getPrescriptionById(id);
 });
+
+final deleteReportProvider = FutureProvider.family<ResponseData, String>((ref, id) async {
+  return ref.read(reportsProvider).deleteReport(id);
+});
+
+final deletePrescriptionProvider = FutureProvider.family<ResponseData, String>((ref, id) async {
+  return ref.read(reportsProvider).deletePrescription(id);
+});

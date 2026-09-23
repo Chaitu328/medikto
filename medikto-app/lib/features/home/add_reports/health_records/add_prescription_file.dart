@@ -44,22 +44,34 @@ class _AddPrescriptionFileScreenState
   }
 
   Future<void> pickFromGallery() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
 
     if (image != null) {
-      setState(() {
-        selectedFile = File(image.path);
-      });
+      final file = File(image.path);
+      if (await file.exists()) {
+        setState(() {
+          selectedFile = file;
+        });
+      }
     }
   }
 
   Future<void> pickFromCamera() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+    );
 
     if (image != null) {
-      setState(() {
-        selectedFile = File(image.path);
-      });
+      final file = File(image.path);
+      if (await file.exists()) {
+        setState(() {
+          selectedFile = file;
+        });
+      }
     }
   }
 
@@ -221,7 +233,7 @@ class _AddPrescriptionFileScreenState
 
                             Text(
                               selectedFile != null
-                                  ? selectedFile!.path.split('/').last
+                                  ? selectedFile!.path.split(RegExp(r'[/\\]')).last
                                   : "Upload Digital Prescription",
                               textAlign: TextAlign.center,
                               style: TextStyle(

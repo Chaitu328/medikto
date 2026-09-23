@@ -22,7 +22,6 @@ import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:medikto/features/home/notifications/notification_provider.dart';
 import 'package:medikto/features/home/notifications/notification_model.dart';
-import 'package:medikto/features/medications/views/medication_verification_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -569,19 +568,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildAdherenceCard(AdherenceModel? adherence, AppThemeColors colors) {
-    final hasActiveMeds = adherence?.hasActiveMedications ??
-        ((adherence?.activeMedications ?? 0) > 0 || (adherence?.totalDoses ?? 0) > 0);
-    final status = adherence?.weeklyStatus ?? "No Regimen";
-
-    // If there are no active medications, show the friendly Empty/Get Started card
-    if (!hasActiveMeds || status == "No Regimen") {
-      return _buildNoMedicationsCard(colors);
-    }
-
-    final isStarting = status == "Starting" || adherence?.weeklyAdherence == null;
-    final percentage = isStarting ? 100 : (adherence?.weeklyAdherence ?? 0);
-    final progressValue = isStarting ? 1.0 : (percentage / 100);
-    final displayStatus = isStarting ? "Starting Out" : status;
+    final percentage = adherence?.weeklyAdherence ?? 0;
+    final progressValue = percentage / 100;
+    final status = adherence?.weeklyStatus ?? "Active";
 
     Color statusColor;
     Color statusBg;
@@ -593,6 +582,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         statusBg = colors.statusSuccessBg;
         break;
 
+      case "active":
+      case "new":
+      case "on track":
       case "starting":
         statusColor = colors.accentMedium;
         statusBg = colors.accentSubtle;
@@ -609,8 +601,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         break;
 
       default:
-        statusColor = colors.textSecondary;
-        statusBg = colors.cardSecondary;
+        statusColor = colors.accentMedium;
+        statusBg = colors.accentSubtle;
     }
 
     return Container(
@@ -629,7 +621,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Medication\nCompliance",
+                  "Medications\nrecord",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -639,9 +631,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  isStarting
-                      ? "New Regimen Active"
-                      : "${adherence?.period ?? "Last 7 Days"} performance",
+                  "${adherence?.period ?? "Last 7 Days"} performance",
                   style: TextStyle(fontSize: 12, color: colors.textSecondary),
                 ),
                 const SizedBox(height: 14),
@@ -650,7 +640,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      isStarting ? "100%" : "$percentage%",
+                      "$percentage%",
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
@@ -659,7 +649,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      isStarting ? "ON TRACK" : "ADHERENCE",
+                      "ADHERENCE",
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -685,13 +675,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isStarting ? Icons.auto_awesome : Icons.favorite,
+                        Icons.favorite,
                         size: 14,
                         color: statusColor,
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        displayStatus,
+                        status,
                         style: TextStyle(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
@@ -717,7 +707,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   value: progressValue,
                   strokeWidth: 8,
                   backgroundColor: colors.ringTrack,
-                  color: isStarting ? colors.accentMedium : colors.ringProgress,
+                  color: colors.ringProgress,
                   strokeCap: StrokeCap.round,
                 ),
               ),
@@ -729,121 +719,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isStarting ? Icons.health_and_safety : Icons.verified,
+                  Icons.verified,
                   color: colors.accentMedium,
                   size: 28,
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNoMedicationsCard(AppThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: colors.accentSubtle,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.info_outline, size: 13, color: colors.accentMedium),
-                    const SizedBox(width: 4),
-                    Text(
-                      "NO ACTIVE REGIMEN",
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
-                        color: colors.accentMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: colors.cardSecondary,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.medical_services_outlined,
-                  size: 18,
-                  color: colors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            "Medication Compliance",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: colors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "Add your daily prescribed medicines to begin tracking your dose schedule, reminders, and adherence streak.",
-            style: TextStyle(
-              fontSize: 13,
-              color: colors.textSecondary,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        MedicationVerificationScreen(medicineName: "Test"),
-                  ),
-                );
-                if (result == true) {
-                  ref.invalidate(getAdherenceProvider);
-                  ref.invalidate(getTodayScheduleProvider);
-                  ref.invalidate(getMedicationsProvider);
-                  setState(() {});
-                }
-              },
-              icon: const Icon(Icons.add_circle_outline, size: 18),
-              label: const Text(
-                "Add Medication",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.accentPrimary,
-                foregroundColor: colors.onAccentPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-            ),
           ),
         ],
       ),

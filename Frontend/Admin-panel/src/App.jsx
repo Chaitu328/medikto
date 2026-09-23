@@ -32,6 +32,12 @@ import UserManagement from "./Pages/UserManagement";
 import GuardianLayout from "./Pages/Guardian/GuardianLayout";
 import GuardianDashboard from "./Pages/Guardian/GuardianDashboard";
 import GuardianHistory from "./Pages/Guardian/GuardianHistory";
+import GuardianProfile from "./Pages/Guardian/GuardianProfile";
+import GuardianMedications from "./Pages/Guardian/GuardianMedications";
+import GuardianVitals from "./Pages/Guardian/GuardianVitals";
+import GuardianReports from "./Pages/Guardian/GuardianReports";
+import GuardianPrescriptions from "./Pages/Guardian/GuardianPrescriptions";
+import GuardianCompliance from "./Pages/Guardian/GuardianCompliance";
 import GuardianChangePassword from "./Pages/Guardian/GuardianChangePassword";
 
 import "./App.css";
@@ -102,7 +108,9 @@ function App() {
           path="/guardian/change-password"
           element={
             <GuardianProtectedRoute>
-              <GuardianChangePassword />
+              <GuardianLayout>
+                <GuardianChangePassword />
+              </GuardianLayout>
             </GuardianProtectedRoute>
           }
         />
@@ -119,11 +127,77 @@ function App() {
         />
 
         <Route
+          path="/guardian/profile"
+          element={
+            <GuardianProtectedRoute>
+              <GuardianLayout>
+                <GuardianProfile />
+              </GuardianLayout>
+            </GuardianProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/guardian/medications"
+          element={
+            <GuardianProtectedRoute>
+              <GuardianLayout>
+                <GuardianMedications />
+              </GuardianLayout>
+            </GuardianProtectedRoute>
+          }
+        />
+
+        <Route
           path="/guardian/history"
           element={
             <GuardianProtectedRoute>
               <GuardianLayout>
                 <GuardianHistory />
+              </GuardianLayout>
+            </GuardianProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/guardian/vitals"
+          element={
+            <GuardianProtectedRoute>
+              <GuardianLayout>
+                <GuardianVitals />
+              </GuardianLayout>
+            </GuardianProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/guardian/reports"
+          element={
+            <GuardianProtectedRoute>
+              <GuardianLayout>
+                <GuardianReports />
+              </GuardianLayout>
+            </GuardianProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/guardian/prescriptions"
+          element={
+            <GuardianProtectedRoute>
+              <GuardianLayout>
+                <GuardianPrescriptions />
+              </GuardianLayout>
+            </GuardianProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/guardian/compliance"
+          element={
+            <GuardianProtectedRoute>
+              <GuardianLayout>
+                <GuardianCompliance />
               </GuardianLayout>
             </GuardianProtectedRoute>
           }

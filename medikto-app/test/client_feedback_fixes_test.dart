@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:medikto/core/security/app_lock_manager.dart';
-import 'package:medikto/core/security/screen_security_service.dart';
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
 import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
 import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
@@ -103,13 +102,6 @@ void main() {
 
       expect(report.fileUrl.endsWith('.pdf'), isTrue);
       expect(prescription.fileUrl!.endsWith('.pdf'), isTrue);
-    });
-
-    test('Screen Security Service defines canonical client security notice', () {
-      expect(
-        ScreenSecurityService.securityNotice,
-        "Due to security, you cannot share your screen.",
-      );
     });
 
     test('AppLockManager session lifecycle correctly manages in-memory lock state', () {

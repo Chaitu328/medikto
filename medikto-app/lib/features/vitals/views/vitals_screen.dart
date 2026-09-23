@@ -219,10 +219,10 @@ class _AddReportsScreenState extends ConsumerState<AddReportsScreen> {
                   decoration: BoxDecoration(
                     color: theme.card,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: theme.accent.withOpacity(0.3)),
+                    border: Border.all(color: theme.accent.withValues(alpha: 0.3)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),

@@ -287,8 +287,8 @@
   router.delete("/dose/:doseId/selfie", auth, auth.blockGuardianWrite, deleteSelfie);
 
   //====== admin ==========
-  router.put("/admin/recover-selfie/:id", auth, recoverSelfie);
-  router.delete("/admin/delete-selfie/:id", auth, adminDeleteSelfie);
+  router.put("/admin/recover-selfie/:id", auth, auth.blockGuardianWrite, recoverSelfie);
+  router.delete("/admin/delete-selfie/:id", auth, auth.blockGuardianWrite, adminDeleteSelfie);
   router.get("/admin/deleted-selfies", auth, getDeletedSelfies);
 
 
