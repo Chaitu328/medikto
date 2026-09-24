@@ -187,7 +187,7 @@ void main() {
       ),
     ];
 
-    testWidgets('Renders VitalsTrendCard with metric selector, period filter, and chart',
+    testWidgets('Renders VitalsTrendCard with metric selector when allowMetricSelection is true',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -201,7 +201,7 @@ void main() {
           child: const MaterialApp(
             home: Scaffold(
               body: SingleChildScrollView(
-                child: VitalsTrendCard(),
+                child: VitalsTrendCard(allowMetricSelection: true),
               ),
             ),
           ),
@@ -213,8 +213,9 @@ void main() {
       // Card Title
       expect(find.text('Vitals Trends'), findsOneWidget);
 
-      // Metric Selector
+      // Verify Dropdown Selector exists
       expect(find.byType(VitalMetricSelector), findsOneWidget);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
       expect(find.text('Blood Sugar'), findsWidgets);
 
       // Period Filter
@@ -232,6 +233,38 @@ void main() {
       // Chart view and Legend
       expect(find.byType(VitalChartView), findsOneWidget);
       expect(find.byType(VitalChartLegend), findsOneWidget);
+    });
+
+    testWidgets('Renders VitalsTrendCard with static badge (no dropdown) when allowMetricSelection is false',
+        (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            getVitalsProvider.overrideWith(
+              (ref) => Future.value(
+                ResponseData('Success', ResponseStatus.SUCCESS, data: dummyVitals),
+              ),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: VitalsTrendCard(
+                  allowMetricSelection: false,
+                  initialConfig: VitalMetricRegistry.bloodSugar,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Verify Dropdown Selector does NOT exist
+      expect(find.byType(VitalMetricSelector), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
+      expect(find.text('Blood Sugar'), findsWidgets);
     });
 
     testWidgets('Tapping period filter updates period selection', (tester) async {

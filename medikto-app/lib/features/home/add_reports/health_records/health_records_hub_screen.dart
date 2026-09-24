@@ -56,6 +56,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   String _selectedReportCondition = "All"; // All, Critical, Moderate, Normal
   String _selectedReportType = "All"; // All, medical, prescription, test
   bool _showTrendChart = true;
+  bool _isSharing = false;
 
   @override
   void initState() {
@@ -95,12 +96,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
   }
 
   Future<void> _shareAllVitals(List<VitalsModel> records) async {
-    final authenticated = await AppLockManager().requestPinVerification(
-      context,
-      reason: "Enter PIN to share health records",
-    );
-    if (!authenticated) return;
-
+    if (_isSharing) return;
     if (records.isEmpty) {
       AppToasts.showError(context, "No health readings recorded yet in Medikto.");
       return;
@@ -113,10 +109,36 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
       patientName = p.firstName;
     }
 
-    await VitalsPdfHelper.generateAndShareVitalsPdf(
-      records: records,
-      patientName: patientName,
-    );
+    _isSharing = true;
+
+    try {
+      await AppLockManager().requestPinVerification(
+        context,
+        reason: "Enter PIN to share health records",
+        loadingTitle: "Preparing your health records",
+        loadingSubtitle: "Creating your secure PDF summary...\nPlease wait a moment.",
+        onVerified: () async {
+          final file = await VitalsPdfHelper.getOrBuildPdf(
+            records: records,
+            patientName: patientName,
+            vitalType: _selectedVitalFilter != "All" ? _selectedVitalFilter : null,
+          );
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            subject: "Medikto Health Records Summary",
+            text: "Please find attached the Medikto Health Records PDF summary.",
+          );
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSharing = false;
+        });
+      } else {
+        _isSharing = false;
+      }
+    }
   }
 
   Future<void> _deleteReport(MedicalReportModel report) async {
@@ -547,8 +569,9 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               // Vitals Trend Graph Card (embedded inside Medical Documents Hub -> Vitals -> All Vitals & individual vital filters)
               VitalsTrendCard(
                 key: ValueKey("vitals_trend_${_selectedVitalFilter}"),
+                allowMetricSelection: _selectedVitalFilter == "All",
                 initialConfig: _selectedVitalFilter == "All"
-                    ? VitalMetricRegistry.bloodPressure
+                    ? _getDeterministicLatestVitalConfig(allVitals)
                     : (VitalMetricRegistry.getConfigByKey(_selectedVitalFilter) ??
                         VitalMetricRegistry.bloodPressure),
                 customRecords: allVitals,
@@ -838,6 +861,22 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
         },
       ),
     );
+  }
+
+  VitalMetricConfig _getDeterministicLatestVitalConfig(List<VitalsModel> records) {
+    if (records.isNotEmpty) {
+      final sorted = List<VitalsModel>.from(records)
+        ..sort((a, b) {
+          final dateA = a.recordedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final dateB = b.recordedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return dateB.compareTo(dateA);
+        });
+      for (final r in sorted) {
+        final config = VitalMetricRegistry.getConfigByKey(r.type);
+        if (config != null) return config;
+      }
+    }
+    return VitalMetricRegistry.bloodSugar;
   }
 
   Widget _buildCentralTrendChart(List<VitalsModel> records, String vitalType) {

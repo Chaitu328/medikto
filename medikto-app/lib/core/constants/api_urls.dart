@@ -34,6 +34,7 @@ class ApiUrls {
   static const String addTemperature = "/vitals/temperature";
   static const String addSugar = "/vitals/sugar";
   static const String getVitals = "/vitals";
+  static const String exportVitalsPdf = "/vitals/export-pdf";
   static String updateMedication(String id) => "/medications/$id";
   static String verifyDoseSelfie(String doseId) => "/dose/$doseId/verify";
 

@@ -76,10 +76,17 @@ class _PinLockScreenState extends State<PinLockScreen> with SingleTickerProvider
       setState(() {
         _errorMessage = null;
         _enteredPin += digit;
+        if (_enteredPin.length == 4) {
+          _isVerifying = true;
+        }
       });
 
+      // Wait exactly one frame so Flutter renders the 4th filled dot,
+      // then verify immediately — no artificial delay.
       if (_enteredPin.length == 4) {
-        _verifyEnteredPin();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _verifyEnteredPin();
+        });
       }
     }
   }
@@ -105,8 +112,6 @@ class _PinLockScreenState extends State<PinLockScreen> with SingleTickerProvider
   }
 
   Future<void> _verifyEnteredPin() async {
-    setState(() => _isVerifying = true);
-
     final userId = _resolvedUserId ?? await AppLockManager().getActiveUserId();
     if (userId == null || userId.isEmpty) {
       setState(() => _isVerifying = false);
@@ -557,15 +562,23 @@ class _PinLockScreenState extends State<PinLockScreen> with SingleTickerProvider
   }
 }
 
+enum PinVerificationStep { entering, preparing }
+
 /// Modal sheet for inline 4-digit PIN verification before sensitive actions (e.g. sharing)
 class PinVerificationModal extends StatefulWidget {
   final String userId;
   final String reason;
+  final Future<void> Function()? onVerified;
+  final String? loadingTitle;
+  final String? loadingSubtitle;
 
   const PinVerificationModal({
     super.key,
     required this.userId,
     required this.reason,
+    this.onVerified,
+    this.loadingTitle,
+    this.loadingSubtitle,
   });
 
   @override
@@ -573,26 +586,23 @@ class PinVerificationModal extends StatefulWidget {
 }
 
 class _PinVerificationModalState extends State<PinVerificationModal> {
+  PinVerificationStep _step = PinVerificationStep.entering;
   String _enteredPin = "";
   String? _errorMessage;
   bool _isVerifying = false;
 
   void _onDigit(String d) {
-    if (_enteredPin.length < 4 && !_isVerifying) {
+    if (_enteredPin.length < 4 && !_isVerifying && _step == PinVerificationStep.entering) {
       HapticFeedback.lightImpact();
       setState(() {
         _errorMessage = null;
         _enteredPin += d;
       });
-
-      if (_enteredPin.length == 4) {
-        _verify();
-      }
     }
   }
 
   void _onDelete() {
-    if (_enteredPin.isNotEmpty && !_isVerifying) {
+    if (_enteredPin.isNotEmpty && !_isVerifying && _step == PinVerificationStep.entering) {
       HapticFeedback.lightImpact();
       setState(() {
         _errorMessage = null;
@@ -601,13 +611,53 @@ class _PinVerificationModalState extends State<PinVerificationModal> {
     }
   }
 
+  void _onOkPressed() {
+    if (_enteredPin.length == 4 && !_isVerifying && _step == PinVerificationStep.entering) {
+      _verify();
+    } else if (_enteredPin.length < 4) {
+      HapticFeedback.lightImpact();
+      setState(() {
+        _errorMessage = "Please enter all 4 digits";
+      });
+    }
+  }
+
   Future<void> _verify() async {
-    setState(() => _isVerifying = true);
+    setState(() {
+      _isVerifying = true;
+    });
+
     final isValid = await AppLockManager().verifyPin(widget.userId, _enteredPin);
+    if (!mounted) return;
+
     if (isValid) {
       HapticFeedback.mediumImpact();
-      if (!mounted) return;
-      Navigator.pop(context, true);
+
+      if (widget.onVerified != null) {
+        // Morph sheet in-place to the loading state instantly
+        setState(() {
+          _step = PinVerificationStep.preparing;
+          _errorMessage = null;
+        });
+
+        try {
+          await widget.onVerified!();
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+        } catch (e) {
+          if (mounted) {
+            setState(() {
+              _step = PinVerificationStep.entering;
+              _isVerifying = false;
+              _errorMessage = "Operation failed. Please try again.";
+              _enteredPin = "";
+            });
+          }
+        }
+      } else {
+        Navigator.pop(context, true);
+      }
     } else {
       HapticFeedback.heavyImpact();
       setState(() {
@@ -622,71 +672,131 @@ class _PinVerificationModalState extends State<PinVerificationModal> {
   Widget build(BuildContext context) {
     final colors = context.themeColors;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    return PopScope(
+      canPop: _step != PinVerificationStep.preparing,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: _step == PinVerificationStep.preparing
+              ? _buildPreparingView(colors)
+              : _buildEnteringView(colors),
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+    );
+  }
+
+  Widget _buildPreparingView(AppThemeColors colors) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "App Security Check",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: colors.textPrimary,
-                ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.accentPrimary.withAlpha(25),
+              shape: BoxShape.circle,
+            ),
+            child: SizedBox(
+              width: 34,
+              height: 34,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: colors.accentPrimary,
               ),
-              IconButton(
-                icon: Icon(Icons.close, color: colors.textMuted),
-                onPressed: () => Navigator.pop(context, false),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 20),
           Text(
-            widget.reason,
-            style: TextStyle(fontSize: 13, color: colors.textSecondary),
+            widget.loadingTitle ?? "Preparing your health records",
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: colors.textPrimary,
+            ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (i) {
-              final filled = i < _enteredPin.length;
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 10),
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: filled ? colors.accentPrimary : Colors.transparent,
-                  border: Border.all(
-                    color: _errorMessage != null ? AppColors.statusMissed : colors.accentPrimary,
-                    width: 2,
-                  ),
-                ),
-              );
-            }),
-          ),
-          if (_errorMessage != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              _errorMessage!,
-              style: const TextStyle(color: AppColors.statusMissed, fontSize: 12),
+          const SizedBox(height: 8),
+          Text(
+            widget.loadingSubtitle ?? "Creating your secure PDF summary...\nPlease wait a moment.",
+            style: TextStyle(
+              fontSize: 13,
+              color: colors.textSecondary,
+              height: 1.4,
             ),
-          ],
-          const SizedBox(height: 20),
-          // Compact Keypad
-          _buildCompactKeypad(colors),
-          const SizedBox(height: 10),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
         ],
       ),
+    );
+  }
+
+  Widget _buildEnteringView(AppThemeColors colors) {
+    return Column(
+      key: const ValueKey('entering_view'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "App Security Check",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colors.textPrimary,
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close, color: colors.textMuted),
+              onPressed: () => Navigator.pop(context, false),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          widget.reason,
+          style: TextStyle(fontSize: 13, color: colors.textSecondary),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(4, (i) {
+            final filled = i < _enteredPin.length;
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 10),
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: filled ? colors.accentPrimary : Colors.transparent,
+                border: Border.all(
+                  color: _errorMessage != null ? AppColors.statusMissed : colors.accentPrimary,
+                  width: 2,
+                ),
+              ),
+            );
+          }),
+        ),
+        if (_errorMessage != null) ...[
+          const SizedBox(height: 10),
+          Text(
+            _errorMessage!,
+            style: const TextStyle(color: AppColors.statusMissed, fontSize: 12),
+          ),
+        ],
+        const SizedBox(height: 20),
+        // Compact Keypad with OK button
+        _buildCompactKeypad(colors),
+        const SizedBox(height: 10),
+      ],
     );
   }
 
@@ -707,7 +817,7 @@ class _PinVerificationModalState extends State<PinVerificationModal> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            const SizedBox(width: 60, height: 60),
+            _buildOkButton(colors),
             _compactKey("0", colors),
             InkWell(
               onTap: _onDelete,
@@ -721,6 +831,47 @@ class _PinVerificationModalState extends State<PinVerificationModal> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildOkButton(AppThemeColors colors) {
+    final isReady = _enteredPin.length == 4 && !_isVerifying;
+
+    return InkWell(
+      onTap: _onOkPressed,
+      borderRadius: BorderRadius.circular(30),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 60,
+        height: 60,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isReady ? colors.accentPrimary : colors.card,
+          border: Border.all(
+            color: isReady ? colors.accentPrimary : colors.borderSubtle,
+            width: isReady ? 1.5 : 1.0,
+          ),
+          boxShadow: isReady
+              ? [
+                  BoxShadow(
+                    color: colors.accentPrimary.withAlpha(80),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          "OK",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: isReady ? Colors.white : colors.textMuted,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
     );
   }
 

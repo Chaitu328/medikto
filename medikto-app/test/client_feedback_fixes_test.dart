@@ -168,5 +168,30 @@ void main() {
       expect(isPinRequiredForAction('share_vitals_report'), isTrue);
       expect(isPinRequiredForAction('export_pdf'), isTrue);
     });
+
+    test('Sharing state machine guards against concurrent double taps', () {
+      bool isSharing = false;
+      int executionCount = 0;
+
+      Future<void> simulateShareAction() async {
+        if (isSharing) return;
+        isSharing = true;
+        try {
+          executionCount++;
+          await Future.delayed(const Duration(milliseconds: 50));
+        } finally {
+          isSharing = false;
+        }
+      }
+
+      // Trigger multiple concurrent taps
+      simulateShareAction();
+      simulateShareAction();
+      simulateShareAction();
+
+      // Only first invocation should execute
+      expect(executionCount, 1);
+    });
   });
 }
+

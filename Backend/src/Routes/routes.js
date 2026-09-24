@@ -96,7 +96,8 @@
     addBloodPressure,
     addHeartRate,
     addTemperature,
-    addSugar
+    addSugar,
+    exportVitalsPdf
   } = require("../controllers/vitalsController");
 
   const {
@@ -309,6 +310,7 @@
 
 
   // ================= VITALS =================
+  router.get("/vitals/export-pdf", auth, exportVitalsPdf);
   router.get("/vitals", auth, getVitals);
   router.get("/vitals/:id", auth, getVitalById);
   router.put("/vitals/:id", auth, auth.blockGuardianWrite, updateVital);

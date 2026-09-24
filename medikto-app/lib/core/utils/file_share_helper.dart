@@ -20,66 +20,54 @@ class FileShareHelper {
       return false;
     }
 
-    // 1. PIN verification check before sharing sensitive medical records
-    final verified = await AppLockManager().requestPinVerification(
+    return await AppLockManager().requestPinVerification(
       context,
       reason: "Enter PIN to share document",
-    );
-    if (!verified) return false;
+      loadingTitle: "Preparing document",
+      loadingSubtitle: "Downloading and preparing your file...\nPlease wait a moment.",
+      onVerified: () async {
+        final tempDir = await getTemporaryDirectory();
+        final extension = _extractExtension(fileUrl);
+        
+        final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        final safeName = customFileName != null && customFileName.trim().isNotEmpty
+            ? customFileName.trim()
+            : "${_sanitizeFileName(fallbackTitle)}_$dateStr$extension";
 
-    // 2. Download file to temporary directory
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final extension = _extractExtension(fileUrl);
-      
-      final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final safeName = customFileName != null && customFileName.trim().isNotEmpty
-          ? customFileName.trim()
-          : "${_sanitizeFileName(fallbackTitle)}_$dateStr$extension";
+        final filePath = "${tempDir.path}/$safeName";
+        final file = File(filePath);
 
-      final filePath = "${tempDir.path}/$safeName";
-      final file = File(filePath);
-
-      final dio = Dio();
-      final response = await dio.get<List<int>>(
-        fileUrl,
-        options: Options(
-          responseType: ResponseType.bytes,
-          followRedirects: true,
-          validateStatus: (status) => status != null && status < 400,
-        ),
-      );
-
-      if (response.data == null || response.data!.isEmpty) {
-        if (context.mounted) {
-          AppToasts.showError(context, "Unable to download file for sharing.");
-        }
-        return false;
-      }
-
-      await file.writeAsBytes(response.data!);
-
-      // 3. Share local file via OS share sheet
-      final mimeType = _getMimeType(extension);
-      await Share.shareXFiles(
-        [
-          XFile(
-            filePath,
-            mimeType: mimeType,
-            name: safeName,
+        final dio = Dio();
+        final response = await dio.get<List<int>>(
+          fileUrl,
+          options: Options(
+            responseType: ResponseType.bytes,
+            followRedirects: true,
+            validateStatus: (status) => status != null && status < 400,
           ),
-        ],
-        subject: fallbackTitle,
-      );
+        );
 
-      return true;
-    } catch (e) {
-      if (context.mounted) {
-        AppToasts.showError(context, "Failed to prepare file for sharing: $e");
-      }
-      return false;
-    }
+        if (response.data == null || response.data!.isEmpty) {
+          throw Exception("Unable to download file for sharing.");
+        }
+
+        await file.writeAsBytes(response.data!);
+
+        final mimeType = _getMimeType(extension);
+        await Share.shareXFiles(
+          [
+            XFile(
+              filePath,
+              mimeType: mimeType,
+              name: safeName,
+            ),
+          ],
+          subject: fallbackTitle,
+        );
+      },
+    );
   }
+
 
   static String _extractExtension(String url) {
     try {

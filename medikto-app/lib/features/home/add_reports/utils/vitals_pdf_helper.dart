@@ -1,6 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
+import 'package:medikto/core/constants/api_urls.dart';
+import 'package:medikto/core/constants/app_themes.dart';
+import 'package:medikto/core/network/dio_client.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -41,22 +47,27 @@ class VitalsPdfHelper {
     }
   }
 
-  /// Generates and shares a professional Medikto-branded PDF containing vital records.
-  static Future<void> generateAndShareVitalsPdf({
+  static Uint8List? _cachedLogoBytes;
+
+  /// Builds the local PDF file for vital records without direct UI interactions.
+  static Future<File> _buildPdfFile({
     required List<VitalsModel> records,
     String? patientName,
   }) async {
-    if (records.isEmpty) return;
-
     final pdf = pw.Document();
 
-    // Load Medikto Logo
+    // Load Medikto Logo (cached in memory)
     pw.MemoryImage? logoImage;
     try {
-      final logoBytes = await rootBundle.load('assets/images/medikto_logo.png');
-      logoImage = pw.MemoryImage(logoBytes.buffer.asUint8List());
+      if (_cachedLogoBytes == null) {
+        final logoBytes = await rootBundle.load('assets/images/medikto_logo.png');
+        _cachedLogoBytes = logoBytes.buffer.asUint8List();
+      }
+      if (_cachedLogoBytes != null) {
+        logoImage = pw.MemoryImage(_cachedLogoBytes!);
+      }
     } catch (e) {
-      print("Could not load logo for PDF: $e");
+      debugPrint("Could not load logo for PDF: $e");
     }
 
     final now = DateTime.now();
@@ -267,7 +278,7 @@ class VitalsPdfHelper {
             pw.SizedBox(height: 16),
             pw.Text(
               "Notice: This document contains strictly factual vital measurements recorded in the Medikto Health Application and contains no automatic medical diagnosis or interpretation.",
-              style: const pw.TextStyle(
+              style: pw.TextStyle(
                 fontSize: 8,
                 color: PdfColors.grey600,
                 fontStyle: pw.FontStyle.italic,
@@ -283,15 +294,222 @@ class VitalsPdfHelper {
     final sanitizedPatient = (patientName != null && patientName.isNotEmpty)
         ? "${patientName.replaceAll(RegExp(r'[^\w\s]+'), '').replaceAll(' ', '_')}_"
         : "";
-    final fileName = "Medikto_Health_Records_${sanitizedPatient}$fileDateSuffix.pdf";
+    final fileName = "Medikto_Health_Records_$sanitizedPatient$fileDateSuffix.pdf";
     final file = File("${output.path}/$fileName");
     await file.writeAsBytes(await pdf.save());
+    return file;
+  }
 
-    // Share via native share sheet
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: "Medikto Health Records Summary",
-      text: "Please find attached the Medikto Health Records PDF summary.",
-    );
+  /// Builds the local PDF file directly for PIN-gated or custom export flows
+  static Future<File> buildFile({
+    required List<VitalsModel> records,
+    String? patientName,
+  }) => _buildPdfFile(records: records, patientName: patientName);
+
+  /// Downloads pre-rendered PDF stream from backend for ultra-fast, scalable export.
+  /// Automatically and seamlessly falls back to local generation if device is offline.
+  static Future<File> getOrBuildPdf({
+    required List<VitalsModel> records,
+    String? patientName,
+    String? vitalType,
+    String? patientId,
+  }) async {
+    try {
+      final dio = dioClient.ref ?? Dio();
+      final dateSuffix = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final sanitizedPatient = (patientName != null && patientName.isNotEmpty)
+          ? "${patientName.replaceAll(RegExp(r'[^\w\s]+'), '').replaceAll(' ', '_')}_"
+          : "";
+      final fileName = "Medikto_Health_Records_$sanitizedPatient$dateSuffix.pdf";
+      final tempDir = await getTemporaryDirectory();
+      final filePath = "${tempDir.path}/$fileName";
+
+      final queryParams = <String, dynamic>{};
+      if (vitalType != null && vitalType.isNotEmpty && vitalType != "All") {
+        queryParams['type'] = vitalType;
+      }
+      if (patientId != null && patientId.isNotEmpty) {
+        queryParams['patientId'] = patientId;
+      }
+
+      final response = await dio.get<List<int>>(
+        ApiUrls.exportVitalsPdf,
+        queryParameters: queryParams,
+        options: Options(
+          responseType: ResponseType.bytes,
+          validateStatus: (status) => status != null && status < 400,
+        ),
+      );
+
+      if (response.data != null && response.data!.isNotEmpty) {
+        final file = File(filePath);
+        await file.writeAsBytes(response.data!);
+        return file;
+      }
+    } catch (e) {
+      debugPrint("Backend PDF stream unavailable, fallback to local engine: $e");
+    }
+
+    // Fallback: Generate locally on mobile device
+    return await buildFile(records: records, patientName: patientName);
+  }
+
+  /// Generates and shares a professional Medikto-branded PDF containing vital records
+  /// with a dedicated preparation state, frame-safe progress modal, and error recovery.
+  static Future<void> generateAndShareVitalsPdf({
+    required BuildContext context,
+    required List<VitalsModel> records,
+    String? patientName,
+  }) async {
+    if (records.isEmpty) return;
+
+    bool shouldTryAgain = true;
+
+    while (shouldTryAgain && context.mounted) {
+      shouldTryAgain = false;
+
+      // 1. Show Professional Preparation Dialog
+      BuildContext? dialogCtx;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dCtx) {
+          dialogCtx = dCtx;
+          final colors = dCtx.themeColors;
+          return PopScope(
+            canPop: false,
+            child: Dialog(
+              backgroundColor: colors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: colors.accentPrimary.withAlpha(25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: colors.accentPrimary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "Preparing your health records",
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Creating your secure PDF summary...\nPlease wait a moment.",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colors.textSecondary,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+
+      // Yield 1 frame to let Flutter render the loading dialog immediately
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      File? file;
+      try {
+        file = await _buildPdfFile(
+          records: records,
+          patientName: patientName,
+        );
+      } catch (e) {
+        debugPrint("Error creating health records PDF: $e");
+      } finally {
+        if (dialogCtx != null && dialogCtx!.mounted) {
+          Navigator.pop(dialogCtx!);
+        }
+      }
+
+      if (file != null && await file.exists() && (await file.length()) > 0) {
+        // Success: Open native share sheet directly
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          subject: "Medikto Health Records Summary",
+          text: "Please find attached the Medikto Health Records PDF summary.",
+        );
+        return;
+      } else {
+        // Failure: Show clear Try Again / Cancel dialog
+        if (!context.mounted) return;
+        final colors = context.themeColors;
+        final retry = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (errCtx) => AlertDialog(
+            backgroundColor: colors.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.statusMissed, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    "Unable to prepare health records",
+                    style: TextStyle(
+                      color: colors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              "Something went wrong while creating the PDF summary.",
+              style: TextStyle(color: colors.textSecondary, fontSize: 14, height: 1.4),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(errCtx, false),
+                child: Text(
+                  "Cancel",
+                  style: TextStyle(color: colors.textMuted, fontWeight: FontWeight.bold),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.accentPrimary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(errCtx, true),
+                child: const Text("Try Again"),
+              ),
+            ],
+          ),
+        );
+
+        if (retry == true) {
+          shouldTryAgain = true;
+        }
+      }
+    }
   }
 }
+

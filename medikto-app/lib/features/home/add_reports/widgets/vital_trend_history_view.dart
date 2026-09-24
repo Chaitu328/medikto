@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:medikto/core/constants/app_themes.dart';
+import 'package:medikto/core/network/toast_utils.dart';
+import 'package:medikto/core/security/app_lock_manager.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
 import 'package:medikto/features/home/add_reports/utils/vitals_pdf_helper.dart';
@@ -10,9 +13,8 @@ import 'package:medikto/features/profile/data/profile_provider.dart';
 import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:medikto/features/vitals/models/vital_metric_type.dart';
 import 'package:medikto/features/vitals/widgets/vitals_trend_card.dart';
-import 'package:share_plus/share_plus.dart';
 
-class VitalTrendHistoryView extends ConsumerWidget {
+class VitalTrendHistoryView extends ConsumerStatefulWidget {
   final String vitalType;
   final String title;
   final String unit;
@@ -28,9 +30,17 @@ class VitalTrendHistoryView extends ConsumerWidget {
     required this.onAddTap,
   });
 
-  Future<void> _shareVitals(WidgetRef ref, BuildContext context, List<VitalsModel> records) async {
+  @override
+  ConsumerState<VitalTrendHistoryView> createState() => _VitalTrendHistoryViewState();
+}
+
+class _VitalTrendHistoryViewState extends ConsumerState<VitalTrendHistoryView> {
+  bool _isSharing = false;
+
+  Future<void> _shareVitals(List<VitalsModel> records) async {
+    if (_isSharing) return;
     if (records.isEmpty) {
-      Share.share("No $title records recorded yet in Medikto.");
+      AppToasts.showError(context, "No ${widget.title} records recorded yet in Medikto.");
       return;
     }
 
@@ -41,14 +51,40 @@ class VitalTrendHistoryView extends ConsumerWidget {
       patientName = p.firstName;
     }
 
-    await VitalsPdfHelper.generateAndShareVitalsPdf(
-      records: records,
-      patientName: patientName,
-    );
+    _isSharing = true;
+
+    try {
+      await AppLockManager().requestPinVerification(
+        context,
+        reason: "Enter PIN to share health records",
+        loadingTitle: "Preparing your health records",
+        loadingSubtitle: "Creating your secure PDF summary...\nPlease wait a moment.",
+        onVerified: () async {
+          final file = await VitalsPdfHelper.getOrBuildPdf(
+            records: records,
+            patientName: patientName,
+            vitalType: widget.vitalType,
+          );
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            subject: "Medikto Health Records Summary",
+            text: "Please find attached the Medikto Health Records PDF summary.",
+          );
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSharing = false;
+        });
+      } else {
+        _isSharing = false;
+      }
+    }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = context.themeColors;
     final vitalsAsync = ref.watch(getVitalsProvider);
 
@@ -57,7 +93,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
         final List<VitalsModel> allVitals =
             (responseData.data as List?)?.cast<VitalsModel>() ?? [];
 
-        final records = allVitals.where((e) => e.type == vitalType).toList();
+        final records = allVitals.where((e) => e.type == widget.vitalType).toList();
         records.sort((a, b) {
           final aDate = a.recordedAt ?? DateTime(1970);
           final bDate = b.recordedAt ?? DateTime(1970);
@@ -77,11 +113,11 @@ class VitalTrendHistoryView extends ConsumerWidget {
                       color: theme.card,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.show_chart, color: accentColor, size: 48),
+                    child: Icon(Icons.show_chart, color: widget.accentColor, size: 48),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    "No $title History",
+                    "No ${widget.title} History",
                     style: TextStyle(
                       color: theme.textPrimary,
                       fontSize: 18,
@@ -97,12 +133,12 @@ class VitalTrendHistoryView extends ConsumerWidget {
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: accentColor,
+                      backgroundColor: widget.accentColor,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
-                    onPressed: onAddTap,
+                    onPressed: widget.onAddTap,
                     icon: const Icon(Icons.add, size: 20),
                     label: const Text("Add New Reading", style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
@@ -115,7 +151,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
         final latest = records.first;
 
         return RefreshIndicator(
-          color: accentColor,
+          color: widget.accentColor,
           backgroundColor: theme.card,
           onRefresh: () async {
             ref.invalidate(getVitalsProvider);
@@ -130,7 +166,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
 
               // 2. Trend Graph Card
               VitalsTrendCard(
-                initialConfig: VitalMetricRegistry.getConfigByKey(vitalType),
+                initialConfig: VitalMetricRegistry.getConfigByKey(widget.vitalType),
                 lockMetric: true,
                 customRecords: records,
               ),
@@ -150,23 +186,23 @@ class VitalTrendHistoryView extends ConsumerWidget {
                     ),
                   ),
                   InkWell(
-                    onTap: () => _shareVitals(ref, context, records),
+                    onTap: () => _shareVitals(records),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: accentColor.withAlpha(25),
+                        color: widget.accentColor.withAlpha(25),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: accentColor.withAlpha(60)),
+                        border: Border.all(color: widget.accentColor.withAlpha(60)),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.share, color: accentColor, size: 14),
+                          Icon(Icons.share, color: widget.accentColor, size: 14),
                           const SizedBox(width: 4),
                           Text(
                             "Share",
                             style: TextStyle(
-                              color: accentColor,
+                              color: widget.accentColor,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -193,7 +229,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
         );
       },
       loading: () => Center(
-        child: CircularProgressIndicator(color: accentColor),
+        child: CircularProgressIndicator(color: widget.accentColor),
       ),
       error: (err, st) => Center(
         child: Text(
@@ -208,7 +244,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
     final theme = context.themeColors;
     String valueStr = "";
 
-    switch (vitalType) {
+    switch (widget.vitalType) {
       case "bloodPressure":
         valueStr = "${latest.systolic ?? '--'}/${latest.diastolic ?? '--'}";
         break;
@@ -232,9 +268,9 @@ class VitalTrendHistoryView extends ConsumerWidget {
       decoration: BoxDecoration(
         color: theme.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accentColor.withAlpha(40)),
+        border: Border.all(color: widget.accentColor.withAlpha(40)),
         gradient: LinearGradient(
-          colors: [accentColor.withAlpha(20), theme.card],
+          colors: [widget.accentColor.withAlpha(20), theme.card],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -257,14 +293,14 @@ class VitalTrendHistoryView extends ConsumerWidget {
                   Text(
                     valueStr,
                     style: TextStyle(
-                      color: accentColor,
+                      color: widget.accentColor,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    unit,
+                    widget.unit,
                     style: TextStyle(color: theme.textSecondary, fontSize: 13),
                   ),
                 ],
@@ -283,7 +319,7 @@ class VitalTrendHistoryView extends ConsumerWidget {
 
   Widget _buildTrendChartCard(BuildContext context, List<VitalsModel> records) {
     return VitalsTrendCard(
-      initialConfig: VitalMetricRegistry.getConfigByKey(vitalType),
+      initialConfig: VitalMetricRegistry.getConfigByKey(widget.vitalType),
       lockMetric: true,
       customRecords: records,
     );
@@ -293,18 +329,18 @@ class VitalTrendHistoryView extends ConsumerWidget {
     final theme = context.themeColors;
     String valStr = "";
 
-    switch (vitalType) {
+    switch (widget.vitalType) {
       case "bloodPressure":
-        valStr = "${record.systolic ?? '--'}/${record.diastolic ?? '--'} $unit";
+        valStr = "${record.systolic ?? '--'}/${record.diastolic ?? '--'} ${widget.unit}";
         break;
       case "heartRate":
-        valStr = "${record.heartRate ?? '--'} $unit";
+        valStr = "${record.heartRate ?? '--'} ${widget.unit}";
         break;
       case "temperature":
-        valStr = "${record.temperature ?? '--'} $unit";
+        valStr = "${record.temperature ?? '--'} ${widget.unit}";
         break;
       case "sugar":
-        valStr = "${record.sugarLevel ?? '--'} $unit";
+        valStr = "${record.sugarLevel ?? '--'} ${widget.unit}";
         break;
     }
 

@@ -213,7 +213,7 @@ void main() {
       expect(find.byIcon(Icons.delete_outline), findsOneWidget);
     });
 
-    testWidgets('Medical Documents Hub Vitals renders VitalsTrendCard on All Vitals by default', (tester) async {
+    testWidgets('Medical Documents Hub Vitals single source of truth and deterministic All Vitals', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -221,17 +221,28 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
+      final now = DateTime.now();
       final dummyVitals = [
         VitalsModel(
           type: 'bloodPressure',
           systolic: 130,
           diastolic: 70,
-          recordedAt: DateTime.now().subtract(const Duration(days: 1)),
+          recordedAt: now.subtract(const Duration(days: 1)), // Most recent
         ),
         VitalsModel(
           type: 'heartRate',
           heartRate: 76,
-          recordedAt: DateTime.now().subtract(const Duration(days: 2)),
+          recordedAt: now.subtract(const Duration(days: 2)),
+        ),
+        VitalsModel(
+          type: 'sugar',
+          sugarLevel: 105,
+          recordedAt: now.subtract(const Duration(days: 3)),
+        ),
+        VitalsModel(
+          type: 'temperature',
+          temperature: 98.4,
+          recordedAt: now.subtract(const Duration(days: 4)),
         ),
       ];
 
@@ -251,20 +262,66 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Trend Graph is present on All Vitals
+      // CASE 1: All Vitals (Default)
+      // Graph deterministically picks Blood Pressure (most recent) and provides Dropdown selector
       expect(find.text('Vitals Trends'), findsOneWidget);
+      expect(find.text('Blood Pressure'), findsWidgets);
+      // Verify Dropdown selector exists on All Vitals
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+      // History shows all
       expect(find.text('ALL PREVIOUS READINGS'), findsOneWidget);
       expect(find.text('130/70 mmHg'), findsWidgets);
       expect(find.text('76 BPM'), findsWidgets);
+      expect(find.text('105 mg/dL'), findsWidgets);
+      expect(find.text('98.4 °F'), findsWidgets);
 
-      // Tap Heart Rate filter chip
+      // CASE 2: Select Blood Pressure top chip
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Blood Pressure'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Blood Pressure'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('BLOOD PRESSURE HISTORY'), findsOneWidget);
+      expect(find.text('130/70 mmHg'), findsWidgets);
+      expect(find.text('76 BPM'), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
+
+      // CASE 3: Select Heart Rate top chip
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Heart Rate'));
       await tester.tap(find.widgetWithText(ChoiceChip, 'Heart Rate'));
       await tester.pumpAndSettle();
 
-      // History header updates and list only contains Heart Rate
       expect(find.text('HEART RATE HISTORY'), findsOneWidget);
       expect(find.text('76 BPM'), findsWidgets);
       expect(find.text('130/70 mmHg'), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
+
+      // CASE 4: Select Blood Sugar top chip
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Blood Sugar'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Blood Sugar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('BLOOD SUGAR HISTORY'), findsOneWidget);
+      expect(find.text('105 mg/dL'), findsWidgets);
+      expect(find.text('76 BPM'), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
+
+      // CASE 5: Select Body Temperature top chip
+      await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Body Temperature'));
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Body Temperature'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('BODY TEMPERATURE HISTORY'), findsOneWidget);
+      expect(find.text('98.4 °F'), findsWidgets);
+      expect(find.text('105 mg/dL'), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
+
+      // CASE 6: Change Period from 7D to 30D inside card
+      await tester.tap(find.text('30D'));
+      await tester.pumpAndSettle();
+
+      // Vital remains Body Temperature
+      expect(find.text('BODY TEMPERATURE HISTORY'), findsOneWidget);
+      expect(find.text('98.4 °F'), findsWidgets);
     });
 
     testWidgets('Medical Documents Hub renders on narrow 320px viewport without overflow', (tester) async {

@@ -6,16 +6,14 @@ import {
   Calendar,
   HeartPulse,
   Droplets,
-  Ruler,
-  Weight,
   Building2,
   Crown,
   ShieldCheck,
-  Activity,
   Users,
   AlertCircle,
   RefreshCw,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import { useGuardianPatient } from "./GuardianPatientContext";
 import api from "../../Api/axios";

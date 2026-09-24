@@ -1189,16 +1189,17 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
   Future<void> _generateAndSharePDF(int tabIndex) async {
     if (_isSharing) return;
 
-    final verified = await AppLockManager().requestPinVerification(context);
-    if (!verified) return;
-
-    setState(() {
-      _isSharing = true;
-    });
+    _isSharing = true;
 
     try {
-      final tabNames = ["All Records", "Taken", "Missed", "Pending"];
-      final query = _getHistoryQuery();
+      await AppLockManager().requestPinVerification(
+        context,
+        reason: "Enter PIN to export medical records",
+        loadingTitle: "Preparing medical report",
+        loadingSubtitle: "Generating your adherence report...\nPlease wait a moment.",
+        onVerified: () async {
+          final tabNames = ["All Records", "Taken", "Missed", "Pending"];
+          final query = _getHistoryQuery();
 
       final response = await ref.read(doseHistoryProvider(query).future);
 
@@ -1481,15 +1482,18 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
 
       await file.writeAsBytes(await pdf.save());
 
-      setState(() {
-        _isSharing = false;
-      });
-
       await Share.shareXFiles([XFile(file.path)]);
+        },
+      );
     } catch (e) {
-      setState(() {
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSharing = false;
+        });
+      } else {
         _isSharing = false;
-      });
+      }
     }
   }
 

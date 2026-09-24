@@ -1,8 +1,10 @@
 const Vitals = require("../models/vitalsModel");
+const User = require("../models/userModel");
 const {
   buildUserAccessFilter,
   shouldPopulateUser,
 } = require("../utils/accessControl");
+const { generateVitalsPdfStream } = require("../services/vitalsPdfService");
 
 // Combine date + time from frontend
 const getDateTime = (date, time) => {
@@ -359,3 +361,47 @@ exports.deleteVital = async (req, res) => {
     });
   }
 };
+
+/**
+ * High-performance streaming export of health records as a branded PDF
+ */
+exports.exportVitalsPdf = async (req, res) => {
+  try {
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+
+    // Optional vital type filter
+    if (req.query.type && req.query.type !== "All" && req.query.type !== "all") {
+      filter.type = req.query.type;
+    }
+
+    // Optional date range
+    if (req.query.startDate || req.query.endDate) {
+      filter.recordedAt = {};
+      if (req.query.startDate) {
+        filter.recordedAt.$gte = new Date(req.query.startDate);
+      }
+      if (req.query.endDate) {
+        filter.recordedAt.$lte = new Date(req.query.endDate);
+      }
+    }
+
+    const vitals = await Vitals.find(filter).sort({ recordedAt: -1 });
+
+    const targetUserId = filter.user || req.user.id;
+    const patient = await User.findById(targetUserId).select("firstName lastName phone email");
+
+    const dateStr = new Date().toISOString().split("T")[0];
+    const sanitizedName = patient && patient.firstName ? `${patient.firstName}_` : "";
+    const filename = `Medikto_Health_Records_${sanitizedName}${dateStr}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    generateVitalsPdfStream(vitals, patient, res);
+  } catch (err) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+};
+
