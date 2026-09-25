@@ -65,9 +65,30 @@ workflows:
 
       - name: Build signed IPA
         script: |
-          LATEST_BUILD_NUMBER=$(app-store-connect fetch-build-number com.example.medikto || echo 1)
-          BUILD_NUM=$((LATEST_BUILD_NUMBER + 1))
-          echo "Building with incremented build number: $BUILD_NUM"
+          # Fetch latest build number from TestFlight, or fallback safely to Codemagic $BUILD_NUMBER
+          LATEST_BUILD_NUMBER=$(app-store-connect fetch-build-number com.example.medikto 2>/dev/null || echo 0)
+          
+          # Ensure LATEST_BUILD_NUMBER is numeric
+          if ! [[ "$LATEST_BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            LATEST_BUILD_NUMBER=0
+          fi
+          
+          # Codemagic $BUILD_NUMBER increments on every build; add offset (+10) to always exceed previous uploads
+          CM_BUILD_NUM=$((${BUILD_NUMBER:-1} + 10))
+          
+          if [ "$LATEST_BUILD_NUMBER" -gt 0 ]; then
+            ASC_NEXT=$((LATEST_BUILD_NUMBER + 1))
+            BUILD_NUM=$(( ASC_NEXT > CM_BUILD_NUM ? ASC_NEXT : CM_BUILD_NUM ))
+          else
+            BUILD_NUM=$CM_BUILD_NUM
+          fi
+          
+          echo "=========================================="
+          echo "Latest App Store Build Number : $LATEST_BUILD_NUMBER"
+          echo "Codemagic Build Number        : $BUILD_NUMBER"
+          echo "Final Build Number for .ipa   : $BUILD_NUM"
+          echo "=========================================="
+          
           flutter build ipa --release \
             --build-number=$BUILD_NUM \
             --export-options-plist=/Users/builder/export_options.plist
