@@ -355,7 +355,12 @@
     useEffect(() => {
       fetchLiveNotifications();
       const interval = setInterval(fetchLiveNotifications, 15000);
-      return () => clearInterval(interval);
+      const handleLinkSync = () => fetchLiveNotifications();
+      window.addEventListener("hospital_link_updated", handleLinkSync);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("hospital_link_updated", handleLinkSync);
+      };
     }, []);
 
     const formatRelativeTime = (isoString) => {
@@ -457,6 +462,7 @@
         await api.post("/hospitals/approve-link", { phone: linkApprovalModal.phone });
         setLinkApprovalModal((prev) => ({ ...prev, approving: false, approved: true }));
         fetchLiveNotifications(); // Refresh notification list
+        window.dispatchEvent(new Event("hospital_link_updated"));
         setTimeout(() => {
           setLinkApprovalModal((prev) => ({ ...prev, open: false }));
         }, 2500);

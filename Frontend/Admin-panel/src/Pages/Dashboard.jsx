@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 
 import {
   Users,
@@ -23,6 +23,13 @@ import {
   Loader2,
   Inbox,
   Zap,
+  Check,
+  X,
+  Phone,
+  Building2,
+  KeyRound,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 import {
@@ -37,22 +44,38 @@ import {
 import api from "../Api/axios.js";
 
 export default function Dashboard() {
-const [dashboard, setDashboard] = useState({
-  medications: [],
-  reports: [],
-  today: [],
-  vitals: [],
-  patients: [],
-  prescriptions: [],
-  adherence: {},
-  loading: true,
-});
+  const [dashboard, setDashboard] = useState({
+    medications: [],
+    reports: [],
+    today: [],
+    vitals: [],
+    patients: [],
+    prescriptions: [],
+    adherence: {},
+    loading: true,
+  });
 
   const [chartData, setChartData] = useState([]);
+  const [actionLoading, setActionLoading] = useState({});
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Listen for connection events from header or other components
+  useEffect(() => {
+    const handleSync = () => fetchDashboardData();
+    window.addEventListener("hospital_link_updated", handleSync);
+    return () => window.removeEventListener("hospital_link_updated", handleSync);
+  }, []);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   const normalizeArray = (response, key) => {
     if (Array.isArray(response?.data)) {
@@ -68,39 +91,33 @@ const [dashboard, setDashboard] = useState({
 
   const fetchDashboardData = async () => {
     try {
-     const [
-  medicationsRes,
-  reportsRes,
-  todayRes,
-  vitalsRes,
-  prescriptionsRes,
-  adherenceRes,
-  patientsRes,
-] = await Promise.all([
-  api.get("/medications"),
-  api.get("/reports"),
-  api.get("/today"),
-  api.get("/vitals"),
-  api.get("/prescriptions"),
-  api.get("/adherence"),
-  api.get("/users"), // <-- use your patient endpoint
-]);
+      const [
+        medicationsRes,
+        reportsRes,
+        todayRes,
+        vitalsRes,
+        prescriptionsRes,
+        adherenceRes,
+        patientsRes,
+      ] = await Promise.all([
+        api.get("/medications"),
+        api.get("/reports"),
+        api.get("/today"),
+        api.get("/vitals"),
+        api.get("/prescriptions"),
+        api.get("/adherence"),
+        api.get("/users"),
+      ]);
 
       const medications = normalizeArray(medicationsRes, "medications");
-
       const reports = normalizeArray(reportsRes, "reports");
-
       const today = normalizeArray(todayRes, "schedules");
-
       const vitals = normalizeArray(vitalsRes, "vitals");
-
       const prescriptions = normalizeArray(prescriptionsRes, "prescriptions");
-
       const adherence = adherenceRes?.data || {};
-
       const patients = normalizeArray(patientsRes, "users").filter(
-  (user) => user.role === "patient"
-);
+        (user) => user.role === "patient"
+      );
 
       const adherenceChart = adherence?.data?.length
         ? adherence.data.slice(0, 7).map((item, index) => ({
@@ -120,15 +137,15 @@ const [dashboard, setDashboard] = useState({
       setChartData(adherenceChart);
 
       setDashboard({
-  medications,
-  reports,
-  today,
-  vitals,
-  patients,
-  prescriptions,
-  adherence,
-  loading: false,
-});
+        medications,
+        reports,
+        today,
+        vitals,
+        patients,
+        prescriptions,
+        adherence,
+        loading: false,
+      });
     } catch (error) {
       console.log("Dashboard Error:", error);
 
@@ -141,6 +158,127 @@ const [dashboard, setDashboard] = useState({
         adherence: {},
         loading: false,
       });
+    }
+  };
+
+  // Pending patient connection requests
+  const pendingRequests = useMemo(() => {
+    return (dashboard.patients || []).filter(
+      (p) => p.role === "patient" && Boolean(p.otpCode)
+    );
+  }, [dashboard.patients]);
+
+  // Relative time formatter
+  const formatRelativeTime = (isoString) => {
+    if (!isoString) return "Just now";
+    const diffMs = Date.now() - new Date(isoString).getTime();
+    if (diffMs < 0) return "Just now";
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  };
+
+  // Handle Accept Connection Request
+  const handleAcceptRequest = async (patient) => {
+    const patientId = patient._id;
+    const patientName = patient.firstName || patient.name || "Patient";
+    const phone = patient.phone;
+
+    if (!phone) {
+      setToast({ message: "Patient phone number is missing.", type: "error" });
+      return;
+    }
+
+    setActionLoading((prev) => ({ ...prev, [patientId]: "accept" }));
+    try {
+      const res = await api.post("/hospitals/approve-link", { phone });
+      if (res.data?.success) {
+        // Remove pending card immediately from view
+        setDashboard((prev) => ({
+          ...prev,
+          patients: prev.patients.map((p) =>
+            p._id === patientId
+              ? { ...p, otpCode: null, isPendingConnection: false }
+              : p
+          ),
+        }));
+
+        setToast({
+          message: `${patientName} connected successfully!`,
+          type: "success",
+        });
+
+        // Notify Header & refresh dashboard in background
+        window.dispatchEvent(new Event("hospital_link_updated"));
+        fetchDashboardData();
+      } else {
+        setToast({
+          message: res.data?.message || "Failed to approve connection.",
+          type: "error",
+        });
+      }
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        "Failed to approve connection. Please try again.";
+      setToast({ message: msg, type: "error" });
+      if (err?.response?.status === 400 || err?.response?.status === 404) {
+        fetchDashboardData();
+      }
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [patientId]: null }));
+    }
+  };
+
+  // Handle Reject Connection Request
+  const handleRejectRequest = async (patient) => {
+    const patientId = patient._id;
+    const patientName = patient.firstName || patient.name || "Patient";
+    const phone = patient.phone;
+
+    if (!phone) {
+      setToast({ message: "Patient phone number is missing.", type: "error" });
+      return;
+    }
+
+    setActionLoading((prev) => ({ ...prev, [patientId]: "reject" }));
+    try {
+      const res = await api.post("/hospitals/reject-link", { phone });
+      if (res.data?.success) {
+        // Remove pending card immediately from view
+        setDashboard((prev) => ({
+          ...prev,
+          patients: prev.patients.filter((p) => p._id !== patientId),
+        }));
+
+        setToast({
+          message: `Connection request from ${patientName} rejected.`,
+          type: "info",
+        });
+
+        // Notify Header & refresh dashboard in background
+        window.dispatchEvent(new Event("hospital_link_updated"));
+        fetchDashboardData();
+      } else {
+        setToast({
+          message: res.data?.message || "Failed to reject connection.",
+          type: "error",
+        });
+      }
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        "Failed to reject connection. Please try again.";
+      setToast({ message: msg, type: "error" });
+      if (err?.response?.status === 400 || err?.response?.status === 404) {
+        fetchDashboardData();
+      }
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [patientId]: null }));
     }
   };
 
@@ -243,7 +381,9 @@ const [dashboard, setDashboard] = useState({
     );
   }
 
-  const totalPatients = dashboard.patients.length;
+  const totalPatients = (dashboard.patients || []).filter(
+    (p) => p.role === "patient" && !p.otpCode
+  ).length;
 
   const totalMedications = Array.isArray(dashboard.medications)
     ? dashboard.medications.length
@@ -264,7 +404,7 @@ const missedMedications =
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6">
       {/* HEADER */}
-      <section className="relative mb-10 overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-sm">
+      <section className="relative mb-8 overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-sm">
         <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.04] via-transparent to-[#10B981]/[0.04]" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#10B981]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
@@ -286,28 +426,143 @@ const missedMedications =
               Monitor patients, medications and adherence analytics across your entire practice.
             </p>
           </div>
-
-          {/* <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100">
-              <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-              <span className="text-sm font-medium text-emerald-700">
-                All Systems Online
-              </span>
-            </div>
-
-            <button className="h-11 px-5 rounded-2xl bg-white border border-slate-200 text-sm font-semibold text-[#0F172A] shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#64748B]" />
-              This Week
-              <ChevronDown className="w-3.5 h-3.5 text-[#64748B]" />
-            </button>
-
-            <button className="h-11 px-5 rounded-2xl bg-[#2563EB] text-white text-sm font-semibold shadow-lg shadow-[#2563EB]/20 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-[#2563EB]/30 transition-all duration-300 flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Medication
-            </button>
-          </div> */}
         </div>
       </section>
+
+      {/* PENDING CONNECTION REQUESTS SECTION */}
+      {pendingRequests.length > 0 && (
+        <section className="mb-8 animate-in fade-in slide-in-from-top-3 duration-300">
+          <div className="bg-gradient-to-r from-amber-500/[0.08] via-blue-500/[0.04] to-emerald-500/[0.06] border border-amber-200/80 rounded-3xl p-6 sm:p-7 shadow-sm">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-amber-200/60">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-300/50 flex items-center justify-center text-amber-700">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
+                      Pending Connection Requests
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white shadow-sm shadow-amber-500/20">
+                      {pendingRequests.length} {pendingRequests.length === 1 ? "Request" : "Requests"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#64748B] mt-0.5">
+                    Review patient connection requests that require your approval.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Request Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {pendingRequests.map((patient) => {
+                const patientName = patient.firstName || patient.name || "Patient";
+                const isAccepting = actionLoading[patient._id] === "accept";
+                const isRejecting = actionLoading[patient._id] === "reject";
+                const isBusy = Boolean(actionLoading[patient._id]);
+                const initials = patientName.charAt(0).toUpperCase();
+
+                return (
+                  <div
+                    key={patient._id}
+                    className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md hover:border-amber-300/80 transition-all duration-200 flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Top: Avatar, Name, Time */}
+                      <div className="flex items-start justify-between gap-3 mb-3.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {patient.profilePic ? (
+                            <img
+                              src={patient.profilePic}
+                              alt={patientName}
+                              className="w-12 h-12 rounded-xl object-cover border border-slate-200 flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] text-white font-bold text-lg flex items-center justify-center flex-shrink-0 shadow-sm shadow-blue-500/20">
+                              {initials}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <h3 className="text-base font-bold text-[#0F172A] truncate">
+                              {patientName}
+                            </h3>
+                            <div className="flex items-center gap-1.5 text-xs text-[#64748B] mt-0.5">
+                              <Phone className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="font-medium">{patient.phone || "No phone"}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60 flex-shrink-0">
+                          <Clock className="w-3 h-3 text-amber-500" />
+                          {formatRelativeTime(patient.linkCreatedAt || patient.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Request summary text */}
+                      <p className="text-xs text-[#64748B] mb-3 leading-relaxed">
+                        <span className="font-semibold text-[#0F172A]">{patientName}</span> is requesting to connect with your hospital.
+                      </p>
+
+                      {/* Verification / OTP Code */}
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-[#2563EB]">
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="text-xs font-semibold text-slate-600">
+                            Verification Code
+                          </span>
+                        </div>
+                        <span className="font-mono text-base font-bold tracking-[0.2em] text-[#0F172A] bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                          {patient.otpCode}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2.5 pt-3 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => handleRejectRequest(patient)}
+                        disabled={isBusy}
+                        className="flex-1 h-10 px-4 rounded-xl border border-red-200 bg-white text-red-600 text-xs sm:text-sm font-semibold hover:bg-red-50 hover:border-red-300 transition-all duration-150 disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                      >
+                        {isRejecting ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                        ) : (
+                          <>
+                            <X className="w-4 h-4" />
+                            Reject
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAcceptRequest(patient)}
+                        disabled={isBusy}
+                        className="flex-1 h-10 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs sm:text-sm font-semibold shadow-sm shadow-[#2563EB]/25 hover:shadow-md transition-all duration-150 disabled:opacity-60 flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                      >
+                        {isAccepting ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Accept
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* KPI CARDS */}
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
@@ -683,40 +938,51 @@ const missedMedications =
                 Recent Patients
               </h3>
               <span className="text-xs font-semibold text-[#64748B] bg-slate-100 px-2.5 py-1 rounded-lg">
-{dashboard.patients.length} Active              </span>
+                {(dashboard.patients || []).filter((p) => !p.otpCode).length} Active
+              </span>
             </div>
 
             <div className="space-y-4">
-              {Array.isArray(dashboard.patients) && dashboard.patients.length > 0 ? (
-  dashboard.patients.slice(0, 3).map((patient, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-[#F8FAFC] transition-all duration-200 cursor-pointer group/patient"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <img
-                          src={`https://i.pravatar.cc/100?img=${index + 1}`}
-                          className="w-11 h-11 rounded-xl object-cover ring-2 ring-white shadow-sm group-hover/patient:ring-[#2563EB]/20 transition-all duration-200"
-                          alt=""
-                        />
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#10B981] border-2 border-white" />
+              {Array.isArray(dashboard.patients) &&
+              dashboard.patients.filter((p) => !p.otpCode).length > 0 ? (
+                dashboard.patients
+                  .filter((p) => !p.otpCode)
+                  .slice(0, 3)
+                  .map((patient, index) => (
+                    <div
+                      key={patient._id || index}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-[#F8FAFC] transition-all duration-200 cursor-pointer group/patient"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative flex-shrink-0">
+                          {patient.profilePic ? (
+                            <img
+                              src={patient.profilePic}
+                              className="w-11 h-11 rounded-xl object-cover ring-2 ring-white shadow-sm group-hover/patient:ring-[#2563EB]/20 transition-all duration-200"
+                              alt=""
+                            />
+                          ) : (
+                            <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center ring-2 ring-white shadow-sm">
+                              {(patient?.firstName || "P").charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#10B981] border-2 border-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-[#0F172A] text-sm truncate">
+                            {patient?.firstName || "Patient"}
+                          </h4>
+                          <p className="text-xs text-[#64748B] truncate">
+                            {patient?.phone || "Medication Checkup"}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="font-semibold text-[#0F172A] text-sm truncate">
-                          {patient?.firstName || "Patient"}
-                        </h4>
-                        <p className="text-xs text-[#64748B]">
-                          Medication Checkup
-                        </p>
-                      </div>
-                    </div>
 
-                    <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100/60 flex-shrink-0">
-                      Active
-                    </span>
-                  </div>
-                ))
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100/60 flex-shrink-0">
+                        Active
+                      </span>
+                    </div>
+                  ))
               ) : (
                 <div className="py-8 text-center">
                   <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
@@ -730,11 +996,33 @@ const missedMedications =
         </div>
       </section>
 
-      {/* FLOATING ACTION BUTTON */}
-      <button className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-[#2563EB] text-white shadow-2xl shadow-[#2563EB]/30 flex items-center justify-center hover:scale-110 hover:shadow-[#2563EB]/40 transition-all duration-300 group z-50">
-        <div className="absolute inset-0 rounded-full bg-[#2563EB] animate-ping opacity-20" />
-        <Plus className="w-6 h-6 relative z-10" />
-      </button>
+      {/* FLOATING TOAST NOTIFICATION */}
+      {toast && (
+        <div
+          className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl border shadow-xl animate-in slide-in-from-bottom-3 duration-300 ${
+            toast.type === "success"
+              ? "bg-emerald-600 text-white border-emerald-500 shadow-emerald-500/20"
+              : toast.type === "error"
+              ? "bg-red-600 text-white border-red-500 shadow-red-500/20"
+              : "bg-slate-900 text-white border-slate-700 shadow-slate-900/30"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+          ) : toast.type === "error" ? (
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          ) : (
+            <Sparkles className="w-5 h-5 flex-shrink-0 text-blue-300" />
+          )}
+          <span className="text-sm font-semibold">{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="ml-2 p-1 hover:bg-white/20 rounded-lg transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

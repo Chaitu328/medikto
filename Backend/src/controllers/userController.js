@@ -104,11 +104,14 @@ exports.getAllUsers = async (req, res) => {
         // Find if there is an active OTP for this patient & hospital
         const linkOtp = await HospitalLinkOTP.findOne({
           phone: uObj.phone,
-          hospitalId: hospitalId,
+          ...(hospitalId ? { hospitalId: hospitalId } : {}),
           expiresAt: { $gt: new Date() }
         });
         if (linkOtp) {
           uObj.otpCode = linkOtp.otp; // Attach OTP
+          uObj.linkCreatedAt = linkOtp.createdAt;
+          uObj.linkExpiresAt = linkOtp.expiresAt;
+          uObj.isPendingConnection = true;
         }
       }
       usersJson.push(uObj);

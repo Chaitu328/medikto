@@ -31,6 +31,7 @@
     verifyAndLink,
     requestHospitalLink,
     approvePatientLink,
+    rejectPatientLink,
     createHospitalWithAdmin,
     getHospitals,
     getHospitalById,
@@ -209,6 +210,7 @@
   router.post("/hospitals/verify-link", auth, verifyAndLink);           // admin verifies (legacy)
   router.post("/hospitals/request-link", auth, requestHospitalLink);    // patient initiates request
   router.post("/hospitals/approve-link", auth, approvePatientLink);     // admin approves request
+  router.post("/hospitals/reject-link", auth, rejectPatientLink);       // admin rejects request
   router.get("/profile/hospitals", auth, getConnectedHospitals);
   router.delete("/profile/hospitals/:hospitalId", auth, unlinkHospital);
 

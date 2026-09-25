@@ -198,8 +198,16 @@ exports.approvePatientLink = async (req, res) => {
       console.error("Admin success notification skipped:", adminNotifErr.message);
     }
 
-    // 9. Cleanup OTP record
+    // 9. Cleanup OTP record and mark pending notification as read
     await HospitalLinkOTP.deleteMany({ phone, hospitalId });
+    await Notification.updateMany(
+      {
+        user: req.user.id,
+        type: "hospital_link",
+        "data.phone": phone,
+      },
+      { isRead: true }
+    );
 
     res.json({
       success: true,
@@ -210,6 +218,95 @@ exports.approvePatientLink = async (req, res) => {
         firstName: patient.firstName,
         phone: patient.phone,
       }
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ================= ADMIN: REJECT PATIENT LINK =================
+exports.rejectPatientLink = async (req, res) => {
+  try {
+    // 1. Enforce admin-only access
+    if (req.user.role === "patient") {
+      return res.status(403).json({
+        message: "Patients cannot reject hospital connections."
+      });
+    }
+
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ message: "Patient phone number is required" });
+    }
+
+    // 2. Identify admin's hospital
+    let hospitalId;
+    if (req.user.id === "123456") {
+      const dummyHosp = await Hospital.findOne({ name: "Demo Hospital" });
+      if (!dummyHosp) return res.status(404).json({ message: "Demo Hospital not found." });
+      hospitalId = dummyHosp._id;
+    } else {
+      const admin = await User.findById(req.user.id);
+      if (admin && admin.hospital) {
+        hospitalId = admin.hospital;
+      } else {
+        const hosp = await Hospital.findOne({ adminId: req.user.id });
+        if (!hosp) return res.status(403).json({ message: "You are not assigned to manage any hospital." });
+        hospitalId = hosp._id;
+      }
+    }
+
+    // 3. Fetch hospital details
+    const hospital = await Hospital.findById(hospitalId);
+    const hospitalName = hospital ? hospital.name : "Hospital";
+
+    // 4. Delete the pending OTP record
+    await HospitalLinkOTP.deleteMany({ phone, hospitalId });
+
+    // 5. Mark pending admin notifications as read
+    await Notification.updateMany(
+      {
+        user: req.user.id,
+        type: "hospital_link",
+        "data.phone": phone,
+      },
+      { isRead: true }
+    );
+
+    // 6. Find patient if exists to send decline notification
+    const patient = await User.findOne({ phone, role: "patient" });
+    const patientName = patient?.firstName || "Patient";
+
+    if (patient) {
+      const declineTitle = "Hospital Connection Request Declined";
+      const declineBody = `${hospitalName} was unable to approve your connection request at this time.`;
+      try {
+        await sendPushNotification(patient._id, declineTitle, declineBody, {
+          type: "HOSPITAL_LINK_REJECTED",
+          hospitalId: hospitalId.toString(),
+          hospitalName,
+        });
+      } catch (notifErr) {
+        console.error("FCM decline push skipped:", notifErr.message);
+      }
+
+      try {
+        await Notification.create({
+          user: patient._id,
+          title: declineTitle,
+          body: declineBody,
+          type: "alert",
+          isRead: false,
+        });
+      } catch (inAppErr) {
+        console.error("Patient decline notification creation skipped:", inAppErr.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Connection request from ${patientName} has been rejected.`,
     });
 
   } catch (err) {
