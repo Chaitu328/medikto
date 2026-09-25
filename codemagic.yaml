@@ -1,41 +1,4 @@
 workflows:
-  ios-medikto:
-    name: Medikto iOS Signed Ad Hoc IPA
-    working_directory: medikto-app
-    instance_type: mac_mini_m2
-    max_build_duration: 60
-
-    integrations:
-      app_store_connect: medikto-api
-
-    environment:
-      flutter: stable
-      xcode: latest
-      cocoapods: default
-
-      ios_signing:
-        distribution_type: ad_hoc
-        bundle_identifier: com.example.medikto
-
-    scripts:
-      - name: Get Flutter packages
-        script: |
-          flutter pub get
-
-      - name: Set up iOS code signing
-        script: |
-          xcode-project use-profiles
-
-      - name: Build signed IPA
-        script: |
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
-
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-
-
   ios-medikto-testflight:
     name: Medikto iOS TestFlight
     working_directory: medikto-app
@@ -54,6 +17,13 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.example.medikto
 
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+        - ~/Library/Caches/org.swift.swiftpm
+        - ~/Library/org.swift.swiftpm
+
     scripts:
       - name: Get Flutter packages
         script: |
@@ -62,6 +32,40 @@ workflows:
       - name: Set up iOS code signing
         script: |
           xcode-project use-profiles
+
+      - name: Resolve iOS dependencies
+        script: |
+          # Optimize git settings for large binary downloads
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 1000
+          git config --global http.lowSpeedTime 60
+
+          # Pre-cache iOS engine artifacts
+          flutter precache --ios
+
+          # Generate ephemeral build configs and CocoaPods
+          flutter build ios --config-only --no-codesign
+
+          # Retry Swift Package Manager resolution (handles transient network drops on large binaries like FirebaseFirestoreInternal)
+          cd ios
+          MAX_RETRIES=5
+          RETRY_DELAY=10
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES: Resolving Swift Package Manager dependencies..."
+            if xcodebuild -resolvePackageDependencies -workspace Runner.xcworkspace -scheme Runner; then
+              echo "Swift Package Manager dependencies resolved successfully."
+              break
+            else
+              if [ $i -lt $MAX_RETRIES ]; then
+                echo "SPM resolution interrupted or timed out. Retrying in $RETRY_DELAY seconds..."
+                sleep $RETRY_DELAY
+              else
+                echo "Failed to resolve SPM dependencies after $MAX_RETRIES attempts."
+                exit 1
+              fi
+            fi
+          done
+          cd ..
 
       - name: Build signed IPA
         script: |
