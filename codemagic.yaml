@@ -77,8 +77,8 @@ workflows:
             LATEST_BUILD_NUMBER=0
           fi
           
-          # Codemagic $BUILD_NUMBER increments on every build; add offset (+10) to always exceed previous uploads
-          CM_BUILD_NUM=$((${BUILD_NUMBER:-1} + 10))
+          # Codemagic $BUILD_NUMBER increments on every build; add offset (+2) to always exceed previous uploads
+          CM_BUILD_NUM=$((${BUILD_NUMBER:-1} + 2))
           
           if [ "$LATEST_BUILD_NUMBER" -gt 0 ]; then
             ASC_NEXT=$((LATEST_BUILD_NUMBER + 1))

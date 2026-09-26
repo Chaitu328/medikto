@@ -143,7 +143,8 @@ exports.updatePrescription = async (req, res) => {
       reminders
     } = req.body;
 
-    const prescription = await Prescription.findOne({ _id: req.params.id, user: req.user.id });
+    const filter = await buildUserAccessFilter(req, req.query.patientId);
+    const prescription = await Prescription.findOne({ _id: req.params.id, ...filter });
 
     if (!prescription) {
       return res.status(404).json({ message: "Not found" });
@@ -151,14 +152,24 @@ exports.updatePrescription = async (req, res) => {
 
     if (medicineName) prescription.medicineName = medicineName;
 
-    if (dosageInstructions)
+    if (dosageInstructions !== undefined)
       prescription.dosageInstructions = dosageInstructions;
 
-    if (reminders)
-      prescription.reminders = reminders;
+    if (reminders !== undefined) {
+      let parsedReminders = reminders;
+      if (typeof reminders === "string") {
+        try {
+          parsedReminders = JSON.parse(reminders);
+        } catch (err) {
+          parsedReminders = prescription.reminders;
+        }
+      }
+      prescription.reminders = Array.isArray(parsedReminders) ? parsedReminders : prescription.reminders;
+    }
 
     // update file in S3 if new uploaded
     if (req.file) {
+      const oldKey = prescription.fileUrl;
       const s3Key = generatePrescriptionKey(prescription.user.toString(), req.file.originalname);
       await uploadBufferToS3(
         req.file.buffer,
@@ -166,6 +177,14 @@ exports.updatePrescription = async (req, res) => {
         req.file.mimetype || "application/pdf"
       );
       prescription.fileUrl = s3Key;
+
+      if (oldKey && oldKey !== s3Key) {
+        try {
+          await deleteS3Object(oldKey);
+        } catch (e) {
+          console.warn("Could not delete old prescription S3 file:", e);
+        }
+      }
     }
 
     await prescription.save();

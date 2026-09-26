@@ -11,10 +11,13 @@ import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
+import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
 
 class AddPrescriptionFileScreen extends ConsumerStatefulWidget {
-  const AddPrescriptionFileScreen({super.key});
+  final PrescriptionModel? prescriptionToEdit;
+
+  const AddPrescriptionFileScreen({super.key, this.prescriptionToEdit});
 
   @override
   ConsumerState<AddPrescriptionFileScreen> createState() =>
@@ -23,12 +26,34 @@ class AddPrescriptionFileScreen extends ConsumerStatefulWidget {
 
 class _AddPrescriptionFileScreenState
     extends ConsumerState<AddPrescriptionFileScreen> {
-  final TextEditingController medicineNameController = TextEditingController();
-  final TextEditingController dosageController = TextEditingController();
+  late final TextEditingController medicineNameController;
+  late final TextEditingController dosageController;
 
   File? selectedFile;
   bool isLoading = false;
   final ImagePicker _picker = ImagePicker();
+
+  bool get isEditing => widget.prescriptionToEdit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.prescriptionToEdit;
+    if (p != null) {
+      medicineNameController = TextEditingController(text: p.medicineName);
+      dosageController = TextEditingController(text: p.dosageInstructions ?? "");
+    } else {
+      medicineNameController = TextEditingController();
+      dosageController = TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    medicineNameController.dispose();
+    dosageController.dispose();
+    super.dispose();
+  }
 
   Future<void> pickFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -125,28 +150,52 @@ class _AddPrescriptionFileScreenState
       isLoading = true;
     });
 
-    final response = await ref.read(
-      addPrescriptionProvider({
-        "medicineName": medicineNameController.text.trim(),
-        "dosageInstructions": dosageController.text.trim(),
-        "reminders": [],
-        "file": selectedFile,
-      }).future,
-    );
+    try {
+      final ResponseData response;
+      if (isEditing) {
+        response = await ref.read(
+          updatePrescriptionProvider({
+            "id": widget.prescriptionToEdit!.id,
+            "medicineName": medicineNameController.text.trim(),
+            "dosageInstructions": dosageController.text.trim(),
+            "file": selectedFile,
+          }).future,
+        );
+      } else {
+        response = await ref.read(
+          addPrescriptionProvider({
+            "medicineName": medicineNameController.text.trim(),
+            "dosageInstructions": dosageController.text.trim(),
+            "reminders": [],
+            "file": selectedFile,
+          }).future,
+        );
+      }
 
-    setState(() {
-      isLoading = false;
-    });
+      setState(() {
+        isLoading = false;
+      });
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (response.status == ResponseStatus.SUCCESS) {
-      AppToasts.showSuccess(context, response.message);
-      ref.invalidate(getPrescriptionsProvider);
+      if (response.status == ResponseStatus.SUCCESS) {
+        AppToasts.showSuccess(context, response.message);
+        ref.invalidate(getPrescriptionsProvider);
+        if (isEditing) {
+          ref.invalidate(getPrescriptionByIdProvider(widget.prescriptionToEdit!.id));
+        }
 
-      Navigator.pop(context, true);
-    } else {
-      AppToasts.showError(context, response.message);
+        Navigator.pop(context, true);
+      } else {
+        AppToasts.showError(context, response.message);
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      if (mounted) {
+        AppToasts.showError(context, e.toString());
+      }
     }
   }
 
@@ -158,7 +207,7 @@ class _AddPrescriptionFileScreenState
     return Scaffold(
       backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
-        title: "Prescription File",
+        title: isEditing ? "Edit Prescription" : "Prescription File",
         backgroundColor: themeColors.bg,
         titleStyle: TextStyle(
           color: themeColors.textPrimary,
@@ -234,12 +283,16 @@ class _AddPrescriptionFileScreenState
                             Text(
                               selectedFile != null
                                   ? selectedFile!.path.split(RegExp(r'[/\\]')).last
-                                  : "Upload Digital Prescription",
+                                  : (isEditing && (widget.prescriptionToEdit?.fileUrl != null && widget.prescriptionToEdit!.fileUrl!.isNotEmpty)
+                                      ? "Current file attached • Tap to replace (Optional)"
+                                      : "Upload Digital Prescription"),
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: themeColors.textPrimary,
+                                color: selectedFile != null
+                                    ? themeColors.accentPrimary
+                                    : themeColors.textPrimary,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 15,
+                                fontSize: 14,
                               ),
                             ),
 
@@ -267,7 +320,9 @@ class _AddPrescriptionFileScreenState
             CustomButton(
               onPressed: isLoading ? null : addPrescription,
               buttonColor: themeColors.accentPrimary,
-              buttonText: isLoading ? "Saving..." : "Save Prescription",
+              buttonText: isEditing
+                  ? (isLoading ? "Saving Changes..." : "Save Changes")
+                  : (isLoading ? "Saving..." : "Save Prescription"),
               textStyle: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

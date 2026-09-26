@@ -29,6 +29,24 @@ final uploadMedicalReportProvider =
           );
     });
 
+final updateMedicalReportProvider =
+    FutureProvider.family<ResponseData, Map<String, dynamic>>((
+      ref,
+      data,
+    ) async {
+      return ref
+          .read(reportsProvider)
+          .updateMedicalReport(
+            id: data["id"],
+            title: data["title"],
+            date: data["date"],
+            file: data["file"] as File?,
+            description: data["description"],
+            condition: data["condition"],
+            type: data["type"],
+          );
+    });
+
 final addPrescriptionProvider =
     FutureProvider.family<ResponseData, Map<String, dynamic>>((
       ref,
@@ -40,6 +58,24 @@ final addPrescriptionProvider =
             medicineName: data["medicineName"],
             dosageInstructions: data["dosageInstructions"],
             reminders: List<Map<String, dynamic>>.from(data["reminders"]),
+            file: data["file"],
+          );
+    });
+
+final updatePrescriptionProvider =
+    FutureProvider.family<ResponseData, Map<String, dynamic>>((
+      ref,
+      data,
+    ) async {
+      return ref
+          .read(reportsProvider)
+          .updatePrescription(
+            id: data["id"],
+            medicineName: data["medicineName"],
+            dosageInstructions: data["dosageInstructions"],
+            reminders: data["reminders"] != null
+                ? List<Map<String, dynamic>>.from(data["reminders"])
+                : null,
             file: data["file"],
           );
     });

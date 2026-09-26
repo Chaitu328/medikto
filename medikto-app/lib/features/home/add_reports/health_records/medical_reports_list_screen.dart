@@ -111,7 +111,7 @@ class MedicalReportsListScreen extends ConsumerWidget {
               itemCount: reports.length,
               itemBuilder: (context, index) {
                 final report = reports[index];
-                return _buildReportCard(context, report);
+                return _buildReportCard(context, ref, report, isGuardian);
               },
             );
           },
@@ -146,7 +146,7 @@ class MedicalReportsListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildReportCard(BuildContext context, MedicalReportModel report) {
+  Widget _buildReportCard(BuildContext context, WidgetRef ref, MedicalReportModel report, bool isGuardian) {
     final themeColors = context.themeColors;
     Color conditionColor;
     switch (report.condition.toLowerCase()) {
@@ -265,16 +265,36 @@ class MedicalReportsListScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.missedRed, size: 20),
-                  onPressed: () => _deleteReport(context, ref, report),
-                ),
+                if (!isGuardian)
+                  IconButton(
+                    icon: Icon(Icons.edit_outlined, color: themeColors.accentMedium, size: 20),
+                    tooltip: "Edit Report",
+                    onPressed: () => _editReport(context, ref, report),
+                  ),
+                if (!isGuardian)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: AppColors.missedRed, size: 20),
+                    tooltip: "Delete Report",
+                    onPressed: () => _deleteReport(context, ref, report),
+                  ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _editReport(BuildContext context, WidgetRef ref, MedicalReportModel report) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddMedicalMedicationsScreen(reportToEdit: report),
+      ),
+    );
+    if (updated == true) {
+      ref.invalidate(getReportsProvider);
+    }
   }
 
   Future<void> _deleteReport(BuildContext context, WidgetRef ref, MedicalReportModel report) async {

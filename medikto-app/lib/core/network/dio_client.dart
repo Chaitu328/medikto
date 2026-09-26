@@ -1,6 +1,8 @@
 
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:medikto/core/cache/secure_history_cache.dart';
 import 'package:medikto/core/constants/api_urls.dart';
 import 'package:medikto/core/security/app_lock_manager.dart';
@@ -60,6 +62,13 @@ Future<void> logoutUser({bool force = false, String? userId}) async {
       await AppLockManager().removePin(currentUserId);
     }
     AppLockManager().lockApp();
+
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {}
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
 
     /// CLEAR STORED DATA
     await prefs.remove(StorageKeys.token);

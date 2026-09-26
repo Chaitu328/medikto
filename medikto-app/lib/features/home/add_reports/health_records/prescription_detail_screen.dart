@@ -5,11 +5,12 @@ import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
+import 'package:medikto/features/home/add_reports/health_records/add_prescription_file.dart';
+import 'package:medikto/features/profile/data/profile_provider.dart';
+import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:medikto/core/security/app_lock_manager.dart';
 import 'package:medikto/core/utils/file_share_helper.dart';
 import 'package:medikto/core/utils/widgets/pdf_viewer_screen.dart';
-import 'package:share_plus/share_plus.dart';
 
 class PrescriptionDetailScreen extends ConsumerWidget {
   final String prescriptionId;
@@ -20,6 +21,8 @@ class PrescriptionDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = context.themeColors;
     final prescriptionAsync = ref.watch(getPrescriptionByIdProvider(prescriptionId));
+    final profileAsync = ref.watch(getProfileProvider);
+    final isGuardian = profileAsync.value?.data is ProfileModel && (profileAsync.value!.data as ProfileModel).role == 'guardian';
 
     return Scaffold(
       backgroundColor: themeColors.bg,
@@ -33,10 +36,16 @@ class PrescriptionDetailScreen extends ConsumerWidget {
         ),
         onBack: () => Navigator.pop(context),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.missedRed),
-            onPressed: () => _deletePrescription(context, ref),
-          ),
+          if (!isGuardian && prescriptionAsync.value?.data is PrescriptionModel)
+            IconButton(
+              icon: Icon(Icons.edit_outlined, color: themeColors.accentPrimary),
+              onPressed: () => _editPrescription(context, ref, prescriptionAsync.value!.data as PrescriptionModel),
+            ),
+          if (!isGuardian)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: AppColors.missedRed),
+              onPressed: () => _deletePrescription(context, ref),
+            ),
         ],
       ),
       body: prescriptionAsync.when(
@@ -465,6 +474,20 @@ class PrescriptionDetailScreen extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res.message.isNotEmpty ? res.message : "Failed to delete prescription")),
       );
+    }
+  }
+
+  Future<void> _editPrescription(BuildContext context, WidgetRef ref, PrescriptionModel prescription) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddPrescriptionFileScreen(prescriptionToEdit: prescription),
+      ),
+    );
+
+    if (result == true) {
+      ref.invalidate(getPrescriptionByIdProvider(prescription.id));
+      ref.invalidate(getPrescriptionsProvider);
     }
   }
 }

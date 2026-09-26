@@ -110,7 +110,7 @@ class PrescriptionsListScreen extends ConsumerWidget {
               itemCount: prescriptions.length,
               itemBuilder: (context, index) {
                 final prescription = prescriptions[index];
-                return _buildPrescriptionCard(context, prescription);
+                return _buildPrescriptionCard(context, ref, prescription, isGuardian);
               },
             );
           },
@@ -145,7 +145,7 @@ class PrescriptionsListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPrescriptionCard(BuildContext context, PrescriptionModel prescription) {
+  Widget _buildPrescriptionCard(BuildContext context, WidgetRef ref, PrescriptionModel prescription, bool isGuardian) {
     final themeColors = context.themeColors;
     final activeReminders = prescription.reminders.where((r) => r.enabled).toList();
     final timesStr = activeReminders.map((r) => r.time).join(", ");
@@ -245,16 +245,36 @@ class PrescriptionsListScreen extends ConsumerWidget {
                       size: 20,
                     ),
                   ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.missedRed, size: 20),
-                  onPressed: () => _deletePrescription(context, ref, prescription),
-                ),
+                if (!isGuardian)
+                  IconButton(
+                    icon: Icon(Icons.edit_outlined, color: themeColors.accentMedium, size: 20),
+                    tooltip: "Edit Prescription",
+                    onPressed: () => _editPrescription(context, ref, prescription),
+                  ),
+                if (!isGuardian)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: AppColors.missedRed, size: 20),
+                    tooltip: "Delete Prescription",
+                    onPressed: () => _deletePrescription(context, ref, prescription),
+                  ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _editPrescription(BuildContext context, WidgetRef ref, PrescriptionModel prescription) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddPrescriptionFileScreen(prescriptionToEdit: prescription),
+      ),
+    );
+    if (updated == true) {
+      ref.invalidate(getPrescriptionsProvider);
+    }
   }
 
   Future<void> _deletePrescription(BuildContext context, WidgetRef ref, PrescriptionModel prescription) async {

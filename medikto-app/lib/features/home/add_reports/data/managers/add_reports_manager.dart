@@ -390,6 +390,148 @@ class AddReportsManager {
     }
   }
 
+  Future<ResponseData> updateMedicalReport({
+    required String id,
+    required String title,
+    required String date,
+    File? file,
+    String? description,
+    String? condition,
+    String? type,
+  }) async {
+    Response response;
+
+    try {
+      MultipartFile? multipartFile;
+      if (file != null) {
+        final pathStr = file.path;
+        String fileName = pathStr.split(RegExp(r'[/\\]')).last;
+        if (fileName.isEmpty) {
+          fileName = "report_${DateTime.now().millisecondsSinceEpoch}.pdf";
+        }
+        if (!fileName.contains('.')) {
+          fileName = "$fileName.jpg";
+        }
+        multipartFile = await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+        );
+      }
+
+      FormData formData = FormData.fromMap({
+        "title": title,
+        "date": date,
+        "description": description ?? "",
+        "condition": condition ?? "normal",
+        "type": type ?? "medical",
+        if (multipartFile != null) "file": multipartFile,
+      });
+
+      response = await dioClient.ref!.put(
+        "${ApiUrls.uploadMedicalReport}/$id",
+        data: formData,
+        options: Options(headers: {"Content-Type": "multipart/form-data"}),
+      );
+
+      print("UPDATE REPORT URL => ${ApiUrls.uploadMedicalReport}/$id");
+      print("STATUS CODE => ${response.statusCode}");
+      print("UPDATE REPORT RESPONSE => ${response.data}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ResponseData(
+          response.data["message"] ?? "Medical Report Updated Successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      } else {
+        return ResponseData(
+          response.data["message"] ?? "Something went wrong",
+          ResponseStatus.FAILED,
+        );
+      }
+    } on DioException catch (e) {
+      print("UPDATE REPORT ERROR => ${e.response?.data}");
+
+      return ResponseData(
+        e.response?.data?["message"] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      print("ERROR => $e");
+
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
+  Future<ResponseData> updatePrescription({
+    required String id,
+    required String medicineName,
+    List<Map<String, dynamic>>? reminders,
+    String? dosageInstructions,
+    File? file,
+  }) async {
+    Response response;
+
+    try {
+      MultipartFile? multipartFile;
+      if (file != null) {
+        final pathStr = file.path;
+        String fileName = pathStr.split(RegExp(r'[/\\]')).last;
+        if (fileName.isEmpty) {
+          fileName = "prescription_${DateTime.now().millisecondsSinceEpoch}.jpg";
+        }
+        if (!fileName.contains('.')) {
+          fileName = "$fileName.jpg";
+        }
+        multipartFile = await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+        );
+      }
+
+      FormData formData = FormData.fromMap({
+        "medicineName": medicineName,
+        "dosageInstructions": dosageInstructions ?? "",
+        if (reminders != null) "reminders": jsonEncode(reminders),
+        if (multipartFile != null) "file": multipartFile,
+      });
+
+      response = await dioClient.ref!.put(
+        "${ApiUrls.addPrescription}/$id",
+        data: formData,
+        options: Options(headers: {"Content-Type": "multipart/form-data"}),
+      );
+
+      print("UPDATE PRESCRIPTION URL => ${ApiUrls.addPrescription}/$id");
+      print("STATUS CODE => ${response.statusCode}");
+      print("UPDATE PRESCRIPTION RESPONSE => ${response.data}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ResponseData(
+          response.data["message"] ?? "Prescription Updated Successfully",
+          ResponseStatus.SUCCESS,
+          data: response.data,
+        );
+      } else {
+        return ResponseData(
+          response.data["message"] ?? "Something went wrong",
+          ResponseStatus.FAILED,
+        );
+      }
+    } on DioException catch (e) {
+      print("UPDATE PRESCRIPTION ERROR => ${e.response?.data}");
+
+      return ResponseData(
+        e.response?.data?["message"] ?? "Something went wrong",
+        ResponseStatus.FAILED,
+      );
+    } catch (e) {
+      print("ERROR => $e");
+
+      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+    }
+  }
+
   Future<ResponseData> deleteReport(String id) async {
     Response response;
     try {

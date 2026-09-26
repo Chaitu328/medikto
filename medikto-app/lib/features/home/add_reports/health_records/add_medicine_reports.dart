@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
@@ -10,11 +11,14 @@ import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
+import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
 import 'package:file_picker/file_picker.dart';
 
 class AddMedicalMedicationsScreen extends ConsumerStatefulWidget {
-  const AddMedicalMedicationsScreen({super.key});
+  final MedicalReportModel? reportToEdit;
+
+  const AddMedicalMedicationsScreen({super.key, this.reportToEdit});
 
   @override
   ConsumerState<AddMedicalMedicationsScreen> createState() =>
@@ -23,11 +27,10 @@ class AddMedicalMedicationsScreen extends ConsumerStatefulWidget {
 
 class _AddMedicalMedicationsScreenState
     extends ConsumerState<AddMedicalMedicationsScreen> {
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController dateController = TextEditingController();
-  final TextEditingController conditionController =
-      TextEditingController(text: "Normal");
+  late final TextEditingController titleController;
+  late final TextEditingController descriptionController;
+  late final TextEditingController dateController;
+  late final TextEditingController conditionController;
 
   String selectedCondition = "Normal";
   final List<String> conditionOptions = ["Normal", "Moderate", "Critical"];
@@ -35,6 +38,47 @@ class _AddMedicalMedicationsScreenState
   File? selectedFile;
   bool isLoading = false;
   String selectedType = "medical";
+
+  bool get isEditing => widget.reportToEdit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final report = widget.reportToEdit;
+    if (report != null) {
+      titleController = TextEditingController(text: report.title);
+      descriptionController = TextEditingController(text: report.description ?? "");
+      dateController = TextEditingController(
+        text: DateFormat("yyyy-MM-dd").format(report.date),
+      );
+      final rawCond = report.condition.toLowerCase();
+      if (rawCond == "critical") {
+        selectedCondition = "Critical";
+      } else if (rawCond == "moderate") {
+        selectedCondition = "Moderate";
+      } else {
+        selectedCondition = "Normal";
+      }
+      conditionController = TextEditingController(text: selectedCondition);
+      selectedType = report.type.isNotEmpty ? report.type : "medical";
+    } else {
+      titleController = TextEditingController();
+      descriptionController = TextEditingController();
+      dateController = TextEditingController();
+      conditionController = TextEditingController(text: "Normal");
+      selectedCondition = "Normal";
+      selectedType = "medical";
+    }
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    descriptionController.dispose();
+    dateController.dispose();
+    conditionController.dispose();
+    super.dispose();
+  }
 
   final ImagePicker _picker = ImagePicker();
 
@@ -79,7 +123,7 @@ class _AddMedicalMedicationsScreenState
       return;
     }
 
-    if (selectedFile == null) {
+    if (!isEditing && selectedFile == null) {
       AppToasts.showError(context, "Please select file");
       return;
     }
@@ -89,24 +133,40 @@ class _AddMedicalMedicationsScreenState
     });
 
     try {
-      final response = await ref.read(
-        uploadMedicalReportProvider({
-          "title": titleController.text.trim(),
-          "description": descriptionController.text.trim(),
-          "date": dateController.text.trim(),
-          "condition": conditionController.text.trim().isEmpty
-              ? "normal"
-              : conditionController.text.trim(),
-          "type": selectedType,
-          "file": selectedFile!,
-        }).future,
-      );
+      final ResponseData response;
+      if (isEditing) {
+        response = await ref.read(
+          updateMedicalReportProvider({
+            "id": widget.reportToEdit!.id,
+            "title": titleController.text.trim(),
+            "description": descriptionController.text.trim(),
+            "date": dateController.text.trim(),
+            "condition": selectedCondition.toLowerCase(),
+            "type": selectedType,
+            "file": selectedFile,
+          }).future,
+        );
+      } else {
+        response = await ref.read(
+          uploadMedicalReportProvider({
+            "title": titleController.text.trim(),
+            "description": descriptionController.text.trim(),
+            "date": dateController.text.trim(),
+            "condition": selectedCondition.toLowerCase(),
+            "type": selectedType,
+            "file": selectedFile!,
+          }).future,
+        );
+      }
 
       if (!mounted) return;
 
       if (response.status == ResponseStatus.SUCCESS) {
         AppToasts.showSuccess(context, response.message);
         ref.invalidate(getReportsProvider);
+        if (isEditing) {
+          ref.invalidate(getReportByIdProvider(widget.reportToEdit!.id));
+        }
 
         Navigator.pop(context, true);
       } else {
@@ -220,7 +280,7 @@ class _AddMedicalMedicationsScreenState
     return Scaffold(
       backgroundColor: themeColors.bg,
       appBar: CustomAppBar(
-        title: "Medical Reports",
+        title: isEditing ? "Edit Medical Report" : "Medical Reports",
         backgroundColor: themeColors.bg,
         titleStyle: TextStyle(
           color: themeColors.textPrimary,
@@ -319,7 +379,7 @@ class _AddMedicalMedicationsScreenState
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              "Upload Medical Report",
+                              isEditing ? "Replace Medical Report (Optional)" : "Upload Medical Report",
                               style: TextStyle(
                                 color: themeColors.textPrimary,
                                 fontSize: 16,
@@ -328,11 +388,14 @@ class _AddMedicalMedicationsScreenState
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "Support PDF, PNG, JPG (Max 5MB)",
+                              isEditing && selectedFile == null
+                                  ? "Tap to select a new file or keep existing document"
+                                  : "Support PDF, PNG, JPG (Max 5MB)",
                               style: TextStyle(
                                 color: themeColors.textMuted,
                                 fontSize: 12,
                               ),
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 20),
                             Container(
@@ -345,7 +408,9 @@ class _AddMedicalMedicationsScreenState
                                 borderRadius: BorderRadius.circular(30),
                               ),
                               child: Text(
-                                "Browse Files",
+                                selectedFile != null
+                                    ? "Change File"
+                                    : (isEditing ? "Replace File" : "Browse Files"),
                                 style: TextStyle(
                                   color: themeColors.accentPrimary,
                                   fontSize: 12,
@@ -356,7 +421,18 @@ class _AddMedicalMedicationsScreenState
                             if (selectedFile != null) ...[
                               const SizedBox(height: 12),
                               Text(
-                                selectedFile!.path.split('/').last,
+                                "Selected: ${selectedFile!.path.split(RegExp(r'[/\\]')).last}",
+                                style: TextStyle(
+                                  color: themeColors.accentPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ] else if (isEditing && (widget.reportToEdit?.fileUrl.isNotEmpty ?? false)) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                "Current file attached",
                                 style: TextStyle(
                                   color: themeColors.textSecondary,
                                   fontSize: 12,
@@ -379,7 +455,7 @@ class _AddMedicalMedicationsScreenState
               isLoading: isLoading,
               onPressed: uploadReport,
               buttonColor: themeColors.accentPrimary,
-              buttonText: "Add Report",
+              buttonText: isEditing ? "Save Changes" : "Add Report",
               textStyle: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

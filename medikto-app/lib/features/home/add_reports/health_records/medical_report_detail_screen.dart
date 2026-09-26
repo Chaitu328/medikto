@@ -6,11 +6,12 @@ import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
+import 'package:medikto/features/home/add_reports/health_records/add_medicine_reports.dart';
+import 'package:medikto/features/profile/data/profile_provider.dart';
+import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:medikto/core/security/app_lock_manager.dart';
 import 'package:medikto/core/utils/file_share_helper.dart';
 import 'package:medikto/core/utils/widgets/pdf_viewer_screen.dart';
-import 'package:share_plus/share_plus.dart';
 
 class MedicalReportDetailScreen extends ConsumerWidget {
   final String reportId;
@@ -21,6 +22,8 @@ class MedicalReportDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColors = context.themeColors;
     final reportAsync = ref.watch(getReportByIdProvider(reportId));
+    final profileAsync = ref.watch(getProfileProvider);
+    final isGuardian = profileAsync.value?.data is ProfileModel && (profileAsync.value!.data as ProfileModel).role == 'guardian';
 
     return Scaffold(
       backgroundColor: themeColors.bg,
@@ -34,10 +37,16 @@ class MedicalReportDetailScreen extends ConsumerWidget {
         ),
         onBack: () => Navigator.pop(context),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.missedRed),
-            onPressed: () => _deleteReport(context, ref),
-          ),
+          if (!isGuardian && reportAsync.value?.data is MedicalReportModel)
+            IconButton(
+              icon: Icon(Icons.edit_outlined, color: themeColors.accentPrimary),
+              onPressed: () => _editReport(context, ref, reportAsync.value!.data as MedicalReportModel),
+            ),
+          if (!isGuardian)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: AppColors.missedRed),
+              onPressed: () => _deleteReport(context, ref),
+            ),
         ],
       ),
       body: reportAsync.when(
@@ -446,6 +455,20 @@ class MedicalReportDetailScreen extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res.message.isNotEmpty ? res.message : "Failed to delete report")),
       );
+    }
+  }
+
+  Future<void> _editReport(BuildContext context, WidgetRef ref, MedicalReportModel report) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddMedicalMedicationsScreen(reportToEdit: report),
+      ),
+    );
+
+    if (result == true) {
+      ref.invalidate(getReportByIdProvider(report.id));
+      ref.invalidate(getReportsProvider);
     }
   }
 }

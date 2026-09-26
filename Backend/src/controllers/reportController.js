@@ -155,7 +155,7 @@ exports.getReportById = async (req, res) => {
 
 exports.updateReport = async (req, res) => {
   try {
-    const { title, description, condition, date } = req.body;
+    const { title, description, condition, date, type } = req.body;
 
     const filter = await buildUserAccessFilter(req, req.query.patientId);
     const report = await Report.findOne({ _id: req.params.id, ...filter });
@@ -167,12 +167,14 @@ exports.updateReport = async (req, res) => {
     }
 
     if (title) report.title = title;
-    if (description) report.description = description;
+    if (description !== undefined) report.description = description;
     if (condition) report.condition = condition.toLowerCase();
     if (date) report.date = formatDate(date);
+    if (type) report.type = type;
 
     // Optional: update file
     if (req.file) {
+      const oldKey = report.fileUrl;
       const s3Key = generateReportKey(report.user.toString(), req.file.originalname);
       await uploadBufferToS3(
         req.file.buffer,
@@ -180,6 +182,14 @@ exports.updateReport = async (req, res) => {
         req.file.mimetype || "application/pdf"
       );
       report.fileUrl = s3Key;
+
+      if (oldKey && oldKey !== s3Key) {
+        try {
+          await deleteS3Object(oldKey);
+        } catch (e) {
+          console.warn("Could not delete old report S3 file:", e);
+        }
+      }
     }
 
     await report.save();

@@ -141,6 +141,30 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     }
   }
 
+  Future<void> _editReport(MedicalReportModel report) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddMedicalMedicationsScreen(reportToEdit: report),
+      ),
+    );
+    if (updated == true && mounted) {
+      ref.invalidate(getReportsProvider);
+    }
+  }
+
+  Future<void> _editPrescription(PrescriptionModel prescription) async {
+    final updated = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddPrescriptionFileScreen(prescriptionToEdit: prescription),
+      ),
+    );
+    if (updated == true && mounted) {
+      ref.invalidate(getPrescriptionsProvider);
+    }
+  }
+
   Future<void> _deleteReport(MedicalReportModel report) async {
     final colors = context.themeColors;
     final shouldDelete = await showDialog<bool>(
@@ -1303,11 +1327,20 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               ),
               const SizedBox(width: 4),
 
+              // Edit Button
+              IconButton(
+                icon: Icon(Icons.edit_outlined,
+                    color: themeColors.accentMedium, size: 18),
+                tooltip: "Edit Report",
+                onPressed: () => _editReport(report),
+              ),
+
               // Quick Share Button
               if (report.fileUrl.isNotEmpty)
                 IconButton(
                   icon: Icon(Icons.share_outlined,
                       color: themeColors.accentMedium, size: 18),
+                  tooltip: "Share Report",
                   onPressed: () {
                     FileShareHelper.shareFile(
                       context: context,
@@ -1322,6 +1355,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               IconButton(
                 icon: const Icon(Icons.delete_outline,
                     color: AppColors.missedRed, size: 18),
+                tooltip: "Delete Report",
                 onPressed: () => _deleteReport(report),
               ),
             ],
@@ -1405,11 +1439,20 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               ),
               const SizedBox(width: 8),
 
+              // Edit Button
+              IconButton(
+                icon: Icon(Icons.edit_outlined,
+                    color: themeColors.accentMedium, size: 18),
+                tooltip: "Edit Prescription",
+                onPressed: () => _editPrescription(prescription),
+              ),
+
               // Quick Share Button
               if (hasAttachment)
                 IconButton(
                   icon: Icon(Icons.share_outlined,
                       color: themeColors.accentMedium, size: 18),
+                  tooltip: "Share Prescription",
                   onPressed: () {
                     FileShareHelper.shareFile(
                       context: context,
@@ -1424,6 +1467,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               IconButton(
                 icon: const Icon(Icons.delete_outline,
                     color: AppColors.missedRed, size: 18),
+                tooltip: "Delete Prescription",
                 onPressed: () => _deletePrescription(prescription),
               ),
             ],

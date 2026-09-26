@@ -152,6 +152,19 @@ Future<ResponseData> signInWithGoogle() async {
   try {
     final GoogleSignIn googleSignIn = GoogleSignIn();
     
+    // Clear any previous Google Sign-In session to ensure account chooser is always shown
+    // and the freshly selected Google account is used.
+    try {
+      await googleSignIn.signOut();
+    } catch (e) {
+      debugPrint("Pre-signin Google signOut ignored: $e");
+    }
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      debugPrint("Pre-signin FirebaseAuth signOut ignored: $e");
+    }
+
     // Trigger native Google Sign-In prompt
     final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
     if (googleUser == null) {

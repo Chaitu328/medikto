@@ -69,6 +69,7 @@
     getReports,
     getReportsByType,
     getReportById,
+    updateReport,
     deleteReport
   } = require("../controllers/reportController");
 
@@ -105,6 +106,7 @@
     addPrescription,
     getPrescriptions,
     getPrescriptionById,
+    updatePrescription,
     deletePrescription
   } = require("../controllers/prescriptionController");
 
@@ -308,6 +310,7 @@
   router.get("/reports", auth, getReports);
   router.get("/reports/type/:type", auth, getReportsByType);
   router.get("/reports/:id", auth, getReportById);
+  router.put("/reports/:id", auth, auth.blockGuardianWrite, upload.single("file"), updateReport);
   router.delete("/reports/:id", auth, auth.blockGuardianWrite, deleteReport);
 
 
@@ -327,6 +330,7 @@
   router.post("/prescriptions", auth, auth.blockGuardianWrite, upload.single("file"), addPrescription);
   router.get("/prescriptions", auth, getPrescriptions);
   router.get("/prescriptions/:id", auth, getPrescriptionById);
+  router.put("/prescriptions/:id", auth, auth.blockGuardianWrite, upload.single("file"), updatePrescription);
   router.delete("/prescriptions/:id", auth, auth.blockGuardianWrite, deletePrescription);
 
 
