@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
+import 'package:medikto/core/utils/rear_camera_helper.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -65,19 +66,17 @@ class _SelfieVerficationMedicineScreenState
     return File(compressedFile!.path);
   }
 Future<void> _captureProofImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+    final File? imageFile = await AppCameraHelper.captureFront();
 
-    if (image == null) return;
+    if (imageFile == null) return;
 
     setState(() {
       isLoading = true;
     });
 
     try {
-      final originalFile = File(image.path);
-
       // 🔥 compressed image
-      final compressedImage = await compressImage(originalFile);
+      final compressedImage = await compressImage(imageFile);
 
       setState(() {
         capturedImage = compressedImage;

@@ -1025,8 +1025,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
           "Search reports by title or description...",
         ),
 
-        // Horizontal filters
-        _buildReportFilterChips(),
+        const SizedBox(height: 4),
 
         Expanded(
           child: RefreshIndicator(
@@ -1048,15 +1047,11 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                       (report.description?.toLowerCase().contains(_reportQuery) ??
                           false);
 
-                  final matchesCondition = _selectedReportCondition == "All" ||
-                      report.condition.toLowerCase() ==
-                          _selectedReportCondition.toLowerCase();
-
                   final matchesType = _selectedReportType == "All" ||
                       report.type.toLowerCase() ==
                           _selectedReportType.toLowerCase();
 
-                  return matchesQuery && matchesCondition && matchesType;
+                  return matchesQuery && matchesType;
                 }).toList();
 
                 if (filteredReports.isEmpty) {
@@ -1184,65 +1179,8 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
     );
   }
 
-  Widget _buildReportFilterChips() {
-    final themeColors = context.themeColors;
-    final conditions = ["All", "Critical", "Moderate", "Normal"];
-    return SizedBox(
-      height: 44,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: conditions.length,
-        itemBuilder: (context, index) {
-          final cond = conditions[index];
-          final isSelected = _selectedReportCondition == cond;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ChoiceChip(
-              label: Text(cond),
-              labelStyle: TextStyle(
-                color: isSelected ? themeColors.accentPrimary : themeColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12,
-              ),
-              selected: isSelected,
-              onSelected: (val) {
-                if (val) {
-                  setState(() => _selectedReportCondition = cond);
-                }
-              },
-              backgroundColor: themeColors.surface,
-              selectedColor: themeColors.accentSubtle,
-              checkmarkColor: themeColors.accentPrimary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(
-                  color: isSelected
-                      ? themeColors.accentBorder
-                      : themeColors.border,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildReportCard(MedicalReportModel report) {
     final themeColors = context.themeColors;
-    Color condColor;
-    switch (report.condition.toLowerCase()) {
-      case "critical":
-        condColor = AppColors.missedRed;
-        break;
-      case "moderate":
-        condColor = AppColors.pendingAmber;
-        break;
-      default:
-        condColor = AppColors.takenGreen;
-    }
-
     final dateStr = DateFormat("dd MMM yyyy").format(report.date.toLocal());
 
     return Container(
@@ -1303,26 +1241,6 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Condition indicator
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: condColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border:
-                      Border.all(color: condColor.withOpacity(0.2), width: 0.8),
-                ),
-                child: Text(
-                  report.condition.toUpperCase(),
-                  style: TextStyle(
-                    color: condColor,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
                 ),
               ),
               const SizedBox(width: 4),

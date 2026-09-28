@@ -11,6 +11,7 @@ import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:medikto/core/utils/file_share_helper.dart';
 import 'package:medikto/core/utils/widgets/pdf_viewer_screen.dart';
+import 'package:medikto/core/utils/widgets/attachments_viewer_section.dart';
 
 class PrescriptionDetailScreen extends ConsumerWidget {
   final String prescriptionId;
@@ -203,161 +204,16 @@ class PrescriptionDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                 ],
 
-                // Attachment Section
+                // Attachment Section Header & Viewer
                 if (hasFile) ...[
-                  Text(
-                    "PRESCRIPTION ATTACHMENT",
-                    style: TextStyle(color: themeColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  AttachmentsViewerSection(
+                    singleUrl: prescription.fileUrl!,
+                    title: prescription.medicineName,
+                    filePrefix: "prescription_${prescription.id}",
+                    sectionTitle: "PRESCRIPTION ATTACHMENT",
                   ),
-                  const SizedBox(height: 10),
-                  if (isImage)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: themeColors.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: themeColors.border),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        children: [
-                          InteractiveViewer(
-                            maxScale: 4.0,
-                            child: CachedNetworkImage(
-                              imageUrl: prescription.fileUrl!,
-                              placeholder: (context, url) => SizedBox(
-                                height: 250,
-                                child: Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
-                              ),
-                              errorWidget: (context, url, error) => SizedBox(
-                                height: 250,
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.broken_image_outlined, color: themeColors.textMuted, size: 48),
-                                      const SizedBox(height: 10),
-                                      Text("Unable to load image", style: TextStyle(color: themeColors.textMuted)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            color: context.isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  "Prescription Image",
-                                  style: TextStyle(color: themeColors.textSecondary, fontSize: 13),
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.share_outlined, color: themeColors.accentMedium, size: 20),
-                                  onPressed: () {
-                                    FileShareHelper.shareFile(
-                                      context: context,
-                                      fileUrl: prescription.fileUrl!,
-                                      fallbackTitle: prescription.medicineName,
-                                      customFileName: "prescription_${prescription.id}.jpg",
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PdfViewerScreen(
-                                title: prescription.medicineName,
-                                pdfUrl: prescription.fileUrl!,
-                                fileName: "prescription_${prescription.id}.pdf",
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: themeColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: themeColors.border),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppColors.missedRed.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(Icons.picture_as_pdf, color: AppColors.missedRed, size: 28),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "Prescription Document",
-                                          style: TextStyle(color: themeColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: themeColors.accentSubtle,
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            "TAP TO VIEW",
-                                            style: TextStyle(color: themeColors.accentMedium, fontSize: 9, fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      prescription.fileUrl!.split('/').last,
-                                      style: TextStyle(color: themeColors.textMuted, fontSize: 12),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.share_outlined, color: themeColors.accentMedium),
-                                onPressed: () {
-                                  FileShareHelper.shareFile(
-                                    context: context,
-                                    fileUrl: prescription.fileUrl!,
-                                    fallbackTitle: prescription.medicineName,
-                                    customFileName: "prescription_${prescription.id}.pdf",
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                  const SizedBox(height: 40),
                 ],
-                const SizedBox(height: 40),
               ],
             ),
           );

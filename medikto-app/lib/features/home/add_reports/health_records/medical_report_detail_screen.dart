@@ -12,6 +12,7 @@ import 'package:medikto/features/profile/models/profile_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:medikto/core/utils/file_share_helper.dart';
 import 'package:medikto/core/utils/widgets/pdf_viewer_screen.dart';
+import 'package:medikto/core/utils/widgets/attachments_viewer_section.dart';
 
 class MedicalReportDetailScreen extends ConsumerWidget {
   final String reportId;
@@ -67,57 +68,20 @@ class MedicalReportDetailScreen extends ConsumerWidget {
           final dateStr = DateFormat("dd MMM yyyy, hh:mm a").format(report.date.toLocal());
           final isImage = _isImageFile(report.fileUrl);
 
-          Color conditionColor;
-          switch (report.condition.toLowerCase()) {
-            case "critical":
-              conditionColor = AppColors.missedRed;
-              break;
-            case "moderate":
-              conditionColor = AppColors.pendingAmber;
-              break;
-            default:
-              conditionColor = AppColors.takenGreen;
-          }
-
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             physics: const BouncingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title and Condition Row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        report.title,
-                        style: TextStyle(
-                          color: themeColors.textPrimary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: conditionColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: conditionColor.withOpacity(0.3), width: 1.0),
-                      ),
-                      child: Text(
-                        report.condition.toUpperCase(),
-                        style: TextStyle(
-                          color: conditionColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
+                // Title Header
+                Text(
+                  report.title,
+                  style: TextStyle(
+                    color: themeColors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -184,161 +148,15 @@ class MedicalReportDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 25),
                 ],
 
-                // Attachment Section Header
-                Text(
-                  "ATTACHMENT",
-                  style: TextStyle(color: themeColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 10),
-
-                // Attachment Display Card
-                if (isImage)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: themeColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: themeColors.border),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      children: [
-                        InteractiveViewer(
-                          maxScale: 4.0,
-                          child: CachedNetworkImage(
-                            imageUrl: report.fileUrl,
-                            placeholder: (context, url) => SizedBox(
-                              height: 250,
-                              child: Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
-                            ),
-                            errorWidget: (context, url, error) => SizedBox(
-                              height: 250,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.broken_image_outlined, color: themeColors.textMuted, size: 48),
-                                    const SizedBox(height: 10),
-                                    Text("Unable to load image", style: TextStyle(color: themeColors.textMuted)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          color: context.isDarkMode ? Colors.black26 : Colors.grey.withOpacity(0.1),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "Image Attachment",
-                                style: TextStyle(color: themeColors.textSecondary, fontSize: 13),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.share_outlined, color: themeColors.accentMedium, size: 20),
-                                onPressed: () {
-                                  FileShareHelper.shareFile(
-                                    context: context,
-                                    fileUrl: report.fileUrl,
-                                    fallbackTitle: report.title,
-                                    customFileName: "medical_report_${report.id}.jpg",
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PdfViewerScreen(
-                              title: report.title,
-                              pdfUrl: report.fileUrl,
-                              fileName: "medical_report_${report.id}.pdf",
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: themeColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: themeColors.border),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.missedRed.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.picture_as_pdf, color: AppColors.missedRed, size: 28),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Document Attachment",
-                                        style: TextStyle(color: themeColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: themeColors.accentSubtle,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          "TAP TO VIEW",
-                                          style: TextStyle(color: themeColors.accentMedium, fontSize: 9, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    report.fileUrl.split('/').last,
-                                    style: TextStyle(color: themeColors.textMuted, fontSize: 12),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.share_outlined, color: themeColors.accentMedium),
-                              onPressed: () {
-                                FileShareHelper.shareFile(
-                                  context: context,
-                                  fileUrl: report.fileUrl,
-                                  fallbackTitle: report.title,
-                                  customFileName: "medical_report_${report.id}.pdf",
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                // Attachment Section Header & Viewer
+                if (report.fileUrl.isNotEmpty) ...[
+                  AttachmentsViewerSection(
+                    singleUrl: report.fileUrl,
+                    title: report.title,
+                    filePrefix: "medical_report_${report.id}",
                   ),
-                const SizedBox(height: 40),
+                  const SizedBox(height: 40),
+                ],
               ],
             ),
           );

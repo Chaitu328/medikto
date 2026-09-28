@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:medikto/core/utils/rear_camera_helper.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
+import 'package:medikto/features/home/add_reports/data/managers/add_reports_manager.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
@@ -83,7 +85,12 @@ class _AddMedicalMedicationsScreenState
   final ImagePicker _picker = ImagePicker();
 
   Future<void> pickFromGallery() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
     if (image != null) {
       setState(() {
         selectedFile = File(image.path);
@@ -92,10 +99,10 @@ class _AddMedicalMedicationsScreenState
   }
 
   Future<void> pickFromCamera() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
+    final File? file = await RearCameraHelper.capture();
+    if (file != null) {
       setState(() {
-        selectedFile = File(image.path);
+        selectedFile = file;
       });
     }
   }
@@ -135,16 +142,14 @@ class _AddMedicalMedicationsScreenState
     try {
       final ResponseData response;
       if (isEditing) {
-        response = await ref.read(
-          updateMedicalReportProvider({
-            "id": widget.reportToEdit!.id,
-            "title": titleController.text.trim(),
-            "description": descriptionController.text.trim(),
-            "date": dateController.text.trim(),
-            "condition": selectedCondition.toLowerCase(),
-            "type": selectedType,
-            "file": selectedFile,
-          }).future,
+        response = await addReportsManager.updateMedicalReport(
+          id: widget.reportToEdit!.id,
+          title: titleController.text.trim(),
+          description: descriptionController.text.trim(),
+          date: dateController.text.trim(),
+          condition: selectedCondition.toLowerCase(),
+          type: selectedType,
+          file: selectedFile,
         );
       } else {
         response = await ref.read(
@@ -317,28 +322,18 @@ class _AddMedicalMedicationsScreenState
                       maxLines: 3,
                     ),
 
-                    /// 🔹 DATE + CONDITION
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextField(
-                            onTap: selectDate,
-                            readOnly: true,
-                            controller: dateController,
-                            title: "Date",
-                            hint: "DD.MM.YY",
-                            suffix: Icon(
-                              Icons.calendar_month_outlined,
-                              color: themeColors.accentPrimary,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildConditionDropdown(),
-                        ),
-                      ],
+                    /// 🔹 DATE
+                    _buildTextField(
+                      onTap: selectDate,
+                      readOnly: true,
+                      controller: dateController,
+                      title: "Date",
+                      hint: "DD.MM.YY",
+                      suffix: Icon(
+                        Icons.calendar_month_outlined,
+                        color: themeColors.accentPrimary,
+                        size: 20,
+                      ),
                     ),
 
                     SizedBox(height: size.height * 0.02),
@@ -466,74 +461,6 @@ class _AddMedicalMedicationsScreenState
             SizedBox(height: size.height * 0.03),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildConditionDropdown() {
-    final themeColors = context.themeColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Condition",
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: themeColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: themeColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: themeColors.border),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: selectedCondition,
-                dropdownColor: themeColors.surface,
-                isExpanded: true,
-                icon: Icon(
-                  Icons.keyboard_arrow_down_sharp,
-                  color: themeColors.accentPrimary,
-                ),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: themeColors.textPrimary,
-                ),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      selectedCondition = newValue;
-                      conditionController.text = newValue;
-                    });
-                  }
-                },
-                items: conditionOptions
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: themeColors.textPrimary,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

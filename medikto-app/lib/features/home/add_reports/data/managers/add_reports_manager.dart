@@ -1,13 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:medikto/core/constants/api_urls.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/dio_client.dart';
-import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
 import 'package:medikto/features/home/add_reports/models/medical_report_model.dart';
 import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
-import 'dart:convert';
+import 'package:medikto/features/home/add_reports/models/vitals_model.dart';
 
 class AddReportsManager {
   factory AddReportsManager() {
@@ -17,6 +17,20 @@ class AddReportsManager {
   AddReportsManager._internal();
 
   static final AddReportsManager _singleton = AddReportsManager._internal();
+
+  String _extractErrorMessage(dynamic data, [String defaultMsg = "Something went wrong"]) {
+    if (data is Map) {
+      return data["message"]?.toString() ?? data["error"]?.toString() ?? defaultMsg;
+    } else if (data is String && data.isNotEmpty) {
+      if (data.contains("413") || data.toLowerCase().contains("too large")) {
+        return "File size is too large. Please select a smaller photo or document.";
+      }
+      if (!data.contains("<html")) {
+        return data;
+      }
+    }
+    return defaultMsg;
+  }
 
   Future<ResponseData> addBloodPressure({
     required int systolic,
@@ -37,7 +51,6 @@ class AddReportsManager {
           "time": time,
           "notes": notes ?? "",
         },
-        options: Options(headers: {"Content-Type": "application/json"}),
       );
 
       print("ADD BLOOD PRESSURE URL => ${ApiUrls.addBloodPressure}");
@@ -52,7 +65,7 @@ class AddReportsManager {
         );
       } else {
         return ResponseData(
-          response.data['message'] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
@@ -60,7 +73,7 @@ class AddReportsManager {
       print("ADD BLOOD PRESSURE ERROR => ${e.response?.data}");
 
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -87,7 +100,6 @@ class AddReportsManager {
           "time": time,
           "notes": notes ?? "",
         },
-        options: Options(headers: {"Content-Type": "application/json"}),
       );
 
       print("ADD HEART RATE URL => ${ApiUrls.addHeartRate}");
@@ -102,7 +114,7 @@ class AddReportsManager {
         );
       } else {
         return ResponseData(
-          response.data['message'] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
@@ -110,7 +122,7 @@ class AddReportsManager {
       print("ADD HEART RATE ERROR => ${e.response?.data}");
 
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -137,7 +149,6 @@ class AddReportsManager {
           "time": time,
           "notes": notes ?? "",
         },
-        options: Options(headers: {"Content-Type": "application/json"}),
       );
 
       print("ADD TEMPERATURE URL => ${ApiUrls.addTemperature}");
@@ -152,7 +163,7 @@ class AddReportsManager {
         );
       } else {
         return ResponseData(
-          response.data['message'] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
@@ -160,7 +171,7 @@ class AddReportsManager {
       print("ADD TEMPERATURE ERROR => ${e.response?.data}");
 
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -187,7 +198,6 @@ class AddReportsManager {
           "time": time,
           "notes": notes ?? "",
         },
-        options: Options(headers: {"Content-Type": "application/json"}),
       );
 
       print("ADD SUGAR URL => ${ApiUrls.addSugar}");
@@ -196,13 +206,13 @@ class AddReportsManager {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ResponseData(
-          "Sugar Level Added Successfully",
+          "Blood Sugar Added Successfully",
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       } else {
         return ResponseData(
-          response.data['message'] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
@@ -210,7 +220,7 @@ class AddReportsManager {
       print("ADD SUGAR ERROR => ${e.response?.data}");
 
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -231,23 +241,27 @@ class AddReportsManager {
       print("RESPONSE => ${response.data}");
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = response.data;
-
-        final vitals = data.map((e) => VitalsModel.fromJson(e)).toList();
-
+        final List<dynamic> rawList = response.data is List ? response.data : [response.data];
+        final vitals = rawList
+            .whereType<Map<String, dynamic>>()
+            .map((e) => VitalsModel.fromJson(e))
+            .toList();
         return ResponseData(
-          "Vitals fetched successfully",
+          "Vitals Fetched Successfully",
           ResponseStatus.SUCCESS,
           data: vitals,
         );
       } else {
-        return ResponseData("Something went wrong", ResponseStatus.FAILED);
+        return ResponseData(
+          _extractErrorMessage(response.data, "Failed to get vitals"),
+          ResponseStatus.FAILED,
+        );
       }
     } on DioException catch (e) {
       print("GET VITALS ERROR => ${e.response?.data}");
 
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -289,7 +303,6 @@ class AddReportsManager {
       response = await dioClient.ref!.post(
         ApiUrls.uploadMedicalReport,
         data: formData,
-        options: Options(headers: {"Content-Type": "multipart/form-data"}),
       );
 
       print("UPLOAD REPORT URL => ${ApiUrls.uploadMedicalReport}");
@@ -298,13 +311,13 @@ class AddReportsManager {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ResponseData(
-          response.data["message"] ?? "Medical Report Uploaded Successfully",
+          _extractErrorMessage(response.data, "Medical Report Uploaded Successfully"),
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       } else {
         return ResponseData(
-          response.data["message"] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
@@ -312,7 +325,7 @@ class AddReportsManager {
       print("UPLOAD REPORT ERROR => ${e.response?.data}");
 
       return ResponseData(
-        e.response?.data?["message"] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -357,7 +370,6 @@ class AddReportsManager {
       response = await dioClient.ref!.post(
         ApiUrls.addPrescription,
         data: formData,
-        options: Options(headers: {"Content-Type": "multipart/form-data"}),
       );
 
       print("ADD PRESCRIPTION URL => ${ApiUrls.addPrescription}");
@@ -366,13 +378,13 @@ class AddReportsManager {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ResponseData(
-          response.data["message"] ?? "Prescription Added Successfully",
+          _extractErrorMessage(response.data, "Prescription Added Successfully"),
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       } else {
         return ResponseData(
-          response.data["message"] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
@@ -380,7 +392,7 @@ class AddReportsManager {
       print("ADD PRESCRIPTION ERROR => ${e.response?.data}");
 
       return ResponseData(
-        e.response?.data?["message"] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -430,7 +442,6 @@ class AddReportsManager {
       response = await dioClient.ref!.put(
         "${ApiUrls.uploadMedicalReport}/$id",
         data: formData,
-        options: Options(headers: {"Content-Type": "multipart/form-data"}),
       );
 
       print("UPDATE REPORT URL => ${ApiUrls.uploadMedicalReport}/$id");
@@ -439,27 +450,25 @@ class AddReportsManager {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ResponseData(
-          response.data["message"] ?? "Medical Report Updated Successfully",
+          _extractErrorMessage(response.data, "Medical Report Updated Successfully"),
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       } else {
         return ResponseData(
-          response.data["message"] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
     } on DioException catch (e) {
       print("UPDATE REPORT ERROR => ${e.response?.data}");
-
       return ResponseData(
-        e.response?.data?["message"] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
-      print("ERROR => $e");
-
-      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+      print("UPDATE REPORT GENERIC ERROR => $e");
+      return ResponseData("Update failed: ${e.toString()}", ResponseStatus.FAILED);
     }
   }
 
@@ -499,7 +508,6 @@ class AddReportsManager {
       response = await dioClient.ref!.put(
         "${ApiUrls.addPrescription}/$id",
         data: formData,
-        options: Options(headers: {"Content-Type": "multipart/form-data"}),
       );
 
       print("UPDATE PRESCRIPTION URL => ${ApiUrls.addPrescription}/$id");
@@ -508,27 +516,25 @@ class AddReportsManager {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return ResponseData(
-          response.data["message"] ?? "Prescription Updated Successfully",
+          _extractErrorMessage(response.data, "Prescription Updated Successfully"),
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       } else {
         return ResponseData(
-          response.data["message"] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
     } on DioException catch (e) {
       print("UPDATE PRESCRIPTION ERROR => ${e.response?.data}");
-
       return ResponseData(
-        e.response?.data?["message"] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
-      print("ERROR => $e");
-
-      return ResponseData("Please check your internet", ResponseStatus.FAILED);
+      print("UPDATE PRESCRIPTION GENERIC ERROR => $e");
+      return ResponseData("Update failed: ${e.toString()}", ResponseStatus.FAILED);
     }
   }
 
@@ -538,19 +544,19 @@ class AddReportsManager {
       response = await dioClient.ref!.delete("${ApiUrls.uploadMedicalReport}/$id");
       if (response.statusCode == 200 || response.statusCode == 204) {
         return ResponseData(
-          response.data?["message"] ?? "Report deleted successfully",
+          _extractErrorMessage(response.data, "Report deleted successfully"),
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       } else {
         return ResponseData(
-          response.data?["message"] ?? "Failed to delete report",
+          _extractErrorMessage(response.data, "Failed to delete report"),
           ResponseStatus.FAILED,
         );
       }
     } on DioException catch (e) {
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -564,19 +570,19 @@ class AddReportsManager {
       response = await dioClient.ref!.delete("${ApiUrls.addPrescription}/$id");
       if (response.statusCode == 200 || response.statusCode == 204) {
         return ResponseData(
-          response.data?["message"] ?? "Prescription deleted successfully",
+          _extractErrorMessage(response.data, "Prescription deleted successfully"),
           ResponseStatus.SUCCESS,
           data: response.data,
         );
       } else {
         return ResponseData(
-          response.data?["message"] ?? "Failed to delete prescription",
+          _extractErrorMessage(response.data, "Failed to delete prescription"),
           ResponseStatus.FAILED,
         );
       }
     } on DioException catch (e) {
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -601,7 +607,7 @@ class AddReportsManager {
       }
     } on DioException catch (e) {
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -625,7 +631,7 @@ class AddReportsManager {
       }
     } on DioException catch (e) {
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -650,7 +656,7 @@ class AddReportsManager {
       }
     } on DioException catch (e) {
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -674,7 +680,7 @@ class AddReportsManager {
       }
     } on DioException catch (e) {
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {

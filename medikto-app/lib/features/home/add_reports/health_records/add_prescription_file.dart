@@ -4,12 +4,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:medikto/core/utils/rear_camera_helper.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_appbar.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
+import 'package:medikto/features/home/add_reports/data/managers/add_reports_manager.dart';
 import 'package:medikto/features/home/add_reports/data/providers/reports_provider.dart';
 import 'package:medikto/features/home/add_reports/models/prescription_model.dart';
 import 'package:medikto/features/medications/widgets/reports_action_sheet.dart';
@@ -71,7 +73,9 @@ class _AddPrescriptionFileScreenState
   Future<void> pickFromGallery() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 85,
+      imageQuality: 70,
+      maxWidth: 1600,
+      maxHeight: 1600,
     );
 
     if (image != null) {
@@ -85,18 +89,11 @@ class _AddPrescriptionFileScreenState
   }
 
   Future<void> pickFromCamera() async {
-    final XFile? image = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 85,
-    );
-
-    if (image != null) {
-      final file = File(image.path);
-      if (await file.exists()) {
-        setState(() {
-          selectedFile = file;
-        });
-      }
+    final File? file = await RearCameraHelper.capture();
+    if (file != null) {
+      setState(() {
+        selectedFile = file;
+      });
     }
   }
 
@@ -153,13 +150,11 @@ class _AddPrescriptionFileScreenState
     try {
       final ResponseData response;
       if (isEditing) {
-        response = await ref.read(
-          updatePrescriptionProvider({
-            "id": widget.prescriptionToEdit!.id,
-            "medicineName": medicineNameController.text.trim(),
-            "dosageInstructions": dosageController.text.trim(),
-            "file": selectedFile,
-          }).future,
+        response = await addReportsManager.updatePrescription(
+          id: widget.prescriptionToEdit!.id,
+          medicineName: medicineNameController.text.trim(),
+          dosageInstructions: dosageController.text.trim(),
+          file: selectedFile,
         );
       } else {
         response = await ref.read(

@@ -13,6 +13,15 @@ class NotificationManager {
 
   static final NotificationManager _singleton = NotificationManager._internal();
 
+  String _extractErrorMessage(dynamic data, [String defaultMsg = "Something went wrong"]) {
+    if (data is Map) {
+      return data["message"]?.toString() ?? data["error"]?.toString() ?? defaultMsg;
+    } else if (data is String && data.isNotEmpty && !data.contains("<html")) {
+      return data;
+    }
+    return defaultMsg;
+  }
+
   Future<ResponseData> getNotifications() async {
     Response response;
 
@@ -25,9 +34,11 @@ class NotificationManager {
       print("STATUS CODE => ${response.statusCode}");
 
       if (response.statusCode == 200) {
-        final List<AppNotificationModel> list = (response.data as List)
-            .map((item) => AppNotificationModel.fromJson(item))
-            .toList();
+        final List<AppNotificationModel> list = (response.data is List)
+            ? (response.data as List)
+                .map((item) => AppNotificationModel.fromJson(item))
+                .toList()
+            : [];
 
         return ResponseData(
           "Notifications retrieved successfully",
@@ -36,14 +47,14 @@ class NotificationManager {
         );
       } else {
         return ResponseData(
-          response.data['message'] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
     } on DioException catch (e) {
       print("GET NOTIFICATIONS ERROR => ${e.response?.data}");
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -67,13 +78,13 @@ class NotificationManager {
         );
       } else {
         return ResponseData(
-          response.data['message'] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
     } on DioException catch (e) {
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
@@ -96,13 +107,13 @@ class NotificationManager {
         );
       } else {
         return ResponseData(
-          response.data['message'] ?? "Something went wrong",
+          _extractErrorMessage(response.data),
           ResponseStatus.FAILED,
         );
       }
     } on DioException catch (e) {
       return ResponseData(
-        e.response?.data?['message'] ?? "Something went wrong",
+        _extractErrorMessage(e.response?.data),
         ResponseStatus.FAILED,
       );
     } catch (e) {
