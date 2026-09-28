@@ -9,7 +9,6 @@ import 'package:medikto/features/vitals/models/vital_metric_type.dart';
 import 'package:medikto/features/vitals/widgets/vital_chart_empty_view.dart';
 import 'package:medikto/features/vitals/widgets/vital_chart_legend.dart';
 import 'package:medikto/features/vitals/widgets/vital_chart_view.dart';
-import 'package:medikto/features/vitals/widgets/vital_metric_selector.dart';
 import 'package:medikto/features/vitals/widgets/vital_period_filter.dart';
 import 'package:medikto/features/vitals/widgets/vitals_trend_card.dart';
 
@@ -106,15 +105,21 @@ void main() {
         diastolic: 82,
         recordedAt: now.subtract(const Duration(days: 40)),
       ),
-      // Sugar record (should not leak into BP)
+      // Sugar record
       VitalsModel(
         type: 'sugar',
         sugarLevel: 105,
         recordedAt: now.subtract(const Duration(days: 1)),
       ),
+      // Heart Rate record
+      VitalsModel(
+        type: 'heartRate',
+        heartRate: 74,
+        recordedAt: now.subtract(const Duration(days: 1)),
+      ),
     ];
 
-    test('Filters records by 7D period properly', () {
+    test('Filters single metric records by 7D period properly', () {
       final processed7D = VitalChartDataProcessor.process(
         allRecords: testRecords,
         config: VitalMetricRegistry.bloodPressure,
@@ -128,7 +133,7 @@ void main() {
       expect(processed7D.secondarySpots.first.y, 80.0);
     });
 
-    test('Filters records by 30D period properly', () {
+    test('Filters single metric records by 30D period properly', () {
       final processed30D = VitalChartDataProcessor.process(
         allRecords: testRecords,
         config: VitalMetricRegistry.bloodPressure,
@@ -136,9 +141,24 @@ void main() {
       );
 
       expect(processed30D.points.length, 2);
-      // Points should be sorted chronologically (10 days ago first, then 2 days ago)
       expect(processed30D.primarySpots[0].y, 130.0);
       expect(processed30D.primarySpots[1].y, 120.0);
+    });
+
+    test('processAll combines multiple vital metrics into distinct series', () {
+      final processedAll = VitalChartDataProcessor.processAll(
+        allRecords: testRecords,
+        period: VitalPeriod.sevenDays,
+      );
+
+      expect(processedAll.isAllVitals, isTrue);
+      expect(processedAll.hasData, isTrue);
+      // BP Systolic, BP Diastolic, Sugar, Heart Rate
+      expect(processedAll.seriesList.length, 4);
+      expect(processedAll.seriesList.any((s) => s.name == 'BP Systolic'), isTrue);
+      expect(processedAll.seriesList.any((s) => s.name == 'BP Diastolic'), isTrue);
+      expect(processedAll.seriesList.any((s) => s.name == 'Blood Sugar'), isTrue);
+      expect(processedAll.seriesList.any((s) => s.name == 'Heart Rate'), isTrue);
     });
 
     test('Does not fabricate zero-points for missing days', () {
@@ -148,7 +168,6 @@ void main() {
         period: VitalPeriod.thirtyDays,
       );
 
-      // Only 1 sugar record exists, exactly 1 spot must be produced (no zero padding)
       expect(processed.points.length, 1);
       expect(processed.primarySpots.length, 1);
       expect(processed.primarySpots.first.y, 105.0);
@@ -187,7 +206,7 @@ void main() {
       ),
     ];
 
-    testWidgets('Renders VitalsTrendCard with metric selector when allowMetricSelection is true',
+    testWidgets('Renders combined multi-vital graph without dropdown for All Vitals',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -201,7 +220,7 @@ void main() {
           child: const MaterialApp(
             home: Scaffold(
               body: SingleChildScrollView(
-                child: VitalsTrendCard(allowMetricSelection: true),
+                child: VitalsTrendCard(isAllVitals: true),
               ),
             ),
           ),
@@ -213,10 +232,9 @@ void main() {
       // Card Title
       expect(find.text('Vitals Trends'), findsOneWidget);
 
-      // Verify Dropdown Selector exists
-      expect(find.byType(VitalMetricSelector), findsOneWidget);
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
-      expect(find.text('Blood Sugar'), findsWidgets);
+      // Verify NO Dropdown Arrow icon exists
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
+      expect(find.text('All Vitals'), findsOneWidget);
 
       // Period Filter
       expect(find.byType(VitalPeriodFilter), findsOneWidget);
@@ -228,14 +246,15 @@ void main() {
 
       // Latest Reading row
       expect(find.text('LATEST READING'), findsOneWidget);
-      expect(find.text('125 mg/dL'), findsOneWidget);
 
-      // Chart view and Legend
+      // Chart view and Legend showing all series
       expect(find.byType(VitalChartView), findsOneWidget);
       expect(find.byType(VitalChartLegend), findsOneWidget);
+      expect(find.text('Blood Sugar (mg/dL)'), findsOneWidget);
+      expect(find.text('Heart Rate (BPM)'), findsOneWidget);
     });
 
-    testWidgets('Renders VitalsTrendCard with static badge (no dropdown) when allowMetricSelection is false',
+    testWidgets('Renders single vital view with static badge and dual-series legend for Blood Pressure',
         (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -250,8 +269,8 @@ void main() {
             home: Scaffold(
               body: SingleChildScrollView(
                 child: VitalsTrendCard(
-                  allowMetricSelection: false,
-                  initialConfig: VitalMetricRegistry.bloodSugar,
+                  isAllVitals: false,
+                  initialConfig: VitalMetricRegistry.bloodPressure,
                 ),
               ),
             ),
@@ -262,9 +281,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify Dropdown Selector does NOT exist
-      expect(find.byType(VitalMetricSelector), findsNothing);
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
-      expect(find.text('Blood Sugar'), findsWidgets);
+      expect(find.text('Blood Pressure'), findsWidgets);
+      expect(find.text('124 / 82 mmHg'), findsOneWidget);
+      expect(find.text('Systolic (mmHg)'), findsOneWidget);
+      expect(find.text('Diastolic (mmHg)'), findsOneWidget);
     });
 
     testWidgets('Tapping period filter updates period selection', (tester) async {
@@ -320,37 +341,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(VitalChartEmptyView), findsOneWidget);
-      expect(find.text('No Blood Sugar Data'), findsOneWidget);
-    });
-
-    testWidgets('Renders dual-series legend and values when Blood Pressure is selected',
-        (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            getVitalsProvider.overrideWith(
-              (ref) => Future.value(
-                ResponseData('Success', ResponseStatus.SUCCESS, data: dummyVitals),
-              ),
-            ),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: VitalsTrendCard(
-                  initialConfig: VitalMetricRegistry.bloodPressure,
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(find.text('124 / 82 mmHg'), findsOneWidget);
-      expect(find.text('Systolic (mmHg)'), findsOneWidget);
-      expect(find.text('Diastolic (mmHg)'), findsOneWidget);
+      expect(find.text('No Vitals Data'), findsOneWidget);
     });
 
     testWidgets('Renders cleanly on 320px width without layout overflow', (tester) async {

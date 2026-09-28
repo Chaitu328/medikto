@@ -263,11 +263,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // CASE 1: All Vitals (Default)
-      // Graph deterministically picks Blood Pressure (most recent) and provides Dropdown selector
+      // Graph renders combined multi-vital trends with All Vitals badge and NO dropdown selector
       expect(find.text('Vitals Trends'), findsOneWidget);
-      expect(find.text('Blood Pressure'), findsWidgets);
-      // Verify Dropdown selector exists on All Vitals
-      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
+      expect(find.text('All Vitals'), findsWidgets);
+      // Verify NO Dropdown selector icon on All Vitals
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
       // History shows all
       expect(find.text('ALL PREVIOUS READINGS'), findsOneWidget);
       expect(find.text('130/70 mmHg'), findsWidgets);

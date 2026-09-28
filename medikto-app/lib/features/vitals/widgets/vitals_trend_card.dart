@@ -8,23 +8,25 @@ import 'package:medikto/features/vitals/models/vital_metric_type.dart';
 import 'package:medikto/features/vitals/widgets/vital_chart_empty_view.dart';
 import 'package:medikto/features/vitals/widgets/vital_chart_legend.dart';
 import 'package:medikto/features/vitals/widgets/vital_chart_view.dart';
-import 'package:medikto/features/vitals/widgets/vital_metric_selector.dart';
 import 'package:medikto/features/vitals/widgets/vital_period_filter.dart';
 
-/// Master reusable Vitals Trend Card supporting multiple vitals, dual-series Blood Pressure,
-/// period filtering, interactive tooltips, and deterministic data resolution.
+/// Master reusable Vitals Trend Card supporting combined multi-vitals graphs,
+/// dual-series Blood Pressure, single vital metrics, period filtering, and deterministic rendering.
 class VitalsTrendCard extends ConsumerStatefulWidget {
   final VitalMetricConfig? initialConfig;
   final VitalPeriod initialPeriod;
-  final bool allowMetricSelection;
+  final bool isAllVitals;
+  final bool allowMetricSelection; // Kept for API compatibility, no longer renders dropdown
   final List<VitalsModel>? customRecords; // If provided, uses these records instead of fetching
 
   const VitalsTrendCard({
     super.key,
     this.initialConfig,
     this.initialPeriod = VitalPeriod.sevenDays,
-    this.allowMetricSelection = true,
-    @Deprecated('lockMetric is deprecated in favor of allowMetricSelection')
+    this.isAllVitals = true,
+    @Deprecated('allowMetricSelection is deprecated in favor of top filter navigation')
+    this.allowMetricSelection = false,
+    @Deprecated('lockMetric is deprecated')
     bool lockMetric = false,
     this.customRecords,
   });
@@ -34,44 +36,20 @@ class VitalsTrendCard extends ConsumerStatefulWidget {
 }
 
 class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
-  VitalMetricConfig? _userSelectedConfig;
   late VitalPeriod _selectedPeriod;
 
   @override
   void initState() {
     super.initState();
-    _userSelectedConfig = widget.initialConfig;
     _selectedPeriod = widget.initialPeriod;
   }
 
   @override
   void didUpdateWidget(covariant VitalsTrendCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialConfig != oldWidget.initialConfig) {
-      _userSelectedConfig = widget.initialConfig;
+    if (widget.initialPeriod != oldWidget.initialPeriod) {
+      _selectedPeriod = widget.initialPeriod;
     }
-  }
-
-  VitalMetricConfig _resolveConfig(List<VitalsModel> records) {
-    if (_userSelectedConfig != null) {
-      return _userSelectedConfig!;
-    }
-    if (widget.initialConfig != null) {
-      return widget.initialConfig!;
-    }
-    if (records.isNotEmpty) {
-      final sorted = List<VitalsModel>.from(records)
-        ..sort((a, b) {
-          final dateA = a.recordedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          final dateB = b.recordedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-          return dateB.compareTo(dateA);
-        });
-      for (final r in sorted) {
-        final config = VitalMetricRegistry.getConfigByKey(r.type);
-        if (config != null) return config;
-      }
-    }
-    return VitalMetricRegistry.bloodSugar;
   }
 
   @override
@@ -96,14 +74,26 @@ class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
   Widget _buildCardContent(BuildContext context, List<VitalsModel> records) {
     final theme = context.themeColors;
 
-    final activeConfig = _resolveConfig(records);
+    final bool renderAll = widget.isAllVitals && widget.initialConfig == null;
 
-    // Process data for the selected metric and period
-    final chartData = VitalChartDataProcessor.process(
-      allRecords: records,
-      config: activeConfig,
-      period: _selectedPeriod,
-    );
+    // Process data for either all vitals combined or a specific metric
+    final ProcessedVitalChartData chartData = renderAll
+        ? VitalChartDataProcessor.processAll(
+            allRecords: records,
+            period: _selectedPeriod,
+          )
+        : VitalChartDataProcessor.process(
+            allRecords: records,
+            config: widget.initialConfig ?? VitalMetricRegistry.bloodPressure,
+            period: _selectedPeriod,
+          );
+
+    final activeConfig = widget.initialConfig;
+    final primaryColor = activeConfig?.primaryColor ?? theme.accentPrimary;
+    final headerIcon = activeConfig?.iconData ?? Icons.insights_rounded;
+    final badgeLabel = renderAll
+        ? "All Vitals"
+        : (activeConfig?.displayName ?? "Vital Trend");
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -122,19 +112,19 @@ class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔹 1. Header: Title + Metric Selector (Dropdown on All Vitals, Static Badge on specific vital)
+          // 🔹 1. Header: Title + Static Status Badge (NO redundant in-card dropdown)
           Row(
             children: [
               Container(
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: activeConfig.primaryColor.withValues(alpha: 0.15),
+                  color: primaryColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  activeConfig.iconData,
-                  color: activeConfig.primaryColor,
+                  headerIcon,
+                  color: primaryColor,
                   size: 15,
                 ),
               ),
@@ -152,55 +142,44 @@ class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
                 ),
               ),
               const SizedBox(width: 6),
-              if (widget.allowMetricSelection)
-                Flexible(
-                  child: VitalMetricSelector(
-                    selectedConfig: activeConfig,
-                    availableConfigs: VitalMetricRegistry.activeMetrics,
-                    onMetricChanged: (newConfig) {
-                      setState(() => _userSelectedConfig = newConfig);
-                    },
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: primaryColor.withValues(alpha: 0.3),
+                    ),
                   ),
-                )
-              else
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: activeConfig.primaryColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: activeConfig.primaryColor.withValues(alpha: 0.3),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: activeConfig.primaryColor,
-                            shape: BoxShape.circle,
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          badgeLabel,
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            activeConfig.displayName,
-                            style: TextStyle(
-                              color: activeConfig.primaryColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
             ],
           ),
 
@@ -209,7 +188,7 @@ class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
           // 🔹 2. Period Filter Pills (7D, 30D, 3M, 6M, 1Y)
           VitalPeriodFilter(
             selectedPeriod: _selectedPeriod,
-            activeColor: activeConfig.primaryColor,
+            activeColor: primaryColor,
             onPeriodChanged: (newPeriod) {
               setState(() => _selectedPeriod = newPeriod);
             },
@@ -218,7 +197,7 @@ class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
           const SizedBox(height: 16),
 
           // 🔹 3. Latest Reading Banner
-          _buildLatestStatsRow(context, chartData, activeConfig),
+          _buildLatestStatsRow(context, chartData, primaryColor),
 
           const SizedBox(height: 16),
 
@@ -230,7 +209,10 @@ class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
             ),
             const SizedBox(height: 12),
             // 🔹 5. Legend
-            VitalChartLegend(config: activeConfig),
+            VitalChartLegend(
+              chartData: chartData,
+              config: activeConfig,
+            ),
           ] else ...[
             VitalChartEmptyView(
               config: activeConfig,
@@ -245,7 +227,7 @@ class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
   Widget _buildLatestStatsRow(
     BuildContext context,
     ProcessedVitalChartData chartData,
-    VitalMetricConfig config,
+    Color activeColor,
   ) {
     final theme = context.themeColors;
 
@@ -278,8 +260,8 @@ class _VitalsTrendCardState extends ConsumerState<VitalsTrendCard> {
                 Text(
                   chartData.latestValueFormatted,
                   style: TextStyle(
-                    color: config.primaryColor,
-                    fontSize: 17,
+                    color: activeColor,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,

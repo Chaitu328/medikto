@@ -593,9 +593,9 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               // Vitals Trend Graph Card (embedded inside Medical Documents Hub -> Vitals -> All Vitals & individual vital filters)
               VitalsTrendCard(
                 key: ValueKey("vitals_trend_${_selectedVitalFilter}"),
-                allowMetricSelection: _selectedVitalFilter == "All",
+                isAllVitals: _selectedVitalFilter == "All",
                 initialConfig: _selectedVitalFilter == "All"
-                    ? _getDeterministicLatestVitalConfig(allVitals)
+                    ? null
                     : (VitalMetricRegistry.getConfigByKey(_selectedVitalFilter) ??
                         VitalMetricRegistry.bloodPressure),
                 customRecords: allVitals,

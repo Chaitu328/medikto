@@ -1,18 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:medikto/core/constants/app_themes.dart';
+import 'package:medikto/features/vitals/models/vital_chart_point.dart';
 import 'package:medikto/features/vitals/models/vital_metric_type.dart';
 
-/// Reusable legend for single and dual series vital trend charts.
+/// Reusable legend for single, dual, and multi-vital series trend charts.
 class VitalChartLegend extends StatelessWidget {
-  final VitalMetricConfig config;
+  final VitalMetricConfig? config;
+  final ProcessedVitalChartData? chartData;
 
-  const VitalChartLegend({super.key, required this.config});
+  const VitalChartLegend({
+    super.key,
+    this.config,
+    this.chartData,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.themeColors;
 
-    if (config.isMultiSeries) {
+    // 1. Multi-vital / Combined view legend
+    if (chartData != null && chartData!.isAllVitals) {
+      if (chartData!.seriesList.isEmpty) return const SizedBox.shrink();
+
+      return Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 14,
+        runSpacing: 8,
+        children: chartData!.seriesList.map((series) {
+          return _buildLegendItem(
+            color: series.color,
+            label: "${series.name} (${series.unit})",
+            textColor: theme.textSecondary,
+          );
+        }).toList(),
+      );
+    }
+
+    final activeConfig = config ?? chartData?.config;
+    if (activeConfig == null) return const SizedBox.shrink();
+
+    // 2. Dual series (e.g. Blood Pressure Systolic + Diastolic)
+    if (activeConfig.isMultiSeries) {
       return Wrap(
         alignment: WrapAlignment.center,
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -20,23 +49,24 @@ class VitalChartLegend extends StatelessWidget {
         runSpacing: 6,
         children: [
           _buildLegendItem(
-            color: config.primaryColor,
-            label: config.seriesLabels.isNotEmpty
-                ? "${config.seriesLabels[0]} (${config.unit})"
-                : "Systolic (${config.unit})",
+            color: activeConfig.primaryColor,
+            label: activeConfig.seriesLabels.isNotEmpty
+                ? "${activeConfig.seriesLabels[0]} (${activeConfig.unit})"
+                : "Systolic (${activeConfig.unit})",
             textColor: theme.textSecondary,
           ),
           _buildLegendItem(
-            color: config.secondaryColor ?? const Color(0xFFBA68C8),
-            label: config.seriesLabels.length > 1
-                ? "${config.seriesLabels[1]} (${config.unit})"
-                : "Diastolic (${config.unit})",
+            color: activeConfig.secondaryColor ?? const Color(0xFFBA68C8),
+            label: activeConfig.seriesLabels.length > 1
+                ? "${activeConfig.seriesLabels[1]} (${activeConfig.unit})"
+                : "Diastolic (${activeConfig.unit})",
             textColor: theme.textSecondary,
           ),
         ],
       );
     }
 
+    // 3. Single series
     return Wrap(
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -44,8 +74,8 @@ class VitalChartLegend extends StatelessWidget {
       runSpacing: 6,
       children: [
         _buildLegendItem(
-          color: config.primaryColor,
-          label: "${config.displayName} (${config.unit})",
+          color: activeConfig.primaryColor,
+          label: "${activeConfig.displayName} (${activeConfig.unit})",
           textColor: theme.textSecondary,
         ),
       ],
@@ -61,11 +91,11 @@ class VitalChartLegend extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 4,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(2),
+            shape: BoxShape.circle,
           ),
         ),
         const SizedBox(width: 6),
@@ -73,7 +103,7 @@ class VitalChartLegend extends StatelessWidget {
           label,
           style: TextStyle(
             color: textColor,
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
         ),

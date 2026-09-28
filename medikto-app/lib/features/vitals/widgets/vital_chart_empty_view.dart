@@ -4,18 +4,21 @@ import 'package:medikto/features/vitals/models/vital_metric_type.dart';
 
 /// Professional empty state view for vital trend charts when no readings exist.
 class VitalChartEmptyView extends StatelessWidget {
-  final VitalMetricConfig config;
+  final VitalMetricConfig? config;
   final String periodLabel;
 
   const VitalChartEmptyView({
     super.key,
-    required this.config,
+    this.config,
     required this.periodLabel,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.themeColors;
+    final primaryColor = config?.primaryColor ?? theme.accentPrimary;
+    final iconData = config?.iconData ?? Icons.monitor_heart_outlined;
+    final title = config != null ? "No ${config!.displayName} Data" : "No Vitals Data";
 
     return Container(
       width: double.infinity,
@@ -33,18 +36,18 @@ class VitalChartEmptyView extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: config.primaryColor.withValues(alpha: 0.12),
+              color: primaryColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              config.iconData,
-              color: config.primaryColor,
+              iconData,
+              color: primaryColor,
               size: 24,
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            "No ${config.displayName} Data",
+            title,
             style: TextStyle(
               color: theme.textPrimary,
               fontSize: 15,

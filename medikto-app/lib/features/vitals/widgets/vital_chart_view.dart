@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:medikto/core/constants/app_themes.dart';
 import 'package:medikto/features/vitals/models/vital_chart_point.dart';
 
-/// FlChart LineChart renderer supporting single & dual vital series with grid, axes, and medical tooltips.
+/// FlChart LineChart renderer supporting single, dual, and multi-vital series with grid, axes, and medical tooltips.
 class VitalChartView extends StatelessWidget {
   final ProcessedVitalChartData chartData;
   final double height;
@@ -20,80 +20,49 @@ class VitalChartView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.themeColors;
     final config = chartData.config;
-    final points = chartData.points;
 
-    if (points.isEmpty) {
+    final int pointCount = chartData.isAllVitals
+        ? chartData.timestamps.length
+        : chartData.points.length;
+
+    if (pointCount == 0 || chartData.seriesList.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final int pointCount = points.length;
     final double maxX = math.max((pointCount - 1).toDouble(), 1.0);
 
     // Calculate bottom label step to prevent label collision
     final int labelStep = pointCount > 7 ? (pointCount / 4).ceil() : 1;
 
-    // Dual or Single line bar data setup
+    // Build series line bar data
     final List<LineChartBarData> lineBarsData = [];
 
-    // 1. Primary Series (e.g. Glucose, Heart Rate, Temperature, or BP Systolic)
-    lineBarsData.add(
-      LineChartBarData(
-        spots: chartData.primarySpots,
-        isCurved: pointCount > 1,
-        curveSmoothness: 0.35,
-        color: config.primaryColor,
-        barWidth: 3.2,
-        isStrokeCapRound: true,
-        dotData: FlDotData(
-          show: true,
-          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-            radius: pointCount > 15 ? 2.5 : 4.0,
-            color: config.primaryColor,
-            strokeWidth: 2,
-            strokeColor: theme.card,
-          ),
-        ),
-        belowBarData: BarAreaData(
-          show: true,
-          gradient: LinearGradient(
-            colors: [
-              config.primaryColor.withValues(alpha: 0.22),
-              config.primaryColor.withValues(alpha: 0.0),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-      ),
-    );
-
-    // 2. Secondary Series (BP Diastolic)
-    if (config.isMultiSeries && chartData.secondarySpots.isNotEmpty) {
-      final secondaryColor = config.secondaryColor ?? const Color(0xFFBA68C8);
+    for (final series in chartData.seriesList) {
+      if (series.spots.isEmpty) continue;
 
       lineBarsData.add(
         LineChartBarData(
-          spots: chartData.secondarySpots,
-          isCurved: pointCount > 1,
+          spots: series.spots,
+          isCurved: series.spots.length > 1,
           curveSmoothness: 0.35,
-          color: secondaryColor,
+          color: series.color,
           barWidth: 3.0,
           isStrokeCapRound: true,
           dotData: FlDotData(
             show: true,
             getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-              radius: pointCount > 15 ? 2.5 : 4.0,
-              color: secondaryColor,
+              radius: series.spots.length > 15 ? 2.5 : 4.0,
+              color: series.color,
               strokeWidth: 2,
               strokeColor: theme.card,
             ),
           ),
           belowBarData: BarAreaData(
-            show: true,
+            show: !chartData.isAllVitals || chartData.seriesList.length == 1,
             gradient: LinearGradient(
               colors: [
-                secondaryColor.withValues(alpha: 0.15),
-                secondaryColor.withValues(alpha: 0.0),
+                series.color.withValues(alpha: 0.18),
+                series.color.withValues(alpha: 0.0),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -135,12 +104,11 @@ class VitalChartView extends StatelessWidget {
                 interval: chartData.yInterval,
                 reservedSize: 38,
                 getTitlesWidget: (value, meta) {
-                  // Hide min and max labels if they overlap graph margins
                   if (value < chartData.minY || value > chartData.maxY) {
                     return const SizedBox.shrink();
                   }
                   String label;
-                  if (config.decimalPrecision > 0) {
+                  if (config != null && config.decimalPrecision > 0) {
                     label = value.toStringAsFixed(config.decimalPrecision);
                   } else {
                     label = value.toInt().toString();
@@ -167,20 +135,23 @@ class VitalChartView extends StatelessWidget {
                 interval: 1,
                 getTitlesWidget: (value, meta) {
                   final int index = value.toInt();
-                  if (index < 0 || index >= points.length) {
+                  if (index < 0 || index >= pointCount) {
                     return const SizedBox.shrink();
                   }
 
                   // Render selective labels based on step interval
                   final bool isFirst = index == 0;
-                  final bool isLast = index == points.length - 1;
+                  final bool isLast = index == pointCount - 1;
                   final bool isStep = index % labelStep == 0;
 
                   if (!isFirst && !isLast && !isStep) {
                     return const SizedBox.shrink();
                   }
 
-                  final date = points[index].timestamp;
+                  final DateTime date = chartData.isAllVitals
+                      ? chartData.timestamps[index]
+                      : chartData.points[index].timestamp;
+
                   final label = VitalChartDataProcessor.formatXAxisLabel(
                     date,
                     chartData.period,
@@ -222,18 +193,89 @@ class VitalChartView extends StatelessWidget {
                 if (touchedSpots.isEmpty) return [];
 
                 final int spotIndex = touchedSpots.first.spotIndex;
-                if (spotIndex < 0 || spotIndex >= points.length) {
+                if (spotIndex < 0 || spotIndex >= pointCount) {
                   return [];
                 }
 
-                final point = points[spotIndex];
-                final dateStr = DateFormat("dd MMM yyyy, hh:mm a")
-                    .format(point.timestamp.toLocal());
+                final DateTime date = chartData.isAllVitals
+                    ? (spotIndex < chartData.timestamps.length
+                        ? chartData.timestamps[spotIndex]
+                        : DateTime.now())
+                    : (spotIndex < chartData.points.length
+                        ? chartData.points[spotIndex].timestamp
+                        : DateTime.now());
 
-                if (config.isMultiSeries) {
+                final dateStr = DateFormat("dd MMM yyyy, hh:mm a")
+                    .format(date.toLocal());
+
+                if (chartData.isAllVitals) {
+                  final List<LineTooltipItem> items = [];
+                  for (int i = 0; i < touchedSpots.length; i++) {
+                    final spot = touchedSpots[i];
+                    final barIdx = spot.barIndex;
+                    if (barIdx < 0 || barIdx >= chartData.seriesList.length) continue;
+                    final series = chartData.seriesList[barIdx];
+
+                    if (i == 0) {
+                      items.add(
+                        LineTooltipItem(
+                          "$dateStr\n",
+                          TextStyle(
+                            color: theme.textSecondary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: "${series.name}: ",
+                              style: TextStyle(
+                                color: series.color,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            TextSpan(
+                              text: "${spot.y.toInt()} ${series.unit}",
+                              style: TextStyle(
+                                color: theme.textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      items.add(
+                        LineTooltipItem(
+                          "${series.name}: ",
+                          TextStyle(
+                            color: series.color,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: "${spot.y.toInt()} ${series.unit}",
+                              style: TextStyle(
+                                color: theme.textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  }
+                  return items;
+                }
+
+                if (config != null && config.isMultiSeries) {
                   return touchedSpots.map((spot) {
                     final bool isSystolic = spot.barIndex == 0;
-                    final String seriesName = isSystolic ? "Systolic" : "Diastolic";
+                    final String seriesName =
+                        isSystolic ? "Systolic" : "Diastolic";
                     final Color color = isSystolic
                         ? config.primaryColor
                         : (config.secondaryColor ?? const Color(0xFFBA68C8));
@@ -289,6 +331,13 @@ class VitalChartView extends StatelessWidget {
                 }
 
                 // Single series tooltip
+                final point = spotIndex < chartData.points.length
+                    ? chartData.points[spotIndex]
+                    : null;
+                final valStr = point != null && config != null
+                    ? config.formatValue(point.primaryValue)
+                    : "${touchedSpots.first.y.toInt()}";
+
                 return [
                   LineTooltipItem(
                     "$dateStr\n",
@@ -299,15 +348,15 @@ class VitalChartView extends StatelessWidget {
                     ),
                     children: [
                       TextSpan(
-                        text: "${config.displayName}: ",
+                        text: "${config?.displayName ?? 'Vital'}: ",
                         style: TextStyle(
-                          color: config.primaryColor,
+                          color: config?.primaryColor ?? theme.accentPrimary,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       TextSpan(
-                        text: config.formatValue(point.primaryValue),
+                        text: valStr,
                         style: TextStyle(
                           color: theme.textPrimary,
                           fontSize: 13,
