@@ -47,7 +47,9 @@ const connectDB = async () => {
       );
     }
 
-    // DocumentDB compatibility settings
+    // DocumentDB requires SCRAM-SHA-1 and authSource=admin
+    options.authMechanism = process.env.DOCDB_AUTH_MECHANISM || "SCRAM-SHA-1";
+    options.authSource = process.env.DOCDB_AUTH_SOURCE || "admin";
     options.retryWrites = false;
   }
 
