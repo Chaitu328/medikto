@@ -26,6 +26,7 @@ COPY . .
 # Set build-time environment variables
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=1536"
 
 # Build arguments for client-side environment variables
 ARG NEXT_PUBLIC_GA_ID=""

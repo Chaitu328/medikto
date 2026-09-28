@@ -25,9 +25,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 512M
         reservations:
-          memory: 128M
+          memory: 256M
     logging:
       driver: "json-file"
       options:
@@ -38,4 +38,4 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
