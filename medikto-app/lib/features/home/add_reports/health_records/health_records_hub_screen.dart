@@ -467,6 +467,7 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 _buildVitalsHistoryTab(isGuardian),
                 _buildReportsTab(),
@@ -1055,10 +1056,17 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 }).toList();
 
                 if (filteredReports.isEmpty) {
-                  return _buildEmptyState(
-                    icon: Icons.assignment_outlined,
-                    title: "No Reports Found",
-                    subtitle: "Try altering search terms or upload a new report.",
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+                      _buildEmptyState(
+                        icon: Icons.assignment_outlined,
+                        title: "No Reports Found",
+                        subtitle: "Try altering search terms or upload a new report.",
+                      ),
+                    ],
                   );
                 }
 
@@ -1074,7 +1082,14 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               },
               loading: () =>
                   Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
-              error: (err, st) => _buildErrorState(err.toString()),
+              error: (err, st) => ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+                  _buildErrorState(err.toString()),
+                ],
+              ),
             ),
           ),
         ),
@@ -1121,10 +1136,17 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
                 }).toList();
 
                 if (filteredPrescriptions.isEmpty) {
-                  return _buildEmptyState(
-                    icon: Icons.receipt_long_outlined,
-                    title: "No Prescriptions Found",
-                    subtitle: "Try altering search terms or add a new prescription.",
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+                      _buildEmptyState(
+                        icon: Icons.receipt_long_outlined,
+                        title: "No Prescriptions Found",
+                        subtitle: "Try altering search terms or add a new prescription.",
+                      ),
+                    ],
                   );
                 }
 
@@ -1140,7 +1162,14 @@ class _HealthRecordsHubScreenState extends ConsumerState<HealthRecordsHubScreen>
               },
               loading: () =>
                   Center(child: CircularProgressIndicator(color: themeColors.accentPrimary)),
-              error: (err, st) => _buildErrorState(err.toString()),
+              error: (err, st) => ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.12),
+                  _buildErrorState(err.toString()),
+                ],
+              ),
             ),
           ),
         ),
