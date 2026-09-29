@@ -244,13 +244,13 @@ export default function Patients() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-16 px-4 sm:px-8 pt-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* ── HEADER BANNER ────────────────────────────────────────────── */}
-      <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl shadow-slate-900/10">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl shadow-slate-900/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_40%)]" />
 
-        <div className="relative px-8 py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="relative px-5 sm:px-8 py-5 sm:py-7 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/30 backdrop-blur-md">
@@ -258,16 +258,16 @@ export default function Patients() {
                 Clinical Practice Directory
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
               Patient Management
             </h1>
-            <p className="text-slate-300 text-sm sm:text-base mt-1.5 max-w-xl leading-relaxed">
+            <p className="text-slate-300 text-xs sm:text-sm lg:text-base mt-1.5 max-w-xl leading-relaxed">
               Monitor connected patients, real-time medication adherence, clinical records, and hospital link status.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/15 text-xs font-medium text-slate-200 flex items-center gap-2">
+            <div className="bg-white/10 backdrop-blur-md px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl border border-white/15 text-xs font-medium text-slate-200 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>{totalPatients} Connected {totalPatients === 1 ? "Patient" : "Patients"}</span>
             </div>
@@ -679,10 +679,10 @@ export default function Patients() {
             onClick={() => setDetailDrawerOpen(false)}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
+            <div className="w-screen max-w-full sm:max-w-md bg-white shadow-2xl flex flex-col">
               {/* Drawer Header */}
-              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+              <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                     <UserCircle className="w-5 h-5" />

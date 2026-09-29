@@ -54,7 +54,7 @@ final subscriptionPlansProvider = FutureProvider.autoDispose<List<PlanOfferingMo
         "🧾 Store up to 50 health reports",
         "💊 Manage up to 5 active medications",
         "🔔 Daily medication reminders",
-        "📸 Take photo & delete in 48 hours",
+        "📸 Images are automatically deleted after 48 hours",
         "📁 Upload and view prescriptions anytime",
         "☁️ Secure cloud backup (limited space)"
       ],
@@ -78,10 +78,11 @@ final subscriptionPlansProvider = FutureProvider.autoDispose<List<PlanOfferingMo
       features: [
         "🧾 Store up to 250 health reports",
         "💊 Manage unlimited medications",
-        "📸 Take photo & store indefinitely",
+        "👨‍👩‍👦 Nominate family carers & guardians",
+        "📸 Images are automatically deleted after 3 months",
         "📈 Detailed AI health analytics",
         "☁️ Full cloud storage & sync across devices",
-        "📤 Share as PDF/JPEG via Bluetooth/Email"
+        "📤 Share health records as PDF/JPEG"
       ],
     ),
   ];

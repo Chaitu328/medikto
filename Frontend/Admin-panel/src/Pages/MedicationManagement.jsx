@@ -210,48 +210,43 @@ const adherence =
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* HEADER */}
-      <div className="relative mb-10 overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-xs">
         <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.04] via-transparent to-[#10B981]/[0.04]" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#10B981]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
+        <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-48 sm:w-64 h-48 sm:h-64 bg-[#10B981]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
 
-        <div className="relative px-6 sm:px-8 py-7 sm:py-8 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="relative px-5 sm:px-8 py-5 sm:py-7 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
           <div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-[#2563EB]/10 flex items-center justify-center">
-                <FlaskConical className="w-5 h-5 text-[#2563EB]" />
+            <div className="flex items-center gap-2.5 mb-2 sm:mb-2.5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0">
+                <FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 text-[#2563EB]" />
               </div>
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#64748B]">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#64748B]">
                 Pharmacy Management
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-[#0F172A] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F172A] tracking-tight">
               Medications
             </h1>
-            <p className="text-[#64748B] mt-2 text-base max-w-lg leading-relaxed">
+            <p className="text-[#64748B] mt-1.5 text-xs sm:text-sm lg:text-base max-w-lg leading-relaxed">
               Manage prescriptions and monitor medication adherence across all patient schedules.
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100">
+            <div className="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
               <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-              <span className="text-sm font-medium text-emerald-700">
+              <span className="text-xs sm:text-sm font-medium text-emerald-700">
                 System Active
               </span>
             </div>
 
-            <button className="h-11 px-5 rounded-2xl bg-white border border-slate-200 text-sm font-semibold text-[#0F172A] shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 flex items-center gap-2">
+            <button className="h-10 sm:h-11 px-4 sm:px-5 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm font-semibold text-[#0F172A] shadow-xs hover:shadow-sm hover:border-slate-300 transition-all duration-300 flex items-center gap-2">
               <Download className="w-4 h-4 text-[#64748B]" />
               Export
             </button>
-
-            {/* <button className="h-11 px-6 rounded-2xl bg-[#2563EB] text-white font-semibold shadow-lg shadow-[#2563EB]/20 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-[#2563EB]/30 hover:scale-[1.02] transition-all duration-300 flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              Add Medication
-            </button> */}
           </div>
         </div>
       </div>
@@ -259,50 +254,50 @@ const adherence =
       {/* ANALYTICS */}
       <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-5 mb-8">
         {/* HEATMAP */}
-        <div className="group relative bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+        <div className="group relative bg-white rounded-3xl border border-slate-200/60 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.02] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           <div className="relative">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
               <div>
-                <h2 className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-bold text-[#0F172A] flex items-center gap-2">
                   <Activity className="w-5 h-5 text-[#2563EB]" />
                   Adherence Heatmap
                 </h2>
-                <p className="text-sm text-[#64748B] mt-1">
+                <p className="text-xs sm:text-sm text-[#64748B] mt-1">
                   Weekly medication analytics across all patients
                 </p>
               </div>
 
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 text-xs sm:text-sm">
+                <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-md bg-[#BFDBFE]"></div>
                   <span className="text-[#64748B]">Low</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-md bg-[#2563EB]"></div>
                   <span className="text-[#64748B]">High</span>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-3">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-3">
               {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day, i) => (
                 <div key={i}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] mb-3 text-center">
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] mb-2 sm:mb-3 text-center">
                     {day}
                   </p>
 
-                  <div className="space-y-2">
-                    <div className="h-10 rounded-xl bg-gradient-to-br from-[#2563EB] to-[#3B82F6] shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer group/cell">
-                      <div className="w-full h-full rounded-xl bg-white/10 opacity-0 group-hover/cell:opacity-100 transition-opacity duration-200" />
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <div className="h-7 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#2563EB] to-[#3B82F6] shadow-xs hover:shadow-sm hover:scale-105 transition-all duration-200 cursor-pointer group/cell">
+                      <div className="w-full h-full rounded-lg sm:rounded-xl bg-white/10 opacity-0 group-hover/cell:opacity-100 transition-opacity duration-200" />
                     </div>
 
-                    <div className="h-10 rounded-xl bg-gradient-to-br from-[#60A5FA] to-[#93C5FD] shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer group/cell">
-                      <div className="w-full h-full rounded-xl bg-white/10 opacity-0 group-hover/cell:opacity-100 transition-opacity duration-200" />
+                    <div className="h-7 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#60A5FA] to-[#93C5FD] shadow-xs hover:shadow-sm hover:scale-105 transition-all duration-200 cursor-pointer group/cell">
+                      <div className="w-full h-full rounded-lg sm:rounded-xl bg-white/10 opacity-0 group-hover/cell:opacity-100 transition-opacity duration-200" />
                     </div>
 
-                    <div className="h-10 rounded-xl bg-gradient-to-br from-[#BFDBFE] to-[#DBEAFE] shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer group/cell">
-                      <div className="w-full h-full rounded-xl bg-white/10 opacity-0 group-hover/cell:opacity-100 transition-opacity duration-200" />
+                    <div className="h-7 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#BFDBFE] to-[#DBEAFE] shadow-xs hover:shadow-sm hover:scale-105 transition-all duration-200 cursor-pointer group/cell">
+                      <div className="w-full h-full rounded-lg sm:rounded-xl bg-white/10 opacity-0 group-hover/cell:opacity-100 transition-opacity duration-200" />
                     </div>
                   </div>
                 </div>

@@ -807,236 +807,245 @@ const Admins = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="space-y-6 sm:space-y-8">
       {/* ─── PAGE HEADER ────────────────────────────────────────────────────── */}
-      <div className="px-8 pt-8 pb-6">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
-                <Shield size={20} className="text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Admins</h1>
-                <p className="text-sm text-slate-500 mt-0.5">Manage all hospital administrators across the Medikto platform.</p>
-              </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100 flex-shrink-0">
+              <Shield size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Admins</h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Manage all hospital administrators across the Medikto platform.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
-            >
-              <Download size={15} /> Export
-            </button>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
-            >
-              <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} /> Refresh
-            </button>
-            <button
-              onClick={() => setAddModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.99]"
-            >
-              <Plus size={16} /> Add Admin
-            </button>
-          </div>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+          <button
+            onClick={handleExport}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            <Download size={14} /> Export
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /> Refresh
+          </button>
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-[#2563EB] text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.99]"
+          >
+            <Plus size={16} /> Add Admin
+          </button>
         </div>
       </div>
 
       {/* ─── ANALYTICS CARDS ─────────────────────────────────────────────────── */}
-      <div className="px-8 pb-6">
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <SkeletonStatCard />
-            <SkeletonStatCard />
-            <SkeletonStatCard />
-            <SkeletonStatCard />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              icon={Users}
-              title="Total Admins"
-              value={stats.total}
-              trend={12}
-              trendUp={true}
-              subtitle="All hospital administrators"
-              color="blue"
-            />
-            <StatCard
-              icon={UserCheck}
-              title="Active Admins"
-              value={stats.active}
-              trend={8}
-              trendUp={true}
-              subtitle="Verified & active accounts"
-              color="emerald"
-            />
-            <StatCard
-              icon={AlertTriangle}
-              title="Inactive Admins"
-              value={stats.inactive}
-              trend={5}
-              trendUp={false}
-              subtitle="Disabled / pending accounts"
-              color="amber"
-            />
-            <StatCard
-              icon={Crown}
-              title="Premium Admins"
-              value={stats.premium}
-              trend={15}
-              trendUp={true}
-              subtitle="Premium subscription holders"
-              color="purple"
-            />
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            icon={Users}
+            title="Total Admins"
+            value={stats.total}
+            trend={12}
+            trendUp={true}
+            subtitle="All hospital administrators"
+            color="blue"
+          />
+          <StatCard
+            icon={UserCheck}
+            title="Active Admins"
+            value={stats.active}
+            trend={8}
+            trendUp={true}
+            subtitle="Verified & active accounts"
+            color="emerald"
+          />
+          <StatCard
+            icon={AlertTriangle}
+            title="Inactive Admins"
+            value={stats.inactive}
+            trend={5}
+            trendUp={false}
+            subtitle="Disabled / pending accounts"
+            color="amber"
+          />
+          <StatCard
+            icon={Crown}
+            title="Premium Admins"
+            value={stats.premium}
+            trend={15}
+            trendUp={true}
+            subtitle="Premium subscription holders"
+            color="purple"
+          />
+        </div>
+      )}
 
       {/* ─── SEARCH, FILTERS & TOOLBAR ──────────────────────────────────────── */}
-      <div className="px-8 pb-6">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[240px]">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, phone, or email..."
-                className="w-full h-11 pl-11 pr-4 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all"
-              />
-            </div>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
+          {/* Search */}
+          <div className="relative flex-1 min-w-0">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, phone, or email..."
+              className="w-full h-10 sm:h-11 pl-11 pr-4 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all"
+            />
+          </div>
 
-            {/* Filter Chips */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <FilterChip label="All" active={statusFilter === "all"} onClick={() => setStatusFilter("all")} count={admins.length} />
-              <FilterChip label="Active" active={statusFilter === "active"} onClick={() => setStatusFilter("active")} count={stats.active} />
-              <FilterChip label="Inactive" active={statusFilter === "inactive"} onClick={() => setStatusFilter("inactive")} count={stats.inactive} />
-              <FilterChip label="Premium" active={statusFilter === "premium"} onClick={() => setStatusFilter("premium")} count={stats.premium} />
-              <FilterChip label="Basic" active={statusFilter === "basic"} onClick={() => setStatusFilter("basic")} count={stats.basic} />
-              <FilterChip label="Free" active={statusFilter === "free"} onClick={() => setStatusFilter("free")} count={stats.free} />
-            </div>
+          {/* Filter Chips */}
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            <FilterChip label="All" active={statusFilter === "all"} onClick={() => setStatusFilter("all")} count={admins.length} />
+            <FilterChip label="Active" active={statusFilter === "active"} onClick={() => setStatusFilter("active")} count={stats.active} />
+            <FilterChip label="Inactive" active={statusFilter === "inactive"} onClick={() => setStatusFilter("inactive")} count={stats.inactive} />
+            <FilterChip label="Premium" active={statusFilter === "premium"} onClick={() => setStatusFilter("premium")} count={stats.premium} />
+            <FilterChip label="Basic" active={statusFilter === "basic"} onClick={() => setStatusFilter("basic")} count={stats.basic} />
+            <FilterChip label="Free" active={statusFilter === "free"} onClick={() => setStatusFilter("free")} count={stats.free} />
+          </div>
 
-            {/* Sort */}
-            <div className="relative min-w-[160px]">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full h-11 pl-4 pr-10 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer font-medium"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="name">Name (A-Z)</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
+          {/* Sort */}
+          <div className="relative w-full sm:w-44 lg:w-48 flex-shrink-0">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full h-10 sm:h-11 pl-3.5 pr-9 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm text-slate-700 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer font-medium"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           </div>
         </div>
       </div>
 
       {/* ─── TABLE ──────────────────────────────────────────────────────────── */}
-      <div className="px-8 pb-10">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10">
-                <tr className="border-b border-slate-100 bg-slate-50/80 backdrop-blur-sm">
-                  {[
-                    { label: "Profile", width: "w-16" },
-                    { label: "Name", width: "w-48" },
-                    { label: "Phone", width: "w-40" },
-                    { label: "Subscription", width: "w-32" },
-                    { label: "Status", width: "w-28" },
-                    { label: "Created", width: "w-36" },
-                    { label: "Actions", width: "w-16" },
-                  ].map((h) => (
-                    <th
-                      key={h.label}
-                      className={`px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${h.width}`}
-                    >
-                      {h.label}
-                    </th>
-                  ))}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[720px]">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-slate-100 bg-slate-50/80 backdrop-blur-sm">
+                {[
+                  { label: "Profile", width: "w-16" },
+                  { label: "Name", width: "w-48" },
+                  { label: "Phone", width: "w-40" },
+                  { label: "Subscription", width: "w-32" },
+                  { label: "Status", width: "w-28" },
+                  { label: "Created", width: "w-36" },
+                  { label: "Actions", width: "w-16" },
+                ].map((h) => (
+                  <th
+                    key={h.label}
+                    className={`px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${h.width}`}
+                  >
+                    {h.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <>
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                </>
+              ) : paginatedAdmins.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <EmptyState onCreate={() => setAddModalOpen(true)} />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <>
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                  </>
-                ) : paginatedAdmins.length === 0 ? (
-                  <tr>
-                    <td colSpan={7}>
-                      <EmptyState onCreate={() => setAddModalOpen(true)} />
+              ) : (
+                paginatedAdmins.map((admin) => (
+                  <tr
+                    key={admin._id || admin.id}
+                    onClick={() => handleView(admin)}
+                    className="border-b border-slate-50 hover:bg-slate-50/70 transition-colors cursor-pointer group"
+                  >
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <Avatar name={admin.name || admin.firstName} src={admin.profilePic || admin.avatar} />
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{admin.name || admin.firstName || "N/A"}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{admin.email || admin.role || "Admin"}</p>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <span className="text-sm text-slate-700 font-medium">{admin.phone || "N/A"}</span>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <SubscriptionBadge subscription={admin.subscription || admin.plan} />
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <StatusBadge status={admin.status || admin.isVerified} />
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <span className="text-sm text-slate-500">{formatDate(admin.createdAt)}</span>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <ActionMenu
+                          admin={admin}
+                          onView={() => handleView(admin)}
+                          onEdit={() => handleEdit(admin)}
+                          onDisable={() => handleDisable(admin)}
+                          onDelete={() => handleDelete(admin)}
+                        />
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  paginatedAdmins.map((admin) => (
-                    <tr
-                      key={admin._id || admin.id}
-                      onClick={() => handleView(admin)}
-                      className="border-b border-slate-50 hover:bg-slate-50/70 transition-colors cursor-pointer group"
-                    >
-                      <td className="px-6 py-4">
-                        <Avatar name={admin.name || admin.firstName} src={admin.profilePic || admin.avatar} />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{admin.name || admin.firstName || "N/A"}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{admin.email || admin.role || "Admin"}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-slate-700 font-medium">{admin.phone || "N/A"}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <SubscriptionBadge subscription={admin.subscription || admin.plan} />
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={admin.status || admin.isVerified} />
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-slate-500">{formatDate(admin.createdAt)}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <ActionMenu
-                            admin={admin}
-                            onView={() => handleView(admin)}
-                            onEdit={() => handleEdit(admin)}
-                            onDisable={() => handleDisable(admin)}
-                            onDelete={() => handleDelete(admin)}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {!loading && filteredAdmins.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredAdmins.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-            />
-          )}
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+
+        {/* Pagination */}
+        {!loading && filteredAdmins.length > 0 && (
+          <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-slate-500 font-medium text-center sm:text-left">
+              Showing <span className="text-slate-700 font-semibold">{filteredAdmins.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span>–<span className="text-slate-700 font-semibold">{Math.min(currentPage * itemsPerPage, filteredAdmins.length)}</span> of <span className="text-slate-700 font-semibold">{filteredAdmins.length}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-xs sm:text-sm font-medium text-slate-600 px-2">
+                {currentPage} / {totalPages || 1}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages || 1, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── ADD ADMIN MODAL ─────────────────────────────────────────────────── */}

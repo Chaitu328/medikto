@@ -93,6 +93,7 @@ Future<void> _captureProofImage() async {
 
       if (response.status == ResponseStatus.SUCCESS) {
         ref.invalidate(getTodayScheduleProvider);
+        ref.invalidate(getAdherenceProvider);
         AppToasts.showSuccess(context, response.message);
 
         Navigator.pop(context, true);
@@ -100,7 +101,9 @@ Future<void> _captureProofImage() async {
         AppToasts.showError(context, response.message);
       }
     } catch (e) {
-      AppToasts.showError(context, e.toString());
+      if (mounted) {
+        AppToasts.showError(context, e.toString());
+      }
     } finally {
       if (mounted) {
       setState(() {

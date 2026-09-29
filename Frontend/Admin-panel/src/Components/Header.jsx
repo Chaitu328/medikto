@@ -11,6 +11,7 @@
     HeartPulse,
     Building2,
     Users,
+    Menu,
   } from "lucide-react";
 
   import { useEffect, useMemo, useRef, useState } from "react";
@@ -22,6 +23,7 @@
     medications = [],
     reports = [],
     currentUser: propUser = null,
+    onToggleSidebar = () => {},
   }) {
     const navigate = useNavigate();
 
@@ -476,86 +478,90 @@
 
     return (
       <>
-      <header className="h-[70px] bg-white border-b border-gray-200 px-8 flex items-center justify-between relative">
+      <header className="h-16 sm:h-[70px] bg-white border-b border-gray-200 px-3.5 sm:px-6 md:px-8 flex items-center justify-between sticky top-0 z-30">
 
-        {/* SEARCH */}
+        {/* LEFT AREA: MOBILE MENU & SEARCH */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 mr-3">
+          <button
+            onClick={onToggleSidebar}
+            className="md:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition flex items-center justify-center flex-shrink-0 -ml-1"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
-        {profile.showSearch && (
-          <div className="relative w-[380px]">
+          {/* SEARCH */}
+          {profile.showSearch && (
+            <div className="relative w-full max-w-[220px] sm:max-w-[280px] md:max-w-[340px] lg:max-w-[380px]">
 
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
 
-            <input
-              type="text"
-              value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              placeholder={
-                userRole === "superadmin"
-                  ? "Search patients, medications, reports..."
-                  : userRole === "hospital_admin" || userRole === "hospitaladmin"
-                  ? "Search hospital patients..."
-                  : userRole === "guardian"
-                  ? "Search linked patients..."
-                  : "Search your medications & reports..."
-              }
-              className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-10 text-sm outline-none focus:border-blue-500 focus:bg-white transition-all"
-            />
-
-            {search && (
-              <button
-                onClick={() =>
-                  setSearch("")
+              <input
+                type="text"
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
                 }
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                <X className="w-4 h-4 text-gray-400" />
-              </button>
-            )}
+                placeholder={
+                  userRole === "superadmin"
+                    ? "Search patients, medications..."
+                    : userRole === "hospital_admin" || userRole === "hospitaladmin"
+                    ? "Search hospital patients..."
+                    : userRole === "guardian"
+                    ? "Search linked patients..."
+                    : "Search medications & reports..."
+                }
+                className="w-full h-9 sm:h-11 rounded-xl border border-gray-200 bg-gray-50 pl-9 sm:pl-11 pr-8 text-xs sm:text-sm outline-none focus:border-blue-500 focus:bg-white transition-all"
+              />
 
-            {/* SEARCH RESULTS */}
-
-            {search &&
-              globalResults.length > 0 && (
-                <div className="absolute top-14 left-0 w-full bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
-
-                  {globalResults.map(
-                    (item, index) => (
-                      <button
-                        key={index}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-none transition"
-                      >
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-semibold text-gray-900">
-                            {item.title}
-                          </h4>
-
-                          <span className="text-[10px] uppercase font-bold text-blue-600">
-                            {item.type}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-gray-500 mt-1">
-                          {item.subtitle}
-                        </p>
-                      </button>
-                    )
-                  )}
-                </div>
+              {search && (
+                <button
+                  onClick={() =>
+                    setSearch("")
+                  }
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
-          </div>
-        )}
 
-        {/* Spacer when search is hidden */}
-        {!profile.showSearch && <div />}
+              {/* SEARCH RESULTS */}
+              {search &&
+                globalResults.length > 0 && (
+                  <div className="absolute top-11 sm:top-14 left-0 w-full min-w-[260px] sm:min-w-full bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
 
-        {/* RIGHT */}
+                    {globalResults.map(
+                      (item, index) => (
+                        <button
+                          key={index}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-none transition"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-semibold text-gray-900 truncate pr-2">
+                              {item.title}
+                            </h4>
 
-        <div className="flex items-center gap-6">
+                            <span className="text-[10px] uppercase font-bold text-blue-600 flex-shrink-0">
+                              {item.type}
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-gray-500 mt-1 truncate">
+                            {item.subtitle}
+                          </p>
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT AREA */}
+        <div className="flex items-center gap-2 sm:gap-4 md:gap-6 flex-shrink-0">
 
           {/* NOTIFICATION */}
-
           {profile.showNotifications && (
             <div
               className="relative"
@@ -567,22 +573,23 @@
                     !showNotifications
                   )
                 }
-                className="relative text-gray-500 hover:text-black transition"
+                className="p-1.5 sm:p-2 rounded-xl text-gray-500 hover:text-black hover:bg-gray-100 transition relative"
+                aria-label="Notifications"
               >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
 
                 {displayNotifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-semibold">
+                  <span className="absolute 0.5 top-0.5 right-0.5 sm:-top-1 sm:-right-1 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] sm:text-[10px] flex items-center justify-center font-semibold">
                     {displayNotifications.length}
                   </span>
                 )}
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 w-88 sm:w-96 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
+                <div className="absolute right-0 top-12 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
 
-                  <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">
+                  <div className="px-4 sm:px-5 py-3.5 sm:py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
                       Notifications
                     </h3>
                     {liveNotifications.length > 0 && (
@@ -662,23 +669,24 @@
 
           {profile.showHelp && (
             <div
-              className="relative"
+              className="relative hidden sm:block"
               ref={helpRef}
             >
               <button
                 onClick={() =>
                   setShowHelp(!showHelp)
                 }
-                className="text-gray-500 hover:text-black transition"
+                className="p-2 rounded-xl text-gray-500 hover:text-black hover:bg-gray-100 transition"
+                aria-label="Help Center"
               >
-                <HelpCircle className="w-5 h-5" />
+                <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
               {showHelp && (
-                <div className="absolute right-0 top-12 w-64 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
+                <div className="absolute right-0 top-12 w-[calc(100vw-2rem)] sm:w-64 max-w-xs bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
 
                   <div className="px-5 py-4 border-b border-gray-100">
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
                       Help Center
                     </h3>
                   </div>
@@ -692,7 +700,7 @@
                       ) => (
                         <button
                           key={index}
-                          className="w-full text-left px-5 py-3 hover:bg-gray-50 text-sm text-gray-700 transition"
+                          className="w-full text-left px-5 py-3 hover:bg-gray-50 text-xs sm:text-sm text-gray-700 transition"
                         >
                           {item}
                         </button>
@@ -716,45 +724,45 @@
                   !showProfileMenu
                 )
               }
-              className="flex items-center gap-3 cursor-pointer"
+              className="flex items-center gap-2 sm:gap-3 cursor-pointer p-1 rounded-xl hover:bg-gray-50 transition"
             >
 
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <img
                   src={
                     profile.profilePic ||
                     `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2563EB&color=fff&size=100`
                   }
                   alt={profile.name}
-                  className="w-10 h-10 rounded-full object-cover border"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border"
                   onError={(e) => {
                     e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2563EB&color=fff&size=100`;
                   }}
                 />
                 {profile.badge && (
-                  <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center ${profile.badge.color.split(" ")[0]}`}>
-                    <profile.badge.icon size={8} className={profile.badge.color.split(" ")[1]} />
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-white flex items-center justify-center ${profile.badge.color.split(" ")[0]}`}>
+                    <profile.badge.icon size={7} className={profile.badge.color.split(" ")[1]} />
                   </span>
                 )}
               </div>
 
-              <div className="leading-tight text-left">
-                <h4 className="text-sm font-semibold text-gray-900">
+              <div className="leading-tight text-left hidden sm:block max-w-[120px] md:max-w-[160px]">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
                   {profile.name}
                 </h4>
 
-                <p className="text-xs text-gray-500">
+                <p className="text-[10px] sm:text-xs text-gray-500 truncate">
                   {profile.subtitle}
                 </p>
               </div>
 
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
             </button>
 
             {/* PROFILE MENU */}
 
             {showProfileMenu && (
-              <div className="absolute right-0 top-14 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
+              <div className="absolute right-0 top-12 sm:top-14 w-[calc(100vw-2rem)] sm:w-72 max-w-xs bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-50">
 
                 <div className="px-5 py-5 border-b border-gray-100">
 

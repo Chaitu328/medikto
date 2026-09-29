@@ -15,13 +15,10 @@ import {
   UserPlus,
   ShieldCheck,
   User,
+  X,
 } from "lucide-react";
 
 import { NavLink } from "react-router-dom";
-
-
-
-
 
 const superAdminMenu = [
   {
@@ -39,11 +36,6 @@ const superAdminMenu = [
     label: "Hospitals",
     path: "/hospitals",
   },
-  // {
-  //   icon: UserPlus,
-  //   label: "Hospital Requests",
-  //   path: "/hospital-requests",
-  // },
   {
     icon: ShieldCheck,
     label: "Caretakers",
@@ -89,7 +81,7 @@ const superAdminMenu = [
     label: "Deleted Selfies",
     path: "/deletedselfie",
   },
-   {
+  {
     icon: User,
     label: "User Management",
     path: "/users",
@@ -112,17 +104,11 @@ const adminMenu = [
     label: "Patients",
     path: "/patients",
   },
-  // {
-  //   icon: UserPlus,
-  //   label: "Hospital Requests",
-  //   path: "/hospital-requests",
-  // },
   {
     icon: ShieldCheck,
     label: "Caretakers",
     path: "/caretakers",
   },
-  
   {
     icon: Pill,
     label: "Medications",
@@ -173,9 +159,7 @@ const guardianMenu = [
   },
 ];
 
-// const role = (localStorage.getItem("role") || "").toLowerCase();
-
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const role = localStorage.getItem("role");
 
   const menuItems =
@@ -184,75 +168,97 @@ export default function Sidebar() {
       : role === "guardian"
       ? guardianMenu
       : adminMenu;
+
   return (
-    <aside className="w-[260px] h-screen bg-white border-r border-gray-200 flex flex-col px-4 py-6 fixed left-0 top-0">
-      {/* LOGO */}
-      <div className="flex items-center gap-3 px-3 mb-10">
-          <div className="w-12 h-12 rounded-2xl bg-black backdrop-blur flex items-center justify-center">
-  <img
-    src="/medikto_icon.png"
-    alt="Medikto Healthcare"
-    className="w-full max-w-md xl:max-w-lg object-contain drop-shadow-2xl"
-  />          </div>
+    <>
+      {/* MOBILE BACKDROP */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden transition-opacity"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-        <div>
-          <h1 className="text-[22px] font-bold text-blue-600">
-            Medikto
-          </h1>
+      {/* SIDEBAR CONTAINER */}
+      <aside
+        className={`
+          w-[270px] md:w-[260px] h-screen bg-white border-r border-gray-200 flex flex-col px-4 py-5 fixed left-0 top-0 z-50
+          transition-transform duration-200 ease-in-out
+          ${isOpen ? "translate-x-0 shadow-2xl md:shadow-none" : "-translate-x-full md:translate-x-0"}
+        `}
+      >
+        {/* LOGO & CLOSE BUTTON */}
+        <div className="flex items-center justify-between px-2 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-black flex items-center justify-center shadow-xs flex-shrink-0">
+              <img
+                src="/medikto_icon.png"
+                alt="Medikto Healthcare"
+                className="w-6 h-6 object-contain"
+              />
+            </div>
 
-          <p className="text-sm text-gray-500">
-            {role === "guardian"
-              ? "Guardian Portal"
-              : role === "superadmin"
-              ? "Super Admin Portal"
-              : "Clinician Portal"}
-          </p>
+            <div>
+              <h1 className="text-xl font-bold text-blue-600 tracking-tight leading-none">
+                Medikto
+              </h1>
+
+              <p className="text-[11px] font-semibold text-gray-500 mt-1 uppercase tracking-wider">
+                {role === "guardian"
+                  ? "Guardian Portal"
+                  : role === "superadmin"
+                  ? "Super Admin"
+                  : "Clinician Portal"}
+              </p>
+            </div>
+          </div>
+
+          {/* Close button visible only on mobile */}
+          <button
+            onClick={onClose}
+            className="md:hidden p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            aria-label="Close Sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-      </div>
 
-      {/* MENU */}
-      <nav
-  className="flex-1 flex flex-col gap-2 overflow-y-auto scrollbar-hide pr-1"
->
-        {menuItems.map((item, index) => {
-          const Icon = item.icon;
+        {/* MENU LINKS */}
+        <nav className="flex-1 flex flex-col gap-1.5 overflow-y-auto scrollbar-hide pr-1">
+          {menuItems.map((item, index) => {
+            const Icon = item.icon;
 
-          return (
-            <NavLink
-              key={index}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all relative
-                ${
-                  isActive
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className="w-5 h-5" />
+            return (
+              <NavLink
+                key={index}
+                to={item.path}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all relative
+                  ${
+                    isActive
+                      ? "bg-blue-50 text-blue-600 shadow-xs"
+                      : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? "text-blue-600" : "text-gray-400"}`} />
 
-                  {item.label}
+                    <span className="truncate">{item.label}</span>
 
-                  {isActive && (
-                    <div className="absolute right-0 top-2 bottom-2 w-1 rounded-full bg-blue-600"></div>
-                  )}
-                </>
-              )}
-            </NavLink>
-          );
-        })}
-      </nav>
-
-      {/* SETTINGS */}
-      {/* <div className="mt-auto">
-        <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 w-full">
-          <Settings className="w-5 h-5" />
-          Settings
-        </button>
-      </div> */}
-    </aside>
+                    {isActive && (
+                      <div className="absolute right-0 top-2 bottom-2 w-1 rounded-full bg-blue-600" />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

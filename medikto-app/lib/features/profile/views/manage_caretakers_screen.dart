@@ -5,7 +5,9 @@ import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/core/network/toast_utils.dart';
 import 'package:medikto/core/utils/widgets/custom_button.dart';
 import 'package:medikto/core/utils/widgets/custom_textfields.dart';
+import 'package:medikto/features/home/premium_plans_views/premium_plans.dart';
 import 'package:medikto/features/profile/data/profile_provider.dart';
+import 'package:medikto/features/profile/data/subscription_provider.dart';
 
 class ManageCaretakersScreen extends ConsumerStatefulWidget {
   const ManageCaretakersScreen({super.key});
@@ -247,9 +249,118 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
     );
   }
 
+  void _showPremiumUpgradeBottomSheet() {
+    final themeColors = context.themeColors;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: themeColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: themeColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: themeColors.accentPrimary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text("👑", style: TextStyle(fontSize: 24)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Nominate a Carer",
+                        style: TextStyle(
+                          color: themeColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "Exclusive Premium Feature",
+                        style: TextStyle(
+                          color: themeColors.accentPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: themeColors.textSecondary),
+                  onPressed: () => Navigator.pop(sheetCtx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: themeColors.bg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: themeColors.border),
+              ),
+              child: Text(
+                "Connect family members or caretakers to help monitor your medication adherence. Upgrade to Medikto Premium to unlock carer nominations.",
+                style: TextStyle(
+                  color: themeColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            CustomButton(
+              buttonText: "Upgrade to Premium",
+              buttonColor: themeColors.accentPrimary,
+              textStyle: TextStyle(
+                color: themeColors.onAccentPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+              onPressed: () {
+                Navigator.pop(sheetCtx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PremiumPlansScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeColors = context.themeColors;
+    final statusAsync = ref.watch(subscriptionStatusProvider);
+    final isPremium = statusAsync.value?.isPremium ?? false;
+
     return Scaffold(
       backgroundColor: themeColors.bg,
       appBar: AppBar(
@@ -319,7 +430,13 @@ class _ManageCaretakersScreenState extends ConsumerState<ManageCaretakersScreen>
                     buttonText: "Add / Invite Caretaker",
                     buttonColor: themeColors.accentPrimary,
                     textStyle: TextStyle(color: themeColors.onAccentPrimary, fontWeight: FontWeight.bold),
-                    onPressed: _showInviteBottomSheet,
+                    onPressed: () {
+                      if (isPremium) {
+                        _showInviteBottomSheet();
+                      } else {
+                        _showPremiumUpgradeBottomSheet();
+                      }
+                    },
                   ),
                   const SizedBox(height: 40),
                 ],

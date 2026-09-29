@@ -937,427 +937,407 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="space-y-6 sm:space-y-8">
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* HEADER */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pt-8 pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Guardians</h1>
-            <p className="text-sm text-slate-500 mt-1.5 font-medium">
-              Manage patient guardians and invitation requests.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-            <button
-              onClick={() => { setRefreshing(true); fetchData(); }}
-              disabled={refreshing || loading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] disabled:opacity-50"
-            >
-              <RefreshCcw size={15} className={refreshing ? "animate-spin" : ""} />
-              Refresh
-            </button>
-            <button
-              onClick={() => setInviteModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98]"
-            >
-              <UserPlus size={16} /> Create Guardian
-            </button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Guardians</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+            Manage patient guardians and invitation requests.
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <button
+            onClick={() => { setRefreshing(true); fetchData(); }}
+            disabled={refreshing || loading}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            <RefreshCcw size={15} className={refreshing ? "animate-spin" : ""} />
+            Refresh
+          </button>
+          <button
+            onClick={() => setInviteModalOpen(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-[#2563EB] text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-blue-700 transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98]"
+          >
+            <UserPlus size={16} /> Create Guardian
+          </button>
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* SUMMARY CARDS */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
-          {loading ? (
-            <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
-          ) : (
-            <>
-              <SummaryCard icon={Users} label="Total Guardians" value={stats.total} subValue={`${stats.active} active`} color="blue" delay={0} />
-              <SummaryCard icon={Clock} label="Pending Password Changes" value={stats.pendingPassword} subValue={stats.pendingPassword > 0 ? "Action required" : "All caught up"} color="amber" delay={100} />
-              <SummaryCard icon={CheckCircle2} label="Active Guardians" value={stats.active} subValue={`${Math.round((stats.active / (stats.total || 1)) * 100)}% rate`} color="emerald" delay={200} />
-              <SummaryCard icon={Bell} label="Pending Invitations" value={stats.pendingInvite} subValue={stats.pendingInvite > 0 ? "Awaiting response" : "All caught up"} color="violet" delay={300} />
-              <SummaryCard icon={XCircle} label="Rejected Invitations" value={stats.rejected} subValue={stats.rejected > 0 ? "Review needed" : "None rejected"} color="red" delay={400} />
-            </>
-          )}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+        {loading ? (
+          <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
+        ) : (
+          <>
+            <SummaryCard icon={Users} label="Total Guardians" value={stats.total} subValue={`${stats.active} active`} color="blue" delay={0} />
+            <SummaryCard icon={Clock} label="Pending Passwords" value={stats.pendingPassword} subValue={stats.pendingPassword > 0 ? "Action required" : "All caught up"} color="amber" delay={100} />
+            <SummaryCard icon={CheckCircle2} label="Active Guardians" value={stats.active} subValue={`${Math.round((stats.active / (stats.total || 1)) * 100)}% rate`} color="emerald" delay={200} />
+            <SummaryCard icon={Bell} label="Pending Invites" value={stats.pendingInvite} subValue={stats.pendingInvite > 0 ? "Awaiting response" : "All caught up"} color="violet" delay={300} />
+            <SummaryCard icon={XCircle} label="Rejected Invites" value={stats.rejected} subValue={stats.rejected > 0 ? "Review needed" : "None rejected"} color="red" delay={400} />
+          </>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* SEARCH & FILTER SECTION */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pb-6">
-        <div className="bg-white rounded-[20px] border border-slate-200 p-5">
-          <div className="flex flex-col xl:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1 min-w-0">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, email, phone, patient, or hospital..."
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative">
-                <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full sm:w-44 pl-10 pr-9 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
-                >
-                  <option value="all">All Invitation Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="accepted">Accepted</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-                <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
-
-              <div className="relative">
-                <ShieldCheck size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <select
-                  value={accountStatusFilter}
-                  onChange={(e) => setAccountStatusFilter(e.target.value)}
-                  className="w-full sm:w-44 pl-10 pr-9 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
-                >
-                  <option value="all">All Account Status</option>
-                  <option value="Pending Password Change">Pending Password Change</option>
-                  <option value="Pending Invitation">Pending Invitation</option>
-                  <option value="Active">Active</option>
-                  <option value="Rejected">Rejected</option>
-                  <option value="Disabled">Disabled</option>
-                </select>
-                <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
-
-              <div className="relative">
-                <HeartHandshake size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <select
-                  value={relationFilter}
-                  onChange={(e) => setRelationFilter(e.target.value)}
-                  className="w-full sm:w-40 pl-10 pr-9 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
-                >
-                  <option value="all">All Relations</option>
-                  {uniqueRelations.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
-
-              <div className="relative">
-                <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <select
-                  value={hospitalFilter}
-                  onChange={(e) => setHospitalFilter(e.target.value)}
-                  className="w-full sm:w-44 pl-10 pr-9 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
-                >
-                  <option value="all">All Hospitals</option>
-                  {uniqueHospitals.map((h) => (
-                    <option key={h} value={h}>{h}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
-
-              <div className="relative">
-                <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <select
-                  value={createdByFilter}
-                  onChange={(e) => setCreatedByFilter(e.target.value)}
-                  className="w-full sm:w-44 pl-10 pr-9 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
-                >
-                  <option value="all">All Created By</option>
-                  {uniqueCreatedBy.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
+      <div className="bg-white rounded-[20px] border border-slate-200 p-4 sm:p-5">
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
+          {/* Search */}
+          <div className="relative flex-1 min-w-0">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, email, phone, patient, or hospital..."
+              className="w-full pl-11 pr-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+            />
           </div>
 
-          {/* Active Filters */}
-          {(searchQuery || statusFilter !== "all" || accountStatusFilter !== "all" || relationFilter !== "all" || hospitalFilter !== "all" || createdByFilter !== "all") && (
-            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-              <span className="text-xs font-medium text-slate-400">Active filters:</span>
-              {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
-                  Search: &quot;{searchQuery}&quot; <button onClick={() => setSearchQuery("")} className="hover:text-blue-900"><X size={10} /></button>
-                </span>
-              )}
-              {statusFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium capitalize">
-                  Invitation: {statusFilter} <button onClick={() => setStatusFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
-                </span>
-              )}
-              {accountStatusFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
-                  Account: {accountStatusFilter} <button onClick={() => setAccountStatusFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
-                </span>
-              )}
-              {relationFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
-                  Relation: {relationFilter} <button onClick={() => setRelationFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
-                </span>
-              )}
-              {hospitalFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
-                  Hospital: {hospitalFilter} <button onClick={() => setHospitalFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
-                </span>
-              )}
-              {createdByFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
-                  Created By: {createdByFilter} <button onClick={() => setCreatedByFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
-                </span>
-              )}
-              <button
-                onClick={() => { setSearchQuery(""); setStatusFilter("all"); setAccountStatusFilter("all"); setRelationFilter("all"); setHospitalFilter("all"); setCreatedByFilter("all"); }}
-                className="text-xs font-medium text-red-500 hover:text-red-600 ml-1"
+          {/* Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-2.5 sm:gap-3">
+            <div className="relative">
+              <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full lg:w-40 pl-9 pr-8 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
               >
-                Clear all
-              </button>
+                <option value="all">All Invites</option>
+                <option value="pending">Pending</option>
+                <option value="accepted">Accepted</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
-          )}
+
+            <div className="relative">
+              <ShieldCheck size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select
+                value={accountStatusFilter}
+                onChange={(e) => setAccountStatusFilter(e.target.value)}
+                className="w-full lg:w-44 pl-9 pr-8 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
+              >
+                <option value="all">All Account Status</option>
+                <option value="Pending Password Change">Pending Password</option>
+                <option value="Pending Invitation">Pending Invite</option>
+                <option value="Active">Active</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Disabled">Disabled</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+
+            <div className="relative">
+              <HeartHandshake size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select
+                value={relationFilter}
+                onChange={(e) => setRelationFilter(e.target.value)}
+                className="w-full lg:w-36 pl-9 pr-8 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
+              >
+                <option value="all">All Relations</option>
+                {uniqueRelations.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+
+            <div className="relative">
+              <Building size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select
+                value={hospitalFilter}
+                onChange={(e) => setHospitalFilter(e.target.value)}
+                className="w-full lg:w-40 pl-9 pr-8 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
+              >
+                <option value="all">All Hospitals</option>
+                {uniqueHospitals.map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+
+            <div className="relative">
+              <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select
+                value={createdByFilter}
+                onChange={(e) => setCreatedByFilter(e.target.value)}
+                className="w-full lg:w-40 pl-9 pr-8 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
+              >
+                <option value="all">All Creators</option>
+                {uniqueCreatedBy.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
+
+        {/* Active Filters */}
+        {(searchQuery || statusFilter !== "all" || accountStatusFilter !== "all" || relationFilter !== "all" || hospitalFilter !== "all" || createdByFilter !== "all") && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
+            <span className="text-xs font-medium text-slate-400">Active filters:</span>
+            {searchQuery && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
+                Search: &quot;{searchQuery}&quot; <button onClick={() => setSearchQuery("")} className="hover:text-blue-900"><X size={10} /></button>
+              </span>
+            )}
+            {statusFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium capitalize">
+                Invitation: {statusFilter} <button onClick={() => setStatusFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
+              </span>
+            )}
+            {accountStatusFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
+                Account: {accountStatusFilter} <button onClick={() => setAccountStatusFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
+              </span>
+            )}
+            {relationFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
+                Relation: {relationFilter} <button onClick={() => setRelationFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
+              </span>
+            )}
+            {hospitalFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
+                Hospital: {hospitalFilter} <button onClick={() => setHospitalFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
+              </span>
+            )}
+            {createdByFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
+                Created By: {createdByFilter} <button onClick={() => setCreatedByFilter("all")} className="hover:text-blue-900"><X size={10} /></button>
+              </span>
+            )}
+            <button
+              onClick={() => { setSearchQuery(""); setStatusFilter("all"); setAccountStatusFilter("all"); setRelationFilter("all"); setHospitalFilter("all"); setCreatedByFilter("all"); }}
+              className="text-xs font-medium text-red-500 hover:text-red-600 ml-1"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* MAIN TABLE */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pb-10">
-        <div className="bg-white rounded-[20px] border border-slate-200 overflow-hidden">
-          {loading ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    {["Guardian", "Patient", "Relation", "Phone", "Created Date", "Invitation Status", "Account Status", "Actions"].map((h) => (
-                      <th key={h} className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+      <div className="bg-white rounded-[20px] border border-slate-200 overflow-hidden shadow-sm">
+        {loading ? (
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[760px]">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50">
+                  {["Guardian", "Patient", "Relation", "Phone", "Created Date", "Invitation Status", "Account Status", "Actions"].map((h) => (
+                    <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>{[1, 2, 3, 4, 5].map((i) => <SkeletonTableRow key={i} />)}</tbody>
+            </table>
+          </div>
+        ) : filteredCaretakers.length === 0 ? (
+          <EmptyState onInvite={() => setInviteModalOpen(true)} />
+        ) : (
+          <>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[760px]">
+                <thead className="sticky top-0 z-10">
+                  <tr className="border-b border-slate-100 bg-slate-50/80 backdrop-blur-sm">
+                    {[
+                      { key: "name", label: "Guardian" },
+                      { key: "patientName", label: "Patient" },
+                      { key: "relation", label: "Relation" },
+                      { key: "phone", label: "Phone" },
+                      { key: "createdAt", label: "Created Date" },
+                      { key: "status", label: "Invitation Status" },
+                      { key: "accountStatus", label: "Account Status" },
+                      { key: null, label: "Actions" },
+                    ].map((col) => (
+                      <th
+                        key={col.label}
+                        onClick={() => col.key && handleSort(col.key)}
+                        className={`px-5 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${col.key ? "cursor-pointer hover:text-slate-700 select-none" : ""}`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {col.label}
+                          {col.key && <SortIcon field={col.key} />}
+                        </div>
+                      </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>{[1, 2, 3, 4, 5].map((i) => <SkeletonTableRow key={i} />)}</tbody>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedCaretakers.map((caretaker) => {
+                    return (
+                      <tr
+                        key={caretaker.id}
+                        className="hover:bg-slate-50/60 transition-colors group"
+                      >
+                        {/* Caretaker */}
+                        <td className="px-5 py-4 min-w-[180px] whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="relative shrink-0">
+                              <img
+                                src={caretaker.profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.name)}&background=2563EB&color=fff&size=128`}
+                                alt={caretaker.name}
+                                className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm"
+                                onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.name)}&background=2563EB&color=fff`; }}
+                              />
+                              {caretaker.isGuardian && (
+                                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-400 border-2 border-white flex items-center justify-center">
+                                  <ShieldCheck size={8} className="text-white" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex flex-col justify-center">
+                              <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{caretaker.name}</p>
+                              <p className="text-xs text-slate-400 truncate max-w-[140px] sm:max-w-[180px]">{caretaker.email}</p>
+                              {caretaker.isGuardian && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 w-fit">
+                                  <ShieldCheck size={8} /> Guardian
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Patient */}
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 flex-wrap max-w-[180px]">
+                            {caretaker.patientName && caretaker.patientName !== "—" ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100">
+                                <User size={12} className="text-blue-500" />
+                                {caretaker.patientName}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Relation */}
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <RelationBadge relation={caretaker.relation} />
+                        </td>
+
+                        {/* Phone */}
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <span className="text-sm text-slate-600 font-medium">{caretaker.phone}</span>
+                        </td>
+
+                        {/* Invitation Date */}
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-600">{formatDate(caretaker.createdAt)}</div>
+                        </td>
+
+                        {/* Invitation Status */}
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <StatusBadge status={caretaker.status} />
+                        </td>
+
+                        {/* Account Status */}
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <AccountStatusBadge status={caretaker.accountStatus} />
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              onClick={() => handleView(caretaker)}
+                              className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-[#2563EB] transition-colors"
+                              title="View"
+                            >
+                              <Eye size={15} />
+                            </button>
+                            {caretaker.accountStatus === "pending" && (
+                              <button
+                                onClick={() => handleUpdateStatus(caretaker.id, "active")}
+                                className="p-1.5 sm:p-2 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
+                                title="Approve Guardian"
+                              >
+                                <CheckCircle2 size={15} />
+                              </button>
+                            )}
+                            {caretaker.status === "pending" && (
+                              <button
+                                onClick={() => handleResendCredentials(caretaker)}
+                                disabled={resendLoading[caretaker.id]}
+                                className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-[#2563EB] transition-colors disabled:opacity-50"
+                                title="Resend Credentials"
+                              >
+                                {resendLoading[caretaker.id] ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteClick(caretaker)}
+                              className="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                            <ActionMenu
+                              caretaker={caretaker}
+                              onView={handleView}
+                              onEdit={handleEdit}
+                              onDelete={handleDeleteClick}
+                              onResend={handleResendCredentials}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             </div>
-          ) : filteredCaretakers.length === 0 ? (
-            <EmptyState onInvite={() => setInviteModalOpen(true)} />
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="sticky top-0 z-10">
-                    <tr className="border-b border-slate-100 bg-slate-50/80 backdrop-blur-sm">
-                      {[
-                        { key: "name", label: "Guardian" },
-                        { key: "patientName", label: "Patient" },
-                        { key: "relation", label: "Relation" },
-                        { key: "phone", label: "Phone" },
-                        { key: "createdAt", label: "Created Date" },
-                        { key: "status", label: "Invitation Status" },
-                        { key: "accountStatus", label: "Account Status" },
-                        { key: null, label: "Actions" },
-                      ].map((col) => (
-                        <th
-                          key={col.label}
-                          onClick={() => col.key && handleSort(col.key)}
-                          className={`px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap ${col.key ? "cursor-pointer hover:text-slate-700 select-none" : ""}`}
-                        >
-                          <div className="flex items-center gap-1.5">
-                            {col.label}
-                            {col.key && <SortIcon field={col.key} />}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedCaretakers.map((caretaker) => {
-                      const isResending = resendLoading[caretaker.id];
 
-                      return (
-                        <tr
-                          key={caretaker.id}
-                          className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group"
-                        >
-                          {/* Caretaker */}
-                          <td className="px-6 py-4 min-w-[200px] whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <div className="relative shrink-0">
-                                <img
-                                  src={caretaker.profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.name)}&background=2563EB&color=fff&size=128`}
-                                  alt={caretaker.name}
-                                  className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm"
-                                  onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.name)}&background=2563EB&color=fff`; }}
-                                />
-                                {caretaker.isGuardian && (
-                                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-400 border-2 border-white flex items-center justify-center">
-                                    <ShieldCheck size={8} className="text-white" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="min-w-0 flex flex-col justify-center">
-                                <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{caretaker.name}</p>
-                                <p className="text-xs text-slate-400 truncate max-w-[160px]">{caretaker.email}</p>
-                                {caretaker.isGuardian && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 w-fit">
-                                    <ShieldCheck size={8} /> Guardian
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Patient */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 flex-wrap max-w-[180px]">
-                              {caretaker.patientName && caretaker.patientName !== "—" ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100">
-                                  <User size={12} className="text-blue-500" />
-                                  {caretaker.patientName}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-slate-400">—</span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Relation */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <RelationBadge relation={caretaker.relation} />
-                          </td>
-
-                          {/* Phone */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-slate-600 font-medium">{caretaker.phone}</span>
-                          </td>
-
-                          {/* Invitation Date */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-slate-600">{formatDate(caretaker.createdAt)}</div>
-                          </td>
-
-                          {/* Invitation Status */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <StatusBadge status={caretaker.status} />
-                          </td>
-
-                          {/* Account Status */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <AccountStatusBadge status={caretaker.accountStatus} />
-                          </td>
-
-                          {/* Actions */}
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-0.5">
-                              <button
-                                onClick={() => handleView(caretaker)}
-                                className="p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-[#2563EB] transition-colors"
-                                title="View"
-                              >
-                                <Eye size={15} />
-                              </button>
-                              {caretaker.accountStatus === "pending" && (
-                                <button
-                                  onClick={() => handleUpdateStatus(caretaker.id, "active")}
-                                  className="p-2 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
-                                  title="Approve Guardian"
-                                >
-                                  <CheckCircle2 size={15} />
-                                </button>
-                              )}
-                              {caretaker.status === "pending" && (
-                                <button
-                                  onClick={() => handleResendCredentials(caretaker)}
-                                  disabled={resendLoading[caretaker.id]}
-                                  className="p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-[#2563EB] transition-colors disabled:opacity-50"
-                                  title="Resend Credentials"
-                                >
-                                  {resendLoading[caretaker.id] ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                                </button>
-                              )}
-                              {caretaker.accountStatus === "Pending Password Change" && (
-                                <button
-                                  onClick={() => handleResetPassword(caretaker)}
-                                  disabled={resetLoading[caretaker.id]}
-                                  className="p-2 rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors disabled:opacity-50"
-                                  title="Reset Password"
-                                >
-                                  {resetLoading[caretaker.id] ? <Loader2 size={15} className="animate-spin" /> : <Lock size={15} />}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDeleteClick(caretaker)}
-                                className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                              <ActionMenu
-                                caretaker={caretaker}
-                                onView={handleView}
-                                onEdit={handleEdit}
-                                onDelete={handleDeleteClick}
-                                onResend={handleResendCredentials}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <p className="text-xs text-slate-500 font-medium">
-                    Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredCaretakers.length)} of {filteredCaretakers.length} guardians
-                  </p>
-                  <div className="flex items-center gap-2">
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-xs text-slate-500 font-medium text-center sm:text-left">
+                  Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredCaretakers.length)} of {filteredCaretakers.length} guardians
+                </p>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 sm:p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`min-w-[32px] sm:min-w-[36px] h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                        page === currentPage
+                          ? "bg-[#2563EB] text-white"
+                          : "text-slate-600 hover:bg-slate-50 border border-slate-200"
+                      }`}
                     >
-                      <ChevronLeft size={16} />
+                      {page}
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`min-w-[36px] h-9 px-3 rounded-lg text-sm font-medium transition-colors ${
-                          page === currentPage
-                            ? "bg-[#2563EB] text-white"
-                            : "text-slate-600 hover:bg-slate-50 border border-slate-200"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
+                  ))}
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 sm:p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
-              )}
-            </>
-          )}
-        </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}

@@ -276,8 +276,8 @@ export default function GuardianVitals() {
             No vital logs found for the selected category.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[650px] text-left text-sm">
               <thead className="bg-gray-50/70 text-gray-400 uppercase text-[11px] font-bold border-b border-gray-100">
                 <tr>
                   <th className="px-6 py-3.5">Vital Type</th>

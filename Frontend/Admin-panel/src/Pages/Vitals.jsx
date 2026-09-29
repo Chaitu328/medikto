@@ -258,26 +258,26 @@ const latestTemp = [...filteredVitals]
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* HEADER */}
-      <div className="relative mb-10 overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-xs">
         <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.04] via-transparent to-[#EF4444]/[0.04]" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#EF4444]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
+        <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-48 sm:w-64 h-48 sm:h-64 bg-[#EF4444]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
 
-        <div className="relative px-6 sm:px-8 py-7 sm:py-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-[#2563EB]/10 flex items-center justify-center">
-              <Stethoscope className="w-5 h-5 text-[#2563EB]" />
+        <div className="relative px-5 sm:px-8 py-5 sm:py-7">
+          <div className="flex items-center gap-2.5 mb-2 sm:mb-2.5">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0">
+              <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 text-[#2563EB]" />
             </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#64748B]">
+            <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#64748B]">
               Live Monitoring
             </span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#0F172A] tracking-tight">
-            Vitals Monitoring
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F172A] tracking-tight">
+            Vitals & Telemetry
           </h1>
-          <p className="text-[#64748B] mt-2 text-base max-w-lg leading-relaxed">
+          <p className="text-[#64748B] mt-1.5 text-xs sm:text-sm lg:text-base max-w-lg leading-relaxed">
             Monitor real-time patient vitals and healthcare analytics across all connected devices.
           </p>
         </div>

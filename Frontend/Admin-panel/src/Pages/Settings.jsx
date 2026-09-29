@@ -1006,83 +1006,79 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="space-y-6 sm:space-y-8">
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
-              <Settings className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Manage your account preferences and security</p>
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 flex-shrink-0">
+          <Settings className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Settings</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Manage your account preferences and security</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+        {/* Sidebar - Desktop */}
+        <div className="hidden lg:block w-64 xl:w-72 flex-shrink-0">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-3 sticky top-8">
+            <nav className="space-y-1">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-400"}`} />
+                    {tab.label}
+                    {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+
+        {/* Mobile Tab Selector */}
+        <div className="w-full lg:hidden">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 overflow-x-auto">
+            <div className="flex gap-1 min-w-max">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`} />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar - Desktop */}
-          <div className="hidden lg:block w-72 flex-shrink-0">
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-3 sticky top-8">
-              <nav className="space-y-1">
-                {TABS.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 ${
-                        isActive
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-400"}`} />
-                      {tab.label}
-                      {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </div>
-
-          {/* Mobile Tab Selector */}
-          <div className="lg:hidden">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 overflow-x-auto">
-              <div className="flex gap-1 min-w-max">
-                {TABS.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-                        isActive
-                          ? "bg-blue-600 text-white shadow-md"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`} />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Content Area */}
-          <div className="flex-1 min-w-0">
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {renderContent()}
-            </div>
+        {/* Content Area */}
+        <div className="flex-1 w-full min-w-0">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {renderContent()}
           </div>
         </div>
       </div>

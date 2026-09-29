@@ -6,6 +6,7 @@ const User = require("../models/userModel");
 const Hospital = require("../models/hospitalModel");
 const CaretakerInvite = require("../models/caretakerInviteModel");
 const { sendGuardianCredentials, sendGuardianAccessGrantedEmail } = require("../utils/emailHelper");
+const { getEffectiveSubscription } = require("./subscriptionController");
 
 // ================= CREATE GUARDIAN =================
 exports.createGuardian = async (req, res) => {
@@ -39,6 +40,18 @@ exports.createGuardian = async (req, res) => {
         success: false,
         message: "Patient not found"
       });
+    }
+
+    // Enforce Premium subscription for patient self-service carer nomination
+    if (req.user?.role === "patient") {
+      const { isPremium } = getEffectiveSubscription(patient);
+      if (!isPremium) {
+        return res.status(403).json({
+          success: false,
+          code: "PREMIUM_REQUIRED",
+          message: "Carer/Guardian nomination is available exclusively for Premium members. Please upgrade to unlock caretaker invitations."
+        });
+      }
     }
 
     // Resolve hospital if created by clinic admin

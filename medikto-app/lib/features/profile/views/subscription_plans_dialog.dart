@@ -307,11 +307,13 @@ class _SubscriptionPlansDialogState extends ConsumerState<SubscriptionPlansDialo
                 const SizedBox(height: 14),
 
                 // Features
-                _buildFeatureRow(Icons.check_circle, "Unlimited medication reminders", colors),
-                _buildFeatureRow(Icons.check_circle, "Store up to 250 medical reports", colors),
-                _buildFeatureRow(Icons.check_circle, "Indefinite dose selfie proof vault", colors),
+                _buildFeatureRow(Icons.check_circle, "Manage unlimited medications", colors),
+                _buildFeatureRow(Icons.check_circle, "Store up to 250 health reports", colors),
+                _buildFeatureRow(Icons.check_circle, "Nominate family carers & guardians", colors),
+                _buildFeatureRow(Icons.check_circle, "Photos automatically deleted after 3 months", colors),
                 _buildFeatureRow(Icons.check_circle, "Detailed AI adherence analytics", colors),
                 _buildFeatureRow(Icons.check_circle, "Secure multi-device cloud backup", colors),
+                _buildFeatureRow(Icons.check_circle, "Share health records as PDF/JPEG", colors),
               ],
             ),
           ),

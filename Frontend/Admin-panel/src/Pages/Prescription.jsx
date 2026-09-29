@@ -281,41 +281,29 @@ const pendingReviews =
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* HEADER */}
-      <div className="relative mb-10 overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-xs">
         <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.04] via-transparent to-[#10B981]/[0.04]" />
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-56 h-56 bg-[#10B981]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
+        <div className="absolute top-0 right-0 w-64 sm:w-80 h-64 sm:h-80 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-48 sm:w-56 h-48 sm:h-56 bg-[#10B981]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
 
-        <div className="relative px-6 sm:px-8 py-7 sm:py-8 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="relative px-5 sm:px-8 py-5 sm:py-7 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-5">
           <div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-[#2563EB]/10 flex items-center justify-center">
-                <Stethoscope className="w-5 h-5 text-[#2563EB]" />
+            <div className="flex items-center gap-2.5 mb-2 sm:mb-2.5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0">
+                <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 text-[#2563EB]" />
               </div>
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#64748B]">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#64748B]">
                 Healthcare Dashboard
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-[#0F172A] tracking-tight">
-              Patients
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F172A] tracking-tight">
+              Prescriptions & Patients
             </h1>
-            <p className="text-[#64748B] mt-2 text-base max-w-lg leading-relaxed">
+            <p className="text-[#64748B] mt-1.5 text-xs sm:text-sm lg:text-base max-w-lg leading-relaxed">
               Manage patients, prescriptions and healthcare compliance across your entire practice.
             </p>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100">
-              <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-              <span className="text-sm font-medium text-emerald-700">System Online</span>
-            </div> */}
-
-            {/* <button className="h-11 px-6 rounded-2xl bg-[#2563EB] text-white font-semibold shadow-lg shadow-[#2563EB]/20 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-[#2563EB]/30 transition-all duration-300 flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              Add Patient
-            </button> */}
           </div>
         </div>
       </div>
@@ -485,8 +473,10 @@ const pendingReviews =
 
       {/* PATIENTS TABLE */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 mb-10">
-        {/* HEADER */}
-        <div className="grid grid-cols-7 gap-4 px-6 py-4 bg-[#F8FAFC] border-b border-slate-200 text-[10px] font-bold uppercase tracking-[0.15em] text-[#64748B] sticky top-0 z-10">
+        <div className="overflow-x-auto w-full">
+          <div className="min-w-[760px]">
+            {/* HEADER */}
+            <div className="grid grid-cols-7 gap-4 px-6 py-4 bg-[#F8FAFC] border-b border-slate-200 text-[10px] font-bold uppercase tracking-[0.15em] text-[#64748B] sticky top-0 z-10">
           <div className="flex items-center">ID</div>
           <div className="flex items-center">Name</div>
           <div className="flex items-center">Age/Gender</div>
@@ -655,6 +645,8 @@ const pendingReviews =
             </button>
           </div>
         )}
+          </div>
+        </div>
 
         {/* FOOTER */}
         <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-slate-100 gap-4">

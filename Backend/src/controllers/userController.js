@@ -414,6 +414,16 @@ exports.inviteCaretaker = async (req, res) => {
       return res.status(404).json({ message: "Patient not found" });
     }
 
+    // Enforce Premium subscription for patient self-service carer nomination
+    const { isPremium } = getEffectiveSubscription(patient);
+    if (!isPremium) {
+      return res.status(403).json({
+        success: false,
+        code: "PREMIUM_REQUIRED",
+        message: "Carer/Guardian nomination is available exclusively for Premium members. Please upgrade to unlock caretaker invitations."
+      });
+    }
+
     // Find or create caretaker user document
     let caretaker = await User.findOne({ email: email.trim().toLowerCase() });
     if (!caretaker) {

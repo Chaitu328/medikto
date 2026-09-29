@@ -706,44 +706,42 @@ setHospitals(
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="space-y-6 sm:space-y-8">
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* HEADER */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pt-8 pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              Hospital Requests
-            </h1>
-            <p className="text-sm text-slate-500 mt-1.5 font-medium">
-              Manage patient requests to connect with hospitals.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-            <button
-              onClick={() => fetchRequests(true)}
-              disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] disabled:opacity-50"
-            >
-              <RefreshCcw size={15} className={refreshing ? "animate-spin" : ""} />
-              Refresh Requests
-            </button>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98]"
-            >
-              <Download size={15} /> Export
-            </button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight">
+            Hospital Requests
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+            Manage patient requests to connect with hospitals.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={() => fetchRequests(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 sm:py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            <RefreshCcw size={14} className={refreshing ? "animate-spin" : ""} />
+            Refresh
+          </button>
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 sm:py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98]"
+          >
+            <Download size={14} /> Export
+          </button>
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* SUMMARY CARDS */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {loading ? (
             <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
           ) : (
@@ -760,8 +758,8 @@ setHospitals(
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* FILTER BAR */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pb-6">
-        <div className="bg-white rounded-[20px] border border-slate-200 p-5">
+      <div>
+        <div className="bg-white rounded-[20px] border border-slate-200 p-4 sm:p-5">
           <div className="flex flex-col xl:flex-row gap-4">
             {/* Search */}
             <div className="relative flex-1 min-w-0">
@@ -866,7 +864,7 @@ setHospitals(
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* TABLE */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pb-10">
+      <div>
         <div className="bg-white rounded-[20px] border border-slate-200 overflow-hidden">
           {loading ? (
             <div className="overflow-x-auto">

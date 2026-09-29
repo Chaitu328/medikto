@@ -244,27 +244,27 @@ export default function DeletedSelfies() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-6">
+    <div className="space-y-6 sm:space-y-8">
 
       {/* HEADER */}
 
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm mb-8">
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-8 shadow-xs">
 
         <div className="flex items-center justify-between flex-wrap gap-4">
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
 
-            <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">
-              <Trash2 className="w-8 h-8 text-red-500" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-red-50 flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
             </div>
 
             <div>
 
-              <h1 className="text-4xl font-bold text-[#0F172A]">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F172A] tracking-tight">
                 Deleted Selfies
               </h1>
 
-              <p className="text-[#64748B] mt-2">
+              <p className="text-xs sm:text-sm text-[#64748B] mt-1 sm:mt-2">
                 Recover deleted patient verification images
               </p>
             </div>
@@ -274,7 +274,7 @@ export default function DeletedSelfies() {
 
       {/* STATS */}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
 
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
 

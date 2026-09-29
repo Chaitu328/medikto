@@ -474,64 +474,60 @@ const PendingRequests = () => {
   const pendingCount = invitations.length;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="space-y-6 sm:space-y-8">
       {/* Toast */}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* HEADER */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pt-8 pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Pending Requests</h1>
-            <p className="text-sm text-slate-500 mt-1.5 font-medium">
-              Review and respond to patient care invitations sent by hospitals.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold">
-              <Clock size={15} />
-              Pending Invitations
-              <span className="ml-1 w-6 h-6 rounded-lg bg-amber-200 flex items-center justify-center text-xs font-bold">
-                {pendingCount}
-              </span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">Pending Requests</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+            Review and respond to patient care invitations sent by hospitals.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs sm:text-sm font-semibold">
+            <Clock size={15} />
+            Pending Invitations
+            <span className="ml-1 w-5 sm:w-6 h-5 sm:h-6 rounded-lg bg-amber-200 flex items-center justify-center text-[10px] sm:text-xs font-bold">
+              {pendingCount}
             </span>
-          </div>
+          </span>
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* SEARCH & FILTER */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pb-8">
-        <div className="bg-white rounded-[20px] border border-slate-200 p-5">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1 min-w-0">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search patient..."
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
-              />
-            </div>
+      <div className="bg-white rounded-[20px] border border-slate-200 p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          {/* Search */}
+          <div className="relative flex-1 min-w-0">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search patient, hospital, relation..."
+              className="w-full pl-11 pr-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+            />
+          </div>
 
-            {/* Filter */}
-            <div className="relative min-w-[160px]">
-              <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <select
-                value={sortFilter}
-                onChange={(e) => setSortFilter(e.target.value)}
-                className="w-full sm:w-44 px-4 pr-9 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
-              >
-                <option value="all">All</option>
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-              </select>
-            </div>
+          {/* Filter */}
+          <div className="relative w-full sm:w-44 flex-shrink-0">
+            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              value={sortFilter}
+              onChange={(e) => setSortFilter(e.target.value)}
+              className="w-full pl-4 pr-9 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
+            >
+              <option value="all">All</option>
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
           </div>
         </div>
       </div>
@@ -539,7 +535,7 @@ const PendingRequests = () => {
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* CARDS */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="px-6 lg:px-10 pb-10">
+      <div>
         {loading ? (
           <div className="space-y-4">
             <SkeletonCard />

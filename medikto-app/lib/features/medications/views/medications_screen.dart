@@ -532,54 +532,79 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                               onEdit: () => _onEditMedication(schedule),
                               onDelete: () => _onDeleteMedication(schedule),
                               onMarkTaken: () async {
-                                if (scheduleId.isEmpty) return;
+                                if (scheduleId.isEmpty || loadingDoseIds.contains(scheduleId)) return;
 
                                 setState(() {
                                   loadingDoseIds.add(scheduleId);
                                 });
 
-                                final result = await ref.read(
-                                  markDoseTakenProvider(scheduleId).future,
-                                );
+                                try {
+                                  final result = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          SelfieVerficationMedicineScreen(
+                                            doseId: scheduleId,
+                                            medicineName: schedule.name ?? "",
+                                            dosage: schedule.dosage ?? "",
+                                            unit: "",
+                                          ),
+                                    ),
+                                  );
 
-                                setState(() {
-                                  loadingDoseIds.remove(scheduleId);
-                                });
+                                  if (result == true && mounted) {
+                                    setState(() {
+                                      takenMap[scheduleId] = true;
+                                    });
 
-                                if (result.status == ResponseStatus.SUCCESS) {
-                                  setState(() {
-                                    takenMap[scheduleId] = true;
-                                  });
-
-                                  ref.invalidate(getScheduleForDateProvider(formattedDate));
-                                  ref.invalidate(getTodayScheduleProvider);
-                                  ref.invalidate(getAdherenceProvider);
+                                    ref.invalidate(getScheduleForDateProvider(formattedDate));
+                                    ref.invalidate(getTodayScheduleProvider);
+                                    ref.invalidate(getAdherenceProvider);
+                                  }
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      loadingDoseIds.remove(scheduleId);
+                                    });
+                                  }
                                 }
                               },
                               onVerifyWithSelfie: () async {
-                                if (scheduleId.isEmpty) return;
+                                if (scheduleId.isEmpty || loadingDoseIds.contains(scheduleId)) return;
 
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        SelfieVerficationMedicineScreen(
-                                          doseId: scheduleId,
-                                          medicineName: schedule.name ?? "",
-                                          dosage: schedule.dosage ?? "",
-                                          unit: "",
-                                        ),
-                                  ),
-                                );
+                                setState(() {
+                                  loadingDoseIds.add(scheduleId);
+                                });
 
-                                if (result != null) {
-                                  setState(() {
-                                    takenMap[scheduleId] = true;
-                                  });
+                                try {
+                                  final result = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          SelfieVerficationMedicineScreen(
+                                            doseId: scheduleId,
+                                            medicineName: schedule.name ?? "",
+                                            dosage: schedule.dosage ?? "",
+                                            unit: "",
+                                          ),
+                                    ),
+                                  );
 
-                                  ref.invalidate(getScheduleForDateProvider(formattedDate));
-                                  ref.invalidate(getTodayScheduleProvider);
-                                  ref.invalidate(getAdherenceProvider);
+                                  if (result == true && mounted) {
+                                    setState(() {
+                                      takenMap[scheduleId] = true;
+                                    });
+
+                                    ref.invalidate(getScheduleForDateProvider(formattedDate));
+                                    ref.invalidate(getTodayScheduleProvider);
+                                    ref.invalidate(getAdherenceProvider);
+                                  }
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      loadingDoseIds.remove(scheduleId);
+                                    });
+                                  }
                                 }
                               },
                             ),

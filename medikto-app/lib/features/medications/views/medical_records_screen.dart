@@ -8,7 +8,6 @@ import 'package:medikto/core/network/base_response.dart';
 import 'package:medikto/features/medications/data/medication_provider.dart';
 import 'package:medikto/features/medications/models/dose_history_model.dart';
 import 'package:medikto/features/medications/models/today_scheduled_model.dart';
-import 'package:medikto/features/medications/views/selfie_verfication_medicine.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -916,31 +915,13 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
             const SizedBox(width: 8),
             // --- VERIFICATION PHOTO ---
             GestureDetector(
-              onTap: () async {
-                if (item['proofImage'] != null) {
-                  _showSelfieViewer(context, item['proofImage'] as String, item['name'] as String);
-                } else {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SelfieVerficationMedicineScreen(
-                        doseId: item['id'],
-                        medicineName: item['name'],
-                        dosage: item['dose'].toString(),
-                        unit: item['unit'].toString(),
-                      ),
-                    ),
-                  );
-
-                  if (result == true) {
-                    SecureHistoryCache.instance.clearAll();
-                    ref.invalidate(doseHistoryProvider(_getHistoryQuery()));
-                    if (mounted) {
-                      setState(() {});
-                    }
-                  }
-                }
-              },
+              onTap: item['proofImage'] != null
+                  ? () => _showSelfieViewer(
+                        context,
+                        item['proofImage'] as String,
+                        item['name'] as String,
+                      )
+                  : null,
               child: Container(
                 height: 42,
                 width: 42,
@@ -977,9 +958,9 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                         ],
                       )
                     : Icon(
-                        Icons.camera_alt_outlined,
+                        Icons.image_not_supported_outlined,
                         color: colors.textMuted,
-                        size: 20,
+                        size: 18,
                       ),
               ),
             ),

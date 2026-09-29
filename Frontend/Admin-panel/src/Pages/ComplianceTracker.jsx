@@ -386,33 +386,33 @@ export default function ComplianceTracker() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* ================= HERO HEADER ================= */}
-      <div className="relative mb-8 overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/60 shadow-xs">
         <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.04] via-transparent to-[#10B981]/[0.04]" />
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-56 h-56 bg-[#10B981]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
+        <div className="absolute top-0 right-0 w-64 sm:w-80 h-64 sm:h-80 bg-[#2563EB]/[0.06] rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-48 sm:w-56 h-48 sm:h-56 bg-[#10B981]/[0.06] rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
 
-        <div className="relative px-6 sm:px-8 py-7 sm:py-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="relative px-5 sm:px-8 py-5 sm:py-7 flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
           <div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-[#2563EB]/10 flex items-center justify-center">
-                <Activity className="w-5 h-5 text-[#2563EB]" />
+            <div className="flex items-center gap-2.5 mb-2 sm:mb-2.5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-[#2563EB]" />
               </div>
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#64748B]">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#64748B]">
                 Clinical Adherence & Intake Logs
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-[#0F172A] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F172A] tracking-tight">
               Compliance Tracking & History
             </h1>
-            <p className="text-[#64748B] mt-2 text-base max-w-xl leading-relaxed">
+            <p className="text-[#64748B] mt-1.5 text-xs sm:text-sm lg:text-base max-w-xl leading-relaxed">
               Analyze daily, weekly, and monthly intake trends, photo-verified dose administration, and high-risk patient flags.
             </p>
           </div>
 
           {/* TIMEFRAME & EXPORT ACTION TOOLBAR */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 flex-wrap">
             {/* TIMEFRAME SELECTOR BUTTONS */}
             <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 shadow-inner">
               {[

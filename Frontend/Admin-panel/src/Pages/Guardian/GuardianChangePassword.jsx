@@ -85,7 +85,7 @@ export default function GuardianChangePassword() {
       </div>
 
       {/* CARD */}
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-5 sm:p-8">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <KeyRound size={20} />

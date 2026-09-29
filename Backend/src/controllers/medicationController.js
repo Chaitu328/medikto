@@ -643,6 +643,13 @@ exports.markAsTaken = async (req, res) => {
       });
     }
 
+    // Direct mark as taken without selfie is not allowed for normal patient/user flows to prevent bypassing selfie verification.
+    if (req.user.role !== "admin" && req.user.role !== "superadmin") {
+      return res.status(400).json({
+        message: "Direct completion is not permitted. Selfie verification is required to mark dose as taken."
+      });
+    }
+
     if (dose.status === "taken") {
       return res.status(400).json({
         message: "Dose is already marked as taken"

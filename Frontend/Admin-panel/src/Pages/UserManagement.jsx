@@ -858,331 +858,305 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ─── Header ────────────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8"
-        >
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="p-2 bg-blue-50 rounded-xl">
-                <Users className="w-6 h-6 text-[#2563EB]" />
-              </div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">User Management</h1>
+    <div className="space-y-6 sm:space-y-8">
+      {/* ─── Header ────────────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      >
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 bg-blue-50 rounded-xl flex-shrink-0">
+              <Users className="w-5 sm:w-6 h-5 sm:h-6 text-[#2563EB]" />
             </div>
-            <p className="text-sm text-slate-500 ml-[52px]">
-              Manage all platform users including Super Admins, Hospital Admins, Guardians, and Patients.
-            </p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">User Management</h1>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="secondary"
-              icon={RefreshCw}
-              loading={isRefreshing}
-              onClick={fetchUsers}
-            >
-              Refresh
-            </Button>
-            <Button variant="secondary" icon={Download} onClick={handleExport}>
-              Export Users
-            </Button>
-            {/* <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => navigate("/superadmin/users/add")}
-            >
-              Add New User
-            </Button> */}
-          </div>
-        </motion.div>
+          <p className="text-xs sm:text-sm text-slate-500 ml-10 sm:ml-12">
+            Manage all platform users including Super Admins, Hospital Admins, Guardians, and Patients.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="secondary"
+            icon={RefreshCw}
+            loading={isRefreshing}
+            onClick={fetchUsers}
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
+          >
+            Refresh
+          </Button>
+          <Button variant="secondary" icon={Download} onClick={handleExport} className="flex-1 sm:flex-none text-xs sm:text-sm">
+            Export Users
+          </Button>
+        </div>
+      </motion.div>
 
-        {/* ─── Analytics Cards ─────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8"
-        >
-          <AnalyticsCard
-            title="Super Admins"
-            count={analytics.superAdmins}
-            icon={Crown}
-            color="blue"
-            description="Platform administrators"
-            trend="up"
-            trendValue="12%"
-            isLoading={isLoading}
-          />
-          <AnalyticsCard
-            title="Hospital Admins"
-            count={analytics.hospitalAdmins}
-            icon={Hospital}
-            color="emerald"
-            description="Hospital managers"
-            trend="up"
-            trendValue="8%"
-            isLoading={isLoading}
-          />
-          <AnalyticsCard
-            title="Guardians"
-            count={analytics.guardians}
-            icon={UserCheck}
-            color="orange"
-            description="Patient guardians"
-            trend="up"
-            trendValue="24%"
-            isLoading={isLoading}
-          />
-          <AnalyticsCard
-            title="Patients"
-            count={analytics.patients}
-            icon={Stethoscope}
-            color="purple"
-            description="Registered patients"
-            trend="up"
-            trendValue="18%"
-            isLoading={isLoading}
-          />
-        </motion.div>
+      {/* ─── Analytics Cards ─────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5"
+      >
+        <AnalyticsCard
+          title="Super Admins"
+          count={analytics.superAdmins}
+          icon={Crown}
+          color="blue"
+          description="Platform administrators"
+          trend="up"
+          trendValue="12%"
+          isLoading={isLoading}
+        />
+        <AnalyticsCard
+          title="Hospital Admins"
+          count={analytics.hospitalAdmins}
+          icon={Hospital}
+          color="emerald"
+          description="Hospital managers"
+          trend="up"
+          trendValue="8%"
+          isLoading={isLoading}
+        />
+        <AnalyticsCard
+          title="Guardians"
+          count={analytics.guardians}
+          icon={UserCheck}
+          color="orange"
+          description="Patient guardians"
+          trend="up"
+          trendValue="24%"
+          isLoading={isLoading}
+        />
+        <AnalyticsCard
+          title="Patients"
+          count={analytics.patients}
+          icon={Stethoscope}
+          color="purple"
+          description="Registered patients"
+          trend="up"
+          trendValue="18%"
+          isLoading={isLoading}
+        />
+      </motion.div>
 
-        {/* ─── Filters Section ─────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-white rounded-[20px] border border-slate-200 shadow-sm p-5 mb-6"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <h3 className="text-sm font-semibold text-slate-700">Filters</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-            <div className="lg:col-span-2">
-              <div className="flex gap-2">
-                <Select
-                  value={searchBy}
-                  onChange={(e) => setSearchBy(e.target.value)}
-                  options={[
-                    { value: "firstName", label: "Name" },
-                    { value: "email", label: "Email" },
-                    { value: "phone", label: "Phone" },
-                  ]}
-                  className="w-32 shrink-0"
-                />
-                <Input
-                  placeholder={`Search by ${searchBy}...`}
-                  value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                  icon={Search}
-                  className="flex-1"
-                />
-              </div>
+      {/* ─── Filters Section ─────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="bg-white rounded-[20px] border border-slate-200 shadow-sm p-4 sm:p-5"
+      >
+        <div className="flex items-center gap-2 mb-3 sm:mb-4">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <h3 className="text-xs sm:text-sm font-semibold text-slate-700">Filters</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 sm:gap-3">
+          <div className="lg:col-span-2">
+            <div className="flex gap-2">
+              <Select
+                value={searchBy}
+                onChange={(e) => setSearchBy(e.target.value)}
+                options={[
+                  { value: "firstName", label: "Name" },
+                  { value: "email", label: "Email" },
+                  { value: "phone", label: "Phone" },
+                ]}
+                className="w-28 sm:w-32 shrink-0 text-xs sm:text-sm"
+              />
+              <Input
+                placeholder={`Search by ${searchBy}...`}
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                icon={Search}
+                className="flex-1 text-xs sm:text-sm"
+              />
             </div>
-            <Select
-              value={roleFilter}
-              onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
-              options={[
-                { value: "all", label: "All Roles" },
-                { value: "superadmin", label: "Super Admin" },
-{ value: "admin", label: "Hospital Admin" },
-                { value: "guardian", label: "Guardian" },
-                { value: "patient", label: "Patient" },
-              ]}
-            />
-            <Select
-              value={hospitalFilter}
-              onChange={(e) => { setHospitalFilter(e.target.value); setCurrentPage(1); }}
-              options={[
-                { value: "all", label: "All Hospitals" },
-                ...hospitals.map((h) => ({ value: h._id || h.id, label: h.name })),
-              ]}
-            />
-            <Select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              options={[
-                { value: "all", label: "All Status" },
-                { value: "active", label: "Active" },
-                { value: "inactive", label: "Inactive" },
-                { value: "pending", label: "Pending" },
-                { value: "verified", label: "Verified" },
-              ]}
-            />
-            <Select
-              value={subscriptionFilter}
-              onChange={(e) => { setSubscriptionFilter(e.target.value); setCurrentPage(1); }}
-              options={[
-                { value: "all", label: "All Subscriptions" },
-                { value: "free", label: "Free" },
-                { value: "basic", label: "Basic" },
-                { value: "premium", label: "Premium" },
-              ]}
-            />
           </div>
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-            <p className="text-sm text-slate-500">
-              {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""} found
-            </p>
-            <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleResetFilters}>
-              Reset Filters
-            </Button>
-          </div>
-        </motion.div>
+          <Select
+            value={roleFilter}
+            onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
+            options={[
+              { value: "all", label: "All Roles" },
+              { value: "superadmin", label: "Super Admin" },
+              { value: "admin", label: "Hospital Admin" },
+              { value: "guardian", label: "Guardian" },
+              { value: "patient", label: "Patient" },
+            ]}
+            className="text-xs sm:text-sm"
+          />
+          <Select
+            value={hospitalFilter}
+            onChange={(e) => { setHospitalFilter(e.target.value); setCurrentPage(1); }}
+            options={[
+              { value: "all", label: "All Hospitals" },
+              ...hospitals.map((h) => ({ value: h._id || h.id, label: h.name })),
+            ]}
+            className="text-xs sm:text-sm"
+          />
+          <Select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            options={[
+              { value: "all", label: "All Status" },
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+              { value: "pending", label: "Pending" },
+              { value: "verified", label: "Verified" },
+            ]}
+            className="text-xs sm:text-sm"
+          />
+          <Select
+            value={subscriptionFilter}
+            onChange={(e) => { setSubscriptionFilter(e.target.value); setCurrentPage(1); }}
+            options={[
+              { value: "all", label: "All Subscriptions" },
+              { value: "free", label: "Free" },
+              { value: "basic", label: "Basic" },
+              { value: "premium", label: "Premium" },
+            ]}
+            className="text-xs sm:text-sm"
+          />
+        </div>
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+          <p className="text-xs sm:text-sm text-slate-500">
+            {filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""} found
+          </p>
+          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleResetFilters} className="text-xs">
+            Reset Filters
+          </Button>
+        </div>
+      </motion.div>
 
-        {/* ─── User Table ────────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-[20px] border border-slate-200 shadow-sm overflow-hidden"
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
-                  {columns.map((col) => (
-                    <th
-                      key={col.key}
-                      className={`px-4 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider ${
-                        col.sortable ? "cursor-pointer hover:text-slate-700 select-none" : ""
-                      }`}
-                      onClick={() => col.sortable && handleSort(col.key)}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        {col.label}
-                        {col.sortable && (
-                          <ArrowUpDown className={`w-3.5 h-3.5 transition-colors ${
-                            sortConfig.key === col.key ? "text-[#2563EB]" : "text-slate-300"
-                          }`} />
-                        )}
-                      </div>
-                    </th>
-                  ))}
+      {/* ─── User Table ────────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-white rounded-[20px] border border-slate-200 shadow-sm overflow-hidden"
+      >
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[760px]">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/50">
+                {columns.map((col) => (
+                  <th
+                    key={col.key}
+                    className={`px-4 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider ${
+                      col.sortable ? "cursor-pointer hover:text-slate-700 select-none" : ""
+                    }`}
+                    onClick={() => col.sortable && handleSort(col.key)}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      {col.label}
+                      {col.sortable && (
+                        <ArrowUpDown className={`w-3.5 h-3.5 transition-colors ${
+                          sortConfig.key === col.key ? "text-[#2563EB]" : "text-slate-300"
+                        }`} />
+                      )}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+              ) : paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length}>
+                    <EmptyState onAddUser={() => navigate("/superadmin/users/add")} />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
-                ) : paginatedUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length}>
-                      <EmptyState onAddUser={() => navigate("/superadmin/users/add")} />
+              ) : (
+                paginatedUsers.map((user, idx) => (
+                  <motion.tr
+                    key={user._id || user.id || idx}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: idx * 0.03 }}
+                    className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                    onClick={() => handleViewUser(user)}
+                  >
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                          {user.profilePicture ? (
+                            <img src={user.profilePicture} alt={user.firstName} className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            <span className="text-xs sm:text-sm font-bold text-blue-600">
+                              {user.firstName?.charAt(0)?.toUpperCase() || "U"}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 group-hover:text-[#2563EB] transition-colors">
+                            {user.firstName}
+                          </p>
+                          <p className="text-xs text-slate-400">{user.email}</p>
+                        </div>
+                      </div>
                     </td>
-                  </tr>
-                ) : (
-                  paginatedUsers.map((user, idx) => (
-                    <motion.tr
-                      key={user._id || user.id || idx}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.03 }}
-                      className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                      onClick={() => handleViewUser(user)}
-                    >
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                            {user.profilePicture ? (
-                              <img src={user.profilePicture} alt={user.firstName} className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              <span className="text-sm font-bold text-blue-600">
-                                {user.firstName?.charAt(0)?.toUpperCase() || "U"}
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900 group-hover:text-[#2563EB] transition-colors">
-                              {user.firstName}
-                            </p>
-                            <p className="text-xs text-slate-400">{user.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      {/* <td className="px-4 py-3.5">
-                        <span className="text-sm text-slate-600">{user.email}</span>
-                      </td> */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-sm text-slate-600">{user.phone || "—"}</span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <Badge variant={getRoleVariant(user.role)}>
-                          {user.role}
-                        </Badge>
-                      </td>
-                      {/* <td className="px-4 py-3.5">
-                      <span className="text-sm text-slate-600">
-  {user.hospitals?.length
-    ? user.hospitals
-        .map((id) => {
-          const hospital = hospitals.find(
-            (h) => h._id === (id._id || id)
-          );
-          return hospital?.name || "Unknown";
-        })
-        .join(", ")
-    : "—"}
-</span>
-                      </td> */}
-                      <td className="px-4 py-3.5">
-                        <Badge variant={getSubscriptionVariant(user.subscription)}>
-                          {user.subscription || "Free"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <Badge variant={getStatusVariant(user.status)}>
-                          <span className="flex items-center gap-1">
-                            {getStatusIcon(user.status)}
-                            {user.accountStatus}
-                          </span>
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className="text-sm text-slate-500">
-                          {user.createdAt ? format(new Date(user.createdAt), "MMM dd, yyyy") : "—"}
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span className="text-sm text-slate-600">{user.phone || "—"}</span>
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <Badge variant={getRoleVariant(user.role)}>
+                        {user.role}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <Badge variant={getSubscriptionVariant(user.subscription)}>
+                        {user.subscription || "Free"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <Badge variant={getStatusVariant(user.status)}>
+                        <span className="flex items-center gap-1">
+                          {getStatusIcon(user.status)}
+                          {user.accountStatus}
                         </span>
-                      </td>
-                      {/* <td className="px-4 py-3.5">
-                        <span className="text-sm text-slate-500">
-                          {user.lastLogin ? format(new Date(user.lastLogin), "MMM dd, HH:mm") : "—"}
-                        </span>
-                      </td> */}
-                      <td className="px-4 py-3.5">
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <ActionMenu
-                            user={user}
-                            onView={handleViewUser}
-                            onEdit={handleEditUser}
-                            onResetPassword={handleResetPassword}
-                            onChangeRole={handleChangeRole}
-                            onAssignHospital={handleAssignHospital}
-                            onSuspend={handleSuspend}
-                            onDelete={handleDelete}
-                          />
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span className="text-sm text-slate-500">
+                        {user.createdAt ? format(new Date(user.createdAt), "MMM dd, yyyy") : "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <ActionMenu
+                          user={user}
+                          onView={handleViewUser}
+                          onEdit={handleEditUser}
+                          onResetPassword={handleResetPassword}
+                          onChangeRole={handleChangeRole}
+                          onAssignHospital={handleAssignHospital}
+                          onSuspend={handleSuspend}
+                          onDelete={handleDelete}
+                        />
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {/* ─── Pagination ──────────────────────────────────────────────── */}
-          {!isLoading && paginatedUsers.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              pageSize={pageSize}
-              totalItems={filteredUsers.length}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
-            />
-          )}
-        </motion.div>
-      </div>
+        {/* ─── Pagination ──────────────────────────────────────────────── */}
+        {!isLoading && paginatedUsers.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredUsers.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          />
+        )}
+      </motion.div>
 
       {/* ─── User Drawer ───────────────────────────────────────────────── */}
       <UserDrawer
