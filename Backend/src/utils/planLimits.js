@@ -68,7 +68,7 @@ const PLAN_PRICING = {
       "💊 Manage unlimited medications",
       "👨‍👩‍👦 Nominate family carers & guardians",
       "📸 Images are automatically deleted after 3 months",
-      "📈 Detailed AI health analytics",
+      "📈 Detailed health analytics",
       "☁️ Full cloud storage & sync across devices",
       "📤 Share health records as PDF/JPEG"
     ]
