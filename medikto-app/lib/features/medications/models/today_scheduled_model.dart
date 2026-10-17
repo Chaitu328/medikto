@@ -8,6 +8,7 @@ class TodayScheduleModel {
   final String? time;
   final String? status;
   final String? takenAt;
+  final String? confirmationMethod;
   final bool? verified;
   final String? proofImage;
   final String? medicationId;
@@ -21,6 +22,7 @@ class TodayScheduleModel {
     this.time,
     this.status,
     this.takenAt,
+    this.confirmationMethod,
     this.verified,
     this.proofImage,
     this.medicationId,
@@ -48,6 +50,7 @@ class TodayScheduleModel {
       time: json["time"],
       status: json["status"],
       takenAt: json["takenAt"],
+      confirmationMethod: json["confirmationMethod"] as String?,
       verified: json["verified"],
       proofImage: json["proofImage"],
       medicationId: medId,

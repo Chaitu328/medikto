@@ -115,6 +115,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
             : null,
         "takenAt": item.takenAt,
         "takenAtFormatted": takenAtFormatted,
+        "confirmationMethod": item.confirmationMethod,
         "isVerified": item.verified ?? false,
         "proofImage": item.proofImage,
       };
@@ -896,26 +897,54 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                 ],
               ),
             ),
-            // Status + Verified Badge
+            // Status + Confirmation Method Badge
             Expanded(
-              flex: 4,
+              flex: 5,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _statusBadge(item['status']),
-                  if (item['isVerified'])
-                    const Text(
-                      "Verified",
-                      style: TextStyle(color: Color(0xFF4A8BFF), fontSize: 9),
-                    ),
+                  if (item['status'] == "Taken") ...[
+                    const SizedBox(height: 3),
+                    if (item['confirmationMethod'] == "manual")
+                      const Text(
+                        "Marked as Taken · Manual Confirmation",
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          color: AppColors.takenGreen,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else if (item['confirmationMethod'] == "selfie")
+                      const Text(
+                        "Verified with Selfie",
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          color: Color(0xFF4A8BFF),
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else if (item['isVerified'] == true)
+                      const Text(
+                        "Verified",
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          color: Color(0xFF4A8BFF),
+                          fontSize: 8.5,
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            // --- VERIFICATION PHOTO ---
+            // --- VERIFICATION PHOTO / PROOF INDICATOR (READ-ONLY) ---
             GestureDetector(
-              onTap: item['proofImage'] != null
+              onTap: (item['status'] == "Taken" &&
+                      item['proofImage'] != null)
                   ? () => _showSelfieViewer(
                         context,
                         item['proofImage'] as String,
@@ -930,38 +959,7 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: colors.borderSubtle),
                 ),
-                child: item['status'] == "Taken" && item['proofImage'] != null
-                    ? Stack(
-                        children: [
-                          Container(
-                            height: 42,
-                            width: 42,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: CachedNetworkImageProvider(
-                                  "${item['proofImage']}?t=${DateTime.now().millisecondsSinceEpoch}",
-                                ),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const Positioned(
-                            right: 2,
-                            top: 2,
-                            child: Icon(
-                              Icons.check_circle,
-                              color: AppColors.takenGreen,
-                              size: 12,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Icon(
-                        Icons.image_not_supported_outlined,
-                        color: colors.textMuted,
-                        size: 18,
-                      ),
+                child: _buildProofWidget(item, colors),
               ),
             ),
             const SizedBox(width: 6),
@@ -969,6 +967,91 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProofWidget(Map<String, dynamic> item, dynamic colors) {
+    if (item['status'] == "Taken") {
+      if (item['confirmationMethod'] == "manual") {
+        return const Icon(
+          Icons.check_circle_outline,
+          color: AppColors.takenGreen,
+          size: 18,
+        );
+      } else if (item['confirmationMethod'] == "selfie") {
+        if (item['proofImage'] != null) {
+          return Stack(
+            children: [
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  image: DecorationImage(
+                    image: CachedNetworkImageProvider(
+                      "${item['proofImage']}?t=${DateTime.now().millisecondsSinceEpoch}",
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const Positioned(
+                right: 2,
+                top: 2,
+                child: Icon(
+                  Icons.check_circle,
+                  color: AppColors.takenGreen,
+                  size: 12,
+                ),
+              ),
+            ],
+          );
+        } else {
+          // Selfie proof has expired or was removed under retention policy
+          return Tooltip(
+            message: "Selfie proof expired",
+            child: Icon(
+              Icons.timer_off_outlined,
+              color: colors.textMuted,
+              size: 18,
+            ),
+          );
+        }
+      } else if (item['proofImage'] != null) {
+        // Legacy verified record
+        return Stack(
+          children: [
+            Container(
+              height: 42,
+              width: 42,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                image: DecorationImage(
+                  image: CachedNetworkImageProvider(
+                    "${item['proofImage']}?t=${DateTime.now().millisecondsSinceEpoch}",
+                  ),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            const Positioned(
+              right: 2,
+              top: 2,
+              child: Icon(
+                Icons.check_circle,
+                color: AppColors.takenGreen,
+                size: 12,
+              ),
+            ),
+          ],
+        );
+      }
+    }
+
+    return Icon(
+      Icons.image_not_supported_outlined,
+      color: colors.textMuted,
+      size: 18,
     );
   }
 
@@ -1401,7 +1484,13 @@ class _MedicalRecordsScreenState extends ConsumerState<MedicalRecordsScreen>
                       "${item['dose']} ${item['unit']}",
                       item['time'],
                       item['takenAtFormatted'] ?? '-',
-                      item['status'],
+                      item['status'] == 'Taken'
+                          ? (item['confirmationMethod'] == 'manual'
+                              ? 'Taken (Manual)'
+                              : (item['confirmationMethod'] == 'selfie'
+                                  ? 'Taken (Selfie)'
+                                  : 'Taken'))
+                          : item['status'],
                     ],
                   ),
                 ],

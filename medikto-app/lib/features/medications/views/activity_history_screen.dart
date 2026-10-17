@@ -169,7 +169,17 @@ class ActivityHistoryScreen extends ConsumerWidget {
   ) {
     final theme = context.themeColors;
     final name = item.name ?? "No Name";
-    final desc = "${item.time ?? ""} • ${item.verified == true ? "Verified" : "Not Verified"}";
+    final String methodLabel;
+    if (item.confirmationMethod == "manual") {
+      methodLabel = "Manual Confirmation";
+    } else if (item.confirmationMethod == "selfie") {
+      methodLabel = "Verified with Selfie";
+    } else if (item.verified == true) {
+      methodLabel = "Verified";
+    } else {
+      methodLabel = (item.status ?? "").toLowerCase() == "taken" ? "Taken" : "Scheduled";
+    }
+    final desc = "${item.time ?? ""} • $methodLabel";
     final status = (item.status ?? "").toUpperCase();
 
     return Container(

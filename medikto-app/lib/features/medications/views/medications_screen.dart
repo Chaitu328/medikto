@@ -539,20 +539,13 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                                 });
 
                                 try {
-                                  final result = await Navigator.push<bool>(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          SelfieVerficationMedicineScreen(
-                                            doseId: scheduleId,
-                                            medicineName: schedule.name ?? "",
-                                            dosage: schedule.dosage ?? "",
-                                            unit: "",
-                                          ),
-                                    ),
-                                  );
+                                  final response = await ref
+                                      .read(medicationProvider)
+                                      .markDoseAsTaken(doseId: scheduleId);
 
-                                  if (result == true && mounted) {
+                                  if (!mounted) return;
+
+                                  if (response.status == ResponseStatus.SUCCESS) {
                                     setState(() {
                                       takenMap[scheduleId] = true;
                                     });
@@ -560,6 +553,28 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                                     ref.invalidate(getScheduleForDateProvider(formattedDate));
                                     ref.invalidate(getTodayScheduleProvider);
                                     ref.invalidate(getAdherenceProvider);
+
+                                    AppToasts.showSuccess(
+                                      context,
+                                      response.message.isNotEmpty
+                                          ? response.message
+                                          : "Dose marked as taken",
+                                    );
+                                  } else {
+                                    ref.invalidate(getScheduleForDateProvider(formattedDate));
+                                    ref.invalidate(getTodayScheduleProvider);
+                                    ref.invalidate(getAdherenceProvider);
+
+                                    AppToasts.showError(
+                                      context,
+                                      response.message.isNotEmpty
+                                          ? response.message
+                                          : "Failed to mark dose as taken",
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    AppToasts.showError(context, e.toString());
                                   }
                                 } finally {
                                   if (mounted) {

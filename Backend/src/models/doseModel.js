@@ -33,6 +33,12 @@ const doseSchema = new mongoose.Schema({
 
   takenAt: Date,
 
+  confirmationMethod: {
+    type: String,
+    enum: ["manual", "selfie"],
+    default: null
+  },
+
   verified: {
     type: Boolean,
     default: false

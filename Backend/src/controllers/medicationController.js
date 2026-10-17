@@ -565,12 +565,15 @@ exports.getTodaySchedule = async (req, res) => {
 
     const filter = await buildUserAccessFilter(req, req.query.patientId);
 
-    // Fetch doses filtered by user and date (excluding cancelled or deleted doses)
+    // Fetch doses filtered by user and date (excluding cancelled or deleted pending doses)
     const query = Dose.find({
       ...filter,
       date: date,
       status: { $ne: "cancelled" },
-      isDeleted: { $ne: true }
+      $or: [
+        { isDeleted: { $ne: true } },
+        { status: "taken" }
+      ]
     }).sort({ time: 1 }).populate("medication");
 
     if (shouldPopulateUser(req)) {
@@ -636,23 +639,20 @@ exports.markAsTaken = async (req, res) => {
     }
 
     // Verify user has access to this dose
-    const filter = await buildUserAccessFilter(req, dose.user._id.toString());
+    const filter = await buildUserAccessFilter(req, dose.user?._id?.toString() || dose.user?.toString());
     if (Object.keys(filter).length > 0 && !filter.user) {
       return res.status(403).json({
         message: "Access denied"
       });
     }
 
-    // Direct mark as taken without selfie is not allowed for normal patient/user flows to prevent bypassing selfie verification.
-    if (req.user.role !== "admin" && req.user.role !== "superadmin") {
-      return res.status(400).json({
-        message: "Direct completion is not permitted. Selfie verification is required to mark dose as taken."
-      });
-    }
-
+    // Mutual exclusion check: reject if already confirmed using either method
     if (dose.status === "taken") {
-      return res.status(400).json({
-        message: "Dose is already marked as taken"
+      return res.status(409).json({
+        message: "Dose is already confirmed as taken",
+        conflict: true,
+        confirmationMethod: dose.confirmationMethod || "unknown",
+        dose
       });
     }
 
@@ -673,20 +673,54 @@ exports.markAsTaken = async (req, res) => {
     if (isDoseExpired(dose.date, dose.time, tz)) {
       dose.status = "missed";
       await dose.save();
+      await invalidateUserDoseCache(dose.user?._id?.toString() || req.user.id);
       return res.status(400).json({
         message: "Dose action window has expired (60 minutes exceeded). This dose is marked as missed."
       });
     }
 
-    dose.status = "taken";
-    dose.takenAt = new Date();
+    const now = new Date();
 
-    await dose.save();
+    // Concurrency-safe atomic conditional update
+    const updatedDose = await Dose.findOneAndUpdate(
+      {
+        _id: doseId,
+        status: "pending",
+        isDeleted: { $ne: true }
+      },
+      {
+        $set: {
+          status: "taken",
+          takenAt: now,
+          confirmationMethod: "manual",
+          verified: false
+        }
+      },
+      { new: true }
+    ).populate("user");
+
+    if (!updatedDose) {
+      const currentDose = await Dose.findById(doseId);
+      if (!currentDose) {
+        return res.status(404).json({ message: "Dose not found" });
+      }
+      if (currentDose.status === "taken") {
+        return res.status(409).json({
+          message: "Dose is already confirmed as taken",
+          conflict: true,
+          confirmationMethod: currentDose.confirmationMethod || "unknown",
+          dose: currentDose
+        });
+      }
+      return res.status(400).json({
+        message: "Dose is not eligible for confirmation"
+      });
+    }
 
     // Invalidate user cache on dose status change
-    await invalidateUserDoseCache(dose.user?._id?.toString() || req.user.id);
+    await invalidateUserDoseCache(updatedDose.user?._id?.toString() || req.user.id);
 
-    const doseObj = dose.toObject();
+    const doseObj = updatedDose.toObject();
     if (doseObj.proofImage) {
       doseObj.proofImage = await resolveFileUrl(doseObj.proofImage);
     }
@@ -721,16 +755,20 @@ exports.verifyWithSelfie = async (req, res) => {
     }
 
     // Verify user has access to this dose
-    const filter = await buildUserAccessFilter(req, dose.user._id.toString());
+    const filter = await buildUserAccessFilter(req, dose.user?._id?.toString() || dose.user?.toString());
     if (Object.keys(filter).length > 0 && !filter.user) {
       return res.status(403).json({
         message: "Access denied"
       });
     }
 
+    // Mutual exclusion check: reject before running watermark or uploading to S3
     if (dose.status === "taken") {
-      return res.status(400).json({
-        message: "Dose is already marked as taken"
+      return res.status(409).json({
+        message: "Dose is already confirmed as taken",
+        conflict: true,
+        confirmationMethod: dose.confirmationMethod || "unknown",
+        dose
       });
     }
 
@@ -767,30 +805,72 @@ exports.verifyWithSelfie = async (req, res) => {
     const s3Key = generateDoseProofKey(patientId, dose._id.toString());
     await uploadBufferToS3(watermarkedBuffer, s3Key, "image/jpeg");
 
-    dose.status = "taken";
-    dose.takenAt = now;
-    dose.verified = true;
-    dose.verifiedAt = now;
-    dose.proofImage = s3Key;
-
     const user = await User.findById(dose.user || req.user.id);
     const { limits, plan } = getEffectiveSubscription(user);
 
-    const expiryAt = new Date();
+    const expiryAt = new Date(now);
     const retentionHours = limits?.selfieRetentionHours || 48;
     expiryAt.setHours(expiryAt.getHours() + retentionHours);
 
-    dose.expiryAt = expiryAt;
-    dose.planType = plan;
+    // 3. Concurrency-safe atomic conditional update
+    const updatedDose = await Dose.findOneAndUpdate(
+      {
+        _id: doseId,
+        status: "pending",
+        isDeleted: { $ne: true }
+      },
+      {
+        $set: {
+          status: "taken",
+          takenAt: now,
+          verified: true,
+          verifiedAt: now,
+          proofImage: s3Key,
+          expiryAt: expiryAt,
+          planType: plan,
+          confirmationMethod: "selfie"
+        }
+      },
+      { new: true }
+    ).populate("user");
 
-    await dose.save();
+    if (!updatedDose) {
+      // Race condition lost (e.g. concurrent markAsTaken won race)
+      // Immediately delete S3 object to prevent orphaned storage
+      try {
+        await deleteS3Object(s3Key);
+      } catch (cleanupErr) {
+        console.error("Failed to cleanup S3 object on race conflict:", cleanupErr.message);
+      }
+
+      const currentDose = await Dose.findById(doseId);
+      if (!currentDose) {
+        return res.status(404).json({ message: "Dose not found" });
+      }
+      if (currentDose.status === "taken") {
+        return res.status(409).json({
+          message: "Dose is already confirmed as taken",
+          conflict: true,
+          confirmationMethod: currentDose.confirmationMethod || "unknown",
+          dose: currentDose
+        });
+      }
+      return res.status(400).json({
+        message: "Dose is not eligible for confirmation"
+      });
+    }
 
     // Invalidate user cache on dose verification
     await invalidateUserDoseCache(patientId);
 
+    const doseObj = updatedDose.toObject();
+    if (doseObj.proofImage) {
+      doseObj.proofImage = await resolveFileUrl(doseObj.proofImage);
+    }
+
     res.json({
       message: "Verification successful",
-      dose
+      dose: doseObj
     });
 
   } catch (err) {
@@ -1226,7 +1306,10 @@ exports.recoverSelfie =
         ...filter,
         date: { $gte: startDate, $lte: endDate },
         status: { $ne: "cancelled" },
-        isDeleted: { $ne: true }
+        $or: [
+          { isDeleted: { $ne: true } },
+          { status: "taken" }
+        ]
       }).sort({ date: -1, time: 1 }).populate("medication");
 
       if (shouldPopulateUser(req)) {

@@ -366,5 +366,103 @@ void main() {
       final isActionable = !isTaken && !isMissed && !isCancelled && !isGuardian;
       expect(isActionable, isFalse);
     });
+
+    test('Test 19: TodayScheduleModel parses confirmationMethod correctly from JSON', () {
+      final manualJson = {
+        "_id": "dose_m1",
+        "name": "Paracetamol",
+        "dosage": "500mg",
+        "date": "2026-10-17",
+        "time": "08:30 AM",
+        "status": "taken",
+        "takenAt": "2026-10-17T08:35:00.000Z",
+        "confirmationMethod": "manual",
+        "verified": false,
+      };
+
+      final selfieJson = {
+        "_id": "dose_s1",
+        "name": "Metformin",
+        "dosage": "500mg",
+        "date": "2026-10-17",
+        "time": "12:00 PM",
+        "status": "taken",
+        "takenAt": "2026-10-17T12:05:00.000Z",
+        "confirmationMethod": "selfie",
+        "verified": true,
+        "proofImage": "https://s3.example.com/proof.jpg",
+      };
+
+      final legacyJson = {
+        "_id": "dose_l1",
+        "name": "Atorvastatin",
+        "dosage": "10mg",
+        "date": "2026-10-16",
+        "time": "09:00 PM",
+        "status": "taken",
+        "takenAt": "2026-10-16T21:00:00.000Z",
+      };
+
+      final manualModel = TodayScheduleModel.fromJson(manualJson);
+      expect(manualModel.confirmationMethod, equals("manual"));
+      expect(manualModel.status, equals("taken"));
+      expect(manualModel.verified, isFalse);
+      expect(manualModel.proofImage, isNull);
+
+      final selfieModel = TodayScheduleModel.fromJson(selfieJson);
+      expect(selfieModel.confirmationMethod, equals("selfie"));
+      expect(selfieModel.status, equals("taken"));
+      expect(selfieModel.verified, isTrue);
+      expect(selfieModel.proofImage, isNotNull);
+
+      final legacyModel = TodayScheduleModel.fromJson(legacyJson);
+      expect(legacyModel.confirmationMethod, isNull);
+      expect(legacyModel.status, equals("taken"));
+    });
+
+    test('Test 20: Both manual and selfie confirmed doses are NOT actionable', () {
+      final manualDose = TodayScheduleModel(
+        id: "d1",
+        name: "Aspirin",
+        status: "taken",
+        confirmationMethod: "manual",
+      );
+
+      final selfieDose = TodayScheduleModel(
+        id: "d2",
+        name: "Lisinopril",
+        status: "taken",
+        confirmationMethod: "selfie",
+        verified: true,
+      );
+
+      expect(evaluateDoseState(manualDose), equals(DoseUIActionState.taken));
+      expect(evaluateDoseState(selfieDose), equals(DoseUIActionState.taken));
+
+      // Cannot be confirmed again in timeline
+      for (final d in [manualDose, selfieDose]) {
+        final isTaken = (d.status ?? "").toLowerCase() == "taken";
+        final isMissed = (d.status ?? "").toLowerCase() == "missed";
+        final isCancelled = (d.status ?? "").toLowerCase() == "cancelled";
+        final isActionable = !isTaken && !isMissed && !isCancelled;
+        expect(isActionable, isFalse, reason: "Confirmed dose must not be actionable");
+      }
+    });
+
+    test('Test 21: Expired selfie proof does NOT make dose actionable again', () {
+      final expiredSelfieDose = TodayScheduleModel(
+        id: "d3",
+        name: "Omega-3",
+        status: "taken",
+        confirmationMethod: "selfie",
+        verified: true,
+        proofImage: null, // Expired / cleaned up by storage retention
+      );
+
+      expect(evaluateDoseState(expiredSelfieDose), equals(DoseUIActionState.taken));
+      final isTaken = (expiredSelfieDose.status ?? "").toLowerCase() == "taken";
+      final isActionable = !isTaken;
+      expect(isActionable, isFalse, reason: "Expired proof dose must remain read-only taken");
+    });
   });
 }
