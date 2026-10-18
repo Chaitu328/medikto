@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const User = require("../models/userModel");
 const Hospital = require("../models/hospitalModel");
 const HospitalLinkOTP = require("../models/hospitalLinkOtpModel");
@@ -567,9 +568,9 @@ exports.createHospitalWithAdmin = async (req, res) => {
       return res.status(403).json({ message: "Only Super Admin can create hospitals" });
     }
 
-    const { hospitalName, hospitalAddress, adminFirstName, adminPhone, adminEmail } = req.body;
+    const { hospitalName, hospitalAddress, adminFirstName, adminPhone, adminEmail, patientId, patient } = req.body;
 
-    // 2. Validate required fields
+    // 2. Validate required fields (Hospital name, admin name, admin phone; patient is completely optional)
     if (!hospitalName || !adminFirstName || !adminPhone) {
       return res.status(400).json({ message: "Hospital name, admin name, and admin phone are required" });
     }
@@ -600,7 +601,7 @@ exports.createHospitalWithAdmin = async (req, res) => {
       isVerified: true
     });
 
-    // 6. Create Hospital and link to admin
+    // 7. Create Hospital and link to admin (creatable without any patient assigned)
     const hospital = await Hospital.create({
       name: hospitalName,
       address: hospitalAddress || "",
@@ -608,9 +609,31 @@ exports.createHospitalWithAdmin = async (req, res) => {
       status: "active"
     });
 
-    // 7. Link hospital to admin user
+    // Link hospital to admin user
     adminUser.hospital = hospital._id;
     await adminUser.save();
+
+    // 8. Optional patient assignment: Safely link patient to hospital if provided
+    const optionalPatientId = patientId || patient;
+    let linkedPatient = null;
+    if (optionalPatientId && typeof optionalPatientId === "string" && optionalPatientId.trim() !== "") {
+      const trimmedPatientId = optionalPatientId.trim();
+      if (mongoose.Types.ObjectId.isValid(trimmedPatientId)) {
+        const patientDoc = await User.findById(trimmedPatientId);
+        if (patientDoc && (patientDoc.role === "patient" || patientDoc.role === "user")) {
+          if (!patientDoc.hospitals) patientDoc.hospitals = [];
+          if (!patientDoc.hospitals.some(h => h.toString() === hospital._id.toString())) {
+            patientDoc.hospitals.push(hospital._id);
+            await patientDoc.save();
+            linkedPatient = {
+              _id: patientDoc._id,
+              firstName: patientDoc.firstName,
+              phone: patientDoc.phone
+            };
+          }
+        }
+      }
+    }
 
     // 8. Send hospital admin credentials via email (non-blocking)
     let emailSent = false;

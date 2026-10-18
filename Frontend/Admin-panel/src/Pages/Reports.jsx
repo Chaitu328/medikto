@@ -33,10 +33,19 @@ import {
 } from "lucide-react";
 
 import api from "../Api/axios";
+import PatientAutocomplete from "../Components/PatientAutocomplete";
+import {
+  resolvePatient,
+  getPatientDisplayName,
+  getPatientIdentifier,
+  recordMatchesPatient,
+} from "../Utils/patientUtils";
 
 export default function ReportsPage() {
   // ================= STATES =================
   const [reports, setReports] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   const [selectedReport, setSelectedReport] = useState(null);
 
@@ -58,13 +67,24 @@ export default function ReportsPage() {
     try {
       setLoading(true);
 
-      const response = await api.get("/reports");
+      const [reportsRes, usersRes] = await Promise.all([
+        api.get("/reports"),
+        api.get("/users"),
+      ]);
 
-      const reportData = Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response?.data?.reports)
-        ? response.data.reports
+      const reportData = Array.isArray(reportsRes?.data)
+        ? reportsRes.data
+        : Array.isArray(reportsRes?.data?.reports)
+        ? reportsRes.data.reports
         : [];
+
+      const userData = Array.isArray(usersRes?.data?.users)
+        ? usersRes.data.users
+        : Array.isArray(usersRes?.data)
+        ? usersRes.data
+        : [];
+
+      setUsers(userData);
 
       const patientReports = reportData.filter(
         (report) => !report?.user?.role || report?.user?.role === "patient"
@@ -72,10 +92,9 @@ export default function ReportsPage() {
 
       setReports(patientReports);
 
-if (patientReports.length > 0) {
-  setSelectedReport(patientReports[0]);
-}
-
+      if (patientReports.length > 0) {
+        setSelectedReport(patientReports[0]);
+      }
     } catch (error) {
       console.log("REPORT FETCH ERROR:", error);
     } finally {
@@ -133,13 +152,29 @@ if (patientReports.length > 0) {
 
   // ================= FILTER =================
   const filteredReports = useMemo(() => {
-    return reports.filter(
-      (report) =>
+    return reports.filter((report) => {
+      const matchesPatient =
+        !selectedPatient ||
+        recordMatchesPatient(report, selectedPatient, users);
+
+      const matchesSearch =
         report?.title?.toLowerCase().includes(search.toLowerCase()) ||
         report?.condition?.toLowerCase().includes(search.toLowerCase()) ||
-        report?.type?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [reports, search]);
+        report?.type?.toLowerCase().includes(search.toLowerCase());
+
+      return matchesPatient && matchesSearch;
+    });
+  }, [reports, selectedPatient, users, search]);
+
+  useEffect(() => {
+    if (filteredReports.length > 0) {
+      if (!selectedReport || !filteredReports.some((r) => r._id === selectedReport._id)) {
+        setSelectedReport(filteredReports[0]);
+      }
+    } else {
+      setSelectedReport(null);
+    }
+  }, [filteredReports]);
 
   // ================= STATS =================
   const totalReports = reports.length;
@@ -373,31 +408,43 @@ if (patientReports.length > 0) {
       </div>
 
       {/* SEARCH + TOGGLE */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8">
-        {/* SEARCH */}
-        <div className="relative group w-full sm:w-[320px]">
-          <Search className="w-4 h-4 text-[#94A3B8] absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#2563EB] transition-colors duration-200" />
+      <div className="relative z-40 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+          {/* PATIENT AUTOCOMPLETE */}
+          <div className="flex-1 max-w-lg">
+            <PatientAutocomplete
+              selectedPatient={selectedPatient}
+              onSelectPatient={setSelectedPatient}
+              patients={users}
+              placeholder="Search patient by name, phone, or ID to view reports..."
+            />
+          </div>
 
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search reports..."
-            className="w-full h-12 rounded-xl border border-slate-200 bg-white pl-11 pr-10 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all duration-200"
-          />
+          {/* REPORT TITLE / TYPE SEARCH */}
+          <div className="relative group w-full sm:w-[260px]">
+            <Search className="w-4 h-4 text-[#94A3B8] absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#2563EB] transition-colors duration-200" />
 
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 flex items-center justify-center hover:bg-slate-300 transition-colors duration-200"
-            >
-              <X className="w-3 h-3 text-[#64748B]" />
-            </button>
-          )}
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter by title/type..."
+              className="w-full h-12 rounded-xl border border-slate-200 bg-white pl-11 pr-10 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all duration-200"
+            />
+
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 flex items-center justify-center hover:bg-slate-300 transition-colors duration-200"
+              >
+                <X className="w-3 h-3 text-[#64748B]" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* TOGGLE */}
-        <div className="inline-flex bg-slate-100 rounded-xl p-1">
+        <div className="inline-flex bg-slate-100 rounded-xl p-1 self-start sm:self-auto">
           <button
             onClick={() => setViewMode("grid")}
             className={`h-10 px-5 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all duration-200
@@ -490,15 +537,25 @@ if (patientReports.length > 0) {
 
                   {/* INFO */}
                   <div className="space-y-2.5 mb-5">
-                    <div className="flex items-center gap-2 text-sm text-[#64748B]">
-                      <User className="w-4 h-4 text-[#94A3B8]" />
-<span className="truncate">
-  Patient:
-  {" "}
-  {report?.user?.firstName ||
-    report?.user?.phone ||
-    "Unknown"}
-</span>                    </div>
+                    {(() => {
+                      const pat = resolvePatient(report, users);
+                      const patientName = getPatientDisplayName(pat);
+                      const patientIdentifier = getPatientIdentifier(pat);
+
+                      return (
+                        <div className="flex items-center gap-2 text-sm text-[#64748B]">
+                          <User className="w-4 h-4 text-[#2563EB]" />
+                          <span className="truncate font-medium text-slate-800">
+                            {patientName}
+                          </span>
+                          {patientIdentifier && (
+                            <span className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-600">
+                              {patientIdentifier}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex items-center gap-2 text-sm text-[#64748B]">
                       <Calendar className="w-4 h-4 text-[#94A3B8]" />
@@ -519,39 +576,18 @@ if (patientReports.length > 0) {
                     </div>
                   </div>
 
-                  {/* ACTIONS */}
-                  <div className="grid grid-cols-3 gap-2">
+                  {/* ACTIONS: VIEW ONLY (Download and Delete removed per requirement 4) */}
+                  <div>
                     <a
                       href={report?.fileUrl}
                       target="_blank"
                       rel="noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="h-10 rounded-xl bg-[#F8FAFC] border border-slate-200 text-sm font-semibold text-[#475569] hover:bg-white hover:border-slate-300 hover:text-[#0F172A] hover:shadow-sm transition-all duration-200 flex items-center justify-center gap-2"
+                      className="w-full h-10 rounded-xl bg-[#F8FAFC] border border-slate-200 text-sm font-semibold text-[#2563EB] hover:bg-blue-50/50 hover:border-blue-200 hover:text-blue-700 hover:shadow-xs transition-all duration-200 flex items-center justify-center gap-2"
                     >
                       <Eye className="w-4 h-4" />
-                      View
+                      View Report
                     </a>
-
-                    <a
-                      href={report?.fileUrl}
-                      download
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-10 rounded-xl bg-[#F8FAFC] border border-slate-200 text-sm font-semibold text-[#475569] hover:bg-white hover:border-slate-300 hover:text-[#0F172A] hover:shadow-sm transition-all duration-200 flex items-center justify-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </a>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(report?._id);
-                      }}
-                      className="h-10 rounded-xl bg-red-50 border border-red-200 text-sm font-semibold text-red-600 hover:bg-red-100 hover:border-red-300 hover:shadow-sm transition-all duration-200 flex items-center justify-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
                   </div>
                 </div>
               </div>
@@ -637,14 +673,10 @@ if (patientReports.length > 0) {
                   </div>
 
                   <div className="flex items-center justify-between text-sm py-2">
-                    <span className="text-[#64748B] font-medium">User ID</span>
-                   <span className="text-[#0F172A] font-semibold text-xs bg-slate-100 px-2 py-1 rounded-lg">
-  {selectedReport?.user
-    ?.firstName ||
-    selectedReport?.user
-      ?.phone ||
-    "Unknown"}
-</span>
+                    <span className="text-[#64748B] font-medium">Patient</span>
+                    <span className="text-[#0F172A] font-semibold text-xs bg-slate-100 px-2 py-1 rounded-lg">
+                      {getPatientDisplayName(resolvePatient(selectedReport, users))}
+                    </span>
                   </div>
                 </div>
 

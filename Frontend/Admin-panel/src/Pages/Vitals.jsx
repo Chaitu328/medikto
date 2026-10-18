@@ -33,6 +33,13 @@ import {
 } from "recharts";
 
 import api from "../Api/axios";
+import PatientAutocomplete from "../Components/PatientAutocomplete";
+import {
+  resolvePatient,
+  getPatientDisplayName,
+  getPatientIdentifier,
+  recordMatchesPatient,
+} from "../Utils/patientUtils";
 
 export default function VitalsPage() {
   // ================= STATES =================
@@ -40,11 +47,9 @@ export default function VitalsPage() {
 
   const [users, setUsers] = useState([]);
 
-  const [selectedPatient, setSelectedPatient] = useState("all");
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   const [loading, setLoading] = useState(true);
-
-  const [search, setSearch] = useState("");
 
   // ================= FETCH =================
   useEffect(() => {
@@ -91,29 +96,12 @@ export default function VitalsPage() {
   };
 
   // ================= FILTER =================
- const filteredVitals = useMemo(() => {
-  return vitals.filter((item) => {
-    const patient =
-  item?.user?.firstName
-    ? item.user
-    : users.find((u) => u._id === item?.user) || {};
-    const patientName =
-      patient?.firstName ||
-      patient?.phone ||
-      "";
-
-    const matchesSearch = patientName
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const matchesPatient =
-      selectedPatient === "all" ||
-      item?.user === selectedPatient ||
-      item?.user?._id === selectedPatient;
-
-    return matchesSearch && matchesPatient;
-  });
-}, [vitals, users, search, selectedPatient]);
+  const filteredVitals = useMemo(() => {
+    if (!selectedPatient) return vitals;
+    return vitals.filter((item) =>
+      recordMatchesPatient(item, selectedPatient, users)
+    );
+  }, [vitals, users, selectedPatient]);
   // ================= CHART DATA =================
   const chartData = filteredVitals.map((item, index) => ({
     day: `#${index + 1}`,
@@ -152,12 +140,11 @@ const latestTemp = [...filteredVitals]
       new Date(b.createdAt) - new Date(a.createdAt)
   )[0];
 
-  const latestPatient =
-  latestBP?.user ||
-  latestHeart?.user ||
-  latestSugar?.user ||
-  latestTemp?.user ||
-  {};
+  const latestPatient = useMemo(() => {
+    if (selectedPatient) return selectedPatient;
+    const latestRecord = latestBP || latestHeart || latestSugar || latestTemp;
+    return resolvePatient(latestRecord, users);
+  }, [selectedPatient, latestBP, latestHeart, latestSugar, latestTemp, users]);
   // ================= CUSTOM TOOLTIP =================
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -284,48 +271,15 @@ const latestTemp = [...filteredVitals]
       </div>
 
       {/* FILTER BAR */}
-      <div className="relative bg-white/80 backdrop-blur-xl rounded-2xl p-4 mb-8 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300">
-        <div className="absolute inset-0 bg-gradient-to-r from-white/50 via-transparent to-white/50 rounded-2xl pointer-events-none" />
-
+      <div className="relative z-40 bg-white rounded-2xl p-4 mb-8 border border-slate-200/60 shadow-xs">
         <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* SEARCH */}
-          <div className="flex-1 relative group">
-            <Search className="w-4 h-4 text-[#94A3B8] absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-[#2563EB] transition-colors duration-200" />
-
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search patient..."
-              className="w-full h-12 rounded-xl border border-slate-200 bg-[#F8FAFC] pl-11 pr-10 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all duration-200"
+          <div className="flex-1 max-w-xl">
+            <PatientAutocomplete
+              selectedPatient={selectedPatient}
+              onSelectPatient={setSelectedPatient}
+              patients={users}
+              placeholder="Search patient by name, phone, or ID to view vitals..."
             />
-
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 flex items-center justify-center hover:bg-slate-300 transition-colors duration-200"
-              >
-                <X className="w-3 h-3 text-[#64748B]" />
-              </button>
-            )}
-          </div>
-
-          {/* PATIENT FILTER */}
-          <div className="relative group">
-            <select
-              value={selectedPatient}
-              onChange={(e) => setSelectedPatient(e.target.value)}
-              className="h-12 px-5 pr-10 rounded-xl border border-slate-200 bg-white text-sm text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 cursor-pointer appearance-none transition-all duration-200 hover:border-slate-300 min-w-[180px]"
-            >
-              <option value="all">All Patients</option>
-
-              {users.map((user) => (
-                <option key={user._id} value={user._id}>
-                  {user.firstName}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black pointer-events-none" />
           </div>
         </div>
       </div>
@@ -544,56 +498,55 @@ const latestTemp = [...filteredVitals]
     const groupedVitals = {};
 
     filteredVitals.forEach((item) => {
+      const patientObj = resolvePatient(item, users);
+      const patientKey =
+        patientObj?._id ||
+        patientObj?.id ||
+        (typeof item?.user === "string" ? item.user : item?.user?._id) ||
+        item?._id ||
+        "unknown-user";
 
-      const userId =
-  item?.user?._id || item?.user || "unknown-user";
-
-      if (!groupedVitals[userId]) {
-        groupedVitals[userId] = {
-          patient:
-  item?.user?.firstName
-    ? item.user
-    : users.find((u) => u._id === userId) || {},
-
+      if (!groupedVitals[patientKey]) {
+        groupedVitals[patientKey] = {
+          patient: patientObj,
           bloodPressure: null,
           heartRate: null,
           sugar: null,
           temperature: null,
-
           updatedAt: item?.createdAt,
         };
       }
 
       // BLOOD PRESSURE
       if (item?.type === "bloodPressure") {
-        groupedVitals[userId].bloodPressure =
+        groupedVitals[patientKey].bloodPressure =
           item?.bloodPressure;
       }
 
       // HEART RATE
       if (item?.type === "heartRate") {
-        groupedVitals[userId].heartRate =
+        groupedVitals[patientKey].heartRate =
           item?.heartRate;
       }
 
       // SUGAR
       if (item?.type === "sugar") {
-        groupedVitals[userId].sugar =
+        groupedVitals[patientKey].sugar =
           item?.sugarLevel;
       }
 
       // TEMP
       if (item?.type === "temperature") {
-        groupedVitals[userId].temperature =
+        groupedVitals[patientKey].temperature =
           item?.temperature;
       }
 
       // UPDATED TIME
       if (
         new Date(item?.createdAt) >
-        new Date(groupedVitals[userId].updatedAt)
+        new Date(groupedVitals[patientKey].updatedAt)
       ) {
-        groupedVitals[userId].updatedAt =
+        groupedVitals[patientKey].updatedAt =
           item?.createdAt;
       }
     });
@@ -643,20 +596,27 @@ const latestTemp = [...filteredVitals]
                   {/* PATIENT */}
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center">
-                        <User className="w-5 h-5 text-blue-600" />
+                      <div className="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center font-bold text-blue-600 text-sm overflow-hidden flex-shrink-0">
+                        {row?.patient?.profilePic ? (
+                          <img
+                            src={row.patient.profilePic}
+                            alt={getPatientDisplayName(row.patient)}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          getPatientDisplayName(row?.patient).charAt(0).toUpperCase() || (
+                            <User className="w-5 h-5 text-blue-600" />
+                          )
+                        )}
                       </div>
 
-                      <div>
-                        <h4 className="font-semibold text-sm text-[#0F172A]">
-                          {row?.patient?.firstName ||
-                            "Unknown"}
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-sm text-[#0F172A] truncate">
+                          {getPatientDisplayName(row?.patient)}
                         </h4>
 
-                        <p className="text-xs text-[#64748B]">
-                          {row?.patient?.email ||
-                            row?.patient?.phone ||
-                            "No Contact"}
+                        <p className="text-xs text-[#64748B] truncate">
+                          {getPatientIdentifier(row?.patient) || "No Contact"}
                         </p>
                       </div>
                     </div>
@@ -767,11 +727,15 @@ const latestTemp = [...filteredVitals]
 
                 <div className="min-w-0">
                   <h2 className="text-xl font-bold text-[#0F172A] truncate">
-                    {latestPatient?.name || "No Patient Selected"}
+                    {latestPatient
+                      ? getPatientDisplayName(latestPatient)
+                      : "All Patients View"}
                   </h2>
 
                   <p className="text-[#64748B] text-sm mt-1">
-                    Live healthcare monitoring
+                    {selectedPatient
+                      ? "Individual patient monitoring"
+                      : "Live clinic monitoring"}
                   </p>
                 </div>
               </div>
@@ -781,7 +745,7 @@ const latestTemp = [...filteredVitals]
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-[#64748B]">Patient ID</span>
                     <span className="font-semibold text-[#0F172A] text-xs bg-slate-100 px-2 py-1 rounded-lg">
-                      {latestPatient?._id?.slice(-6).toUpperCase()}
+                      {getPatientIdentifier(latestPatient) || "N/A"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
@@ -818,8 +782,8 @@ const latestTemp = [...filteredVitals]
 
               {filteredVitals.length > 0 ? (
                 filteredVitals.map((item, index) => {
-const alertPatient =
-  item?.user || {};
+const alertPatient = resolvePatient(item, users);
+const alertName = getPatientDisplayName(alertPatient);
                   return (
                     <div
                       key={index}
@@ -838,8 +802,7 @@ const alertPatient =
                           <p className="text-xs text-[#64748B] mt-1.5 leading-relaxed">
                             Patient{" "}
                             <span className="font-semibold text-[#475569]">
-                            {alertPatient?.firstName ||
-  alertPatient?.phone}
+                              {alertName}
                             </span>{" "}
                             requires monitoring attention.
                           </p>

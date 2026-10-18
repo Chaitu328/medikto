@@ -26,17 +26,24 @@ import {
   Inbox,
   Loader2,
   Sparkles,
+  User,
 } from "lucide-react";
 
 import api from "../Api/axios";
+import PatientAutocomplete from "../Components/PatientAutocomplete";
+import {
+  resolvePatient,
+  getPatientDisplayName,
+  getPatientIdentifier,
+  recordMatchesPatient,
+} from "../Utils/patientUtils";
 
 export default function Patients() {
   const [patients, setPatients] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   const [loading, setLoading] = useState(true);
-
-  const [search, setSearch] = useState("");
 
   const [subscriptionFilter, setSubscriptionFilter] = useState("All");
 
@@ -122,71 +129,36 @@ export default function Patients() {
   };
 
   // ================= FILTER =================
- const filteredPatients = useMemo(() => {
-  return patients.filter((patient) => {
+  const filteredPatients = useMemo(() => {
+    return patients.filter((patient) => {
+      if (patient.role && patient.role !== "patient") {
+        return false;
+      }
 
-    if (patient.role !== "patient") {
-      return false;
-    }
-    const matchesSearch =
-      patient?.name
-        ?.toLowerCase()
-        .includes(
-          search.toLowerCase()
-        ) ||
+      const matchesSelected =
+        !selectedPatient ||
+        String(patient._id || patient.id) ===
+          String(selectedPatient._id || selectedPatient.id);
 
-      patient?.email
-        ?.toLowerCase()
-        .includes(
-          search.toLowerCase()
-        ) ||
+      const plan = (patient?.subscription || "Free").toLowerCase();
+      const selectedPlan = subscriptionFilter.toLowerCase();
+      const matchesSubscription =
+        subscriptionFilter === "All" || plan === selectedPlan;
 
-      patient?.phone
-        ?.toLowerCase()
-        .includes(
-          search.toLowerCase()
-        ) ||
+      const compliance = getComplianceStatus(patient);
+      const matchesStatus =
+        statusFilter === "All" || compliance === statusFilter;
 
-      patient?._id
-        ?.toLowerCase()
-        .includes(
-          search.toLowerCase()
-        );
+      return matchesSelected && matchesSubscription && matchesStatus;
+    });
+  }, [patients, selectedPatient, subscriptionFilter, statusFilter]);
 
-    const plan =
-      (
-        patient?.subscription ||
-        "Free"
-      ).toLowerCase();
-
-    const selectedPlan =
-      subscriptionFilter.toLowerCase();
-
-    const matchesSubscription =
-      subscriptionFilter === "All" ||
-      plan === selectedPlan;
-
-    const compliance =
-      getComplianceStatus(
-        patient
-      );
-
-    const matchesStatus =
-      statusFilter === "All" ||
-      compliance === statusFilter;
-
-    return (
-      matchesSearch &&
-      matchesSubscription &&
-      matchesStatus
+  const filteredPrescriptions = useMemo(() => {
+    if (!selectedPatient) return prescriptions;
+    return prescriptions.filter((item) =>
+      recordMatchesPatient(item, selectedPatient, patients)
     );
-  });
-}, [
-  patients,
-  search,
-  subscriptionFilter,
-  statusFilter,
-]);
+  }, [prescriptions, selectedPatient, patients]);
   // ================= PAGINATION =================
 const totalPages =
   Math.max(
@@ -400,30 +372,16 @@ const pendingReviews =
       </div>
 
       {/* FILTER BAR */}
-      <div className="relative bg-white/80 backdrop-blur-xl rounded-2xl p-4 mb-6 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300">
-        <div className="absolute inset-0 bg-gradient-to-r from-white/50 via-transparent to-white/50 rounded-2xl pointer-events-none" />
-
+      <div className="relative z-40 bg-white rounded-2xl p-4 mb-6 border border-slate-200/60 shadow-xs">
         <div className="relative flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-          {/* SEARCH */}
-          <div className="flex-1 relative group">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
-              <Search className="w-4 h-4 text-[#94A3B8] group-focus-within:text-[#2563EB] transition-colors duration-200" />
-            </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search patient..."
-              className="w-full h-12 rounded-xl border border-slate-200 bg-[#F8FAFC] pl-11 pr-10 text-sm text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 transition-all duration-200"
+          {/* PATIENT AUTOCOMPLETE */}
+          <div className="flex-1">
+            <PatientAutocomplete
+              selectedPatient={selectedPatient}
+              onSelectPatient={setSelectedPatient}
+              patients={patients}
+              placeholder="Search patient by name, phone, or ID to filter records..."
             />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200/80 flex items-center justify-center hover:bg-slate-300 transition-colors duration-200"
-              >
-                <X className="w-3 h-3 text-[#64748B]" />
-              </button>
-            )}
           </div>
 
           {/* SUBSCRIPTION */}
@@ -459,7 +417,7 @@ const pendingReviews =
           {/* CLEAR */}
           <button
             onClick={() => {
-              setSearch("");
+              setSelectedPatient(null);
               setSubscriptionFilter("All");
               setStatusFilter("All");
             }}
@@ -729,68 +687,89 @@ const pendingReviews =
 
           {/* LIST */}
           <div className="divide-y divide-slate-100">
-            {prescriptions.length > 0 ? (
-              prescriptions.map((prescription, index) => (
-                <div
-                  key={prescription?._id || index}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-5 hover:bg-[#F8FAFC]/80 transition-all duration-200 group/prescription cursor-pointer gap-4"
-                >
-                  {/* LEFT */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0 group-hover/prescription:scale-105 transition-transform duration-200">
-                      <FileText className="w-5 h-5 text-[#2563EB]" />
+            {filteredPrescriptions.length > 0 ? (
+              filteredPrescriptions.map((prescription, index) => {
+                const pat = resolvePatient(prescription, patients);
+                const patientName = getPatientDisplayName(pat);
+                const patientIdentifier = getPatientIdentifier(pat);
+
+                return (
+                  <div
+                    key={prescription?._id || index}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-5 hover:bg-[#F8FAFC]/80 transition-all duration-200 group/prescription cursor-pointer gap-4"
+                  >
+                    {/* LEFT */}
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-12 h-12 rounded-2xl bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0 group-hover/prescription:scale-105 transition-transform duration-200">
+                        <FileText className="w-5 h-5 text-[#2563EB]" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-[#0F172A] text-sm truncate">
+                            {prescription?.title || "Prescription"}
+                          </h3>
+                        </div>
+
+                        {/* PATIENT ATTRIBUTION */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#64748B] mt-1.5">
+                          <span className="flex items-center gap-1.5 font-medium text-slate-800">
+                            <User className="w-3.5 h-3.5 text-blue-600" />
+                            {patientName}
+                          </span>
+
+                          {patientIdentifier && (
+                            <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md font-mono text-slate-600">
+                              {patientIdentifier}
+                            </span>
+                          )}
+
+                          <span className="text-slate-400">
+                            • {prescription?.createdAt
+                              ? new Date(prescription.createdAt).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })
+                              : "Recently"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-[#0F172A] text-sm truncate">
-                        {prescription?.title || "Prescription"}
-                      </h3>
-                      <p className="text-xs text-[#64748B] mt-1">
-                        {prescription?.createdAt
-                          ? new Date(prescription.createdAt).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : "Recently"}
-                      </p>
+                    {/* ACTIONS */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+
+                          if (prescription?.fileUrl) {
+                            window.open(prescription.fileUrl, "_blank", "noopener,noreferrer");
+                          } else {
+                            alert("Prescription file not available.");
+                          }
+                        }}
+                        className="h-9 px-3 rounded-xl border border-slate-200 flex items-center gap-1.5 text-xs font-semibold text-[#2563EB] hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200"
+                        title="View Prescription"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>View</span>
+                      </button>
                     </div>
                   </div>
-
-                  {/* ACTIONS */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-  onClick={(e) => {
-    e.stopPropagation();
-
-    if (prescription?.fileUrl) {
-      window.open(prescription.fileUrl, "_blank", "noopener,noreferrer");
-    } else {
-      alert("Prescription file not available.");
-    }
-  }}
-  className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200"
-  title="View Prescription"
->
-  <Eye className="w-4 h-4 text-[#2563EB]" />
-</button>
-
-                    {/* <button
-                      onClick={() => handleDeletePrescription(prescription?._id)}
-                      className="w-9 h-9 rounded-lg border border-red-200 flex items-center justify-center hover:bg-red-50 hover:border-red-300 transition-all duration-200"
-                    >
-                      <Trash2 className="w-4 h-4 text-[#EF4444]" />
-                    </button> */}
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="py-16 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                   <FileText className="w-7 h-7 text-[#94A3B8]" />
                 </div>
                 <h3 className="font-semibold text-lg text-[#0F172A]">No Prescriptions</h3>
-                <p className="text-[#64748B] text-sm mt-2">No prescriptions found.</p>
+                <p className="text-[#64748B] text-sm mt-2">
+                  {selectedPatient
+                    ? "No prescriptions found for the selected patient."
+                    : "No prescriptions found."}
+                </p>
               </div>
             )}
           </div>

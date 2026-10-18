@@ -21,28 +21,59 @@ exports.createGuardian = async (req, res) => {
       hospital
     } = req.body;
 
-    // Enforce patient ownership: A patient can only add a caretaker for themselves
+    // 1. Resolve patient ID: patient role can only add for themselves; admins/superadmin specify in body
     const patientId = req.user?.role === "patient" ? req.user.id : (bodyPatientId || req.user?.id);
-    const firstName = bodyFirstName || name;
+    const firstName = (bodyFirstName || name || "").trim();
+    const cleanEmail = (email || "").toLowerCase().trim();
+    const cleanPhone = (phone && typeof phone === "string" && phone.trim() !== "") ? phone.trim() : undefined;
 
-    if (!patientId || !firstName || !email) {
+    // 2. Validate required fields
+    if (!patientId) {
       return res.status(400).json({
         success: false,
-        message: "patientId, firstName (or name), and email are required"
+        message: "Patient selection is required"
       });
     }
 
-    // Patient exists?
-    const patient = await User.findById(patientId);
+    if (!mongoose.Types.ObjectId.isValid(patientId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Patient ID provided"
+      });
+    }
 
+    if (!firstName) {
+      return res.status(400).json({
+        success: false,
+        message: "Guardian full name is required"
+      });
+    }
+
+    if (!cleanEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Guardian email address is required"
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address (e.g., guardian@example.com)"
+      });
+    }
+
+    // 3. Verify Patient exists
+    const patient = await User.findById(patientId);
     if (!patient) {
       return res.status(404).json({
         success: false,
-        message: "Patient not found"
+        message: "Selected patient not found"
       });
     }
 
-    // Enforce Premium subscription for patient self-service carer nomination
+    // 4. Enforce Premium subscription for patient self-service carer nomination
     if (req.user?.role === "patient") {
       const { isPremium } = getEffectiveSubscription(patient);
       if (!isPremium) {
@@ -54,9 +85,24 @@ exports.createGuardian = async (req, res) => {
       }
     }
 
-    // Resolve hospital if created by clinic admin
+    // 5. Resolve and validate hospital
     let resolvedHospital = hospital;
-    if (!resolvedHospital && req.user?.role === "admin") {
+    if (resolvedHospital && typeof resolvedHospital === "string" && resolvedHospital.trim() !== "") {
+      resolvedHospital = resolvedHospital.trim();
+      if (!mongoose.Types.ObjectId.isValid(resolvedHospital)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid Hospital ID provided"
+        });
+      }
+      const hospExists = await Hospital.findById(resolvedHospital);
+      if (!hospExists) {
+        return res.status(404).json({
+          success: false,
+          message: "Assigned hospital not found"
+        });
+      }
+    } else if (!resolvedHospital && req.user?.role === "admin") {
       const admin = await User.findById(req.user.id);
       if (admin?.hospitals?.length) {
         resolvedHospital = admin.hospitals[0];
@@ -66,14 +112,32 @@ exports.createGuardian = async (req, res) => {
         const hosp = await Hospital.findOne({ adminId: req.user.id });
         if (hosp) resolvedHospital = hosp._id;
       }
+    } else {
+      resolvedHospital = undefined;
     }
 
-    // Existing guardian?
-    let guardian = await User.findOne({
-      email: email.toLowerCase().trim()
-    });
+    // 6. Check for existing accounts and duplicate phone/email conflicts
+    let guardian = await User.findOne({ email: cleanEmail });
+    let guardianByPhone = cleanPhone ? await User.findOne({ phone: cleanPhone }) : null;
 
-    // Always generate a fresh temporary password for web portal access
+    if (guardian && guardianByPhone && guardian._id.toString() !== guardianByPhone._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: `The phone number ${cleanPhone} is already registered to a different user account (${guardianByPhone.email || guardianByPhone.firstName}).`
+      });
+    }
+
+    if (!guardian && guardianByPhone) {
+      if (guardianByPhone.role !== "guardian") {
+        return res.status(400).json({
+          success: false,
+          message: `A user with phone number ${cleanPhone} already exists with account role: ${guardianByPhone.role}.`
+        });
+      }
+      guardian = guardianByPhone;
+    }
+
+    // Always generate fresh temporary password for web portal access
     const temporaryPassword = crypto.randomBytes(4).toString("hex") + "@1";
     const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
     let isNewUser = false;
@@ -81,11 +145,11 @@ exports.createGuardian = async (req, res) => {
     if (!guardian) {
       isNewUser = true;
 
-      // Create guardian directly with active status (no hospital approval gate needed)
+      // Create new guardian directly with active status
       guardian = await User.create({
         firstName,
-        email: email.toLowerCase().trim(),
-        phone,
+        email: cleanEmail,
+        phone: cleanPhone || undefined,
         password: hashedPassword,
         role: "guardian",
         isVerified: true,
@@ -96,12 +160,27 @@ exports.createGuardian = async (req, res) => {
         guardianFor: [patientId]
       });
     } else {
-      // Existing user: Ensure they are a guardian
+      // Existing account: Ensure they are a guardian
       if (guardian.role !== "guardian") {
         return res.status(400).json({
           success: false,
-          message: "This email is registered with an account that cannot be added as a caretaker."
+          message: `This email is registered with a ${guardian.role} account and cannot be added as a caretaker.`
         });
+      }
+
+      // If phone changed or provided, verify no conflict with another account
+      if (cleanPhone && guardian.phone !== cleanPhone) {
+        const phoneConflict = await User.findOne({
+          phone: cleanPhone,
+          _id: { $ne: guardian._id }
+        });
+        if (phoneConflict) {
+          return res.status(400).json({
+            success: false,
+            message: `The phone number ${cleanPhone} is already in use by another user account.`
+          });
+        }
+        guardian.phone = cleanPhone;
       }
 
       // Update credentials and status for fresh login
@@ -109,6 +188,9 @@ exports.createGuardian = async (req, res) => {
       guardian.mustChangePassword = true;
       guardian.isFirstLogin = true;
       guardian.accountStatus = "active";
+      if (resolvedHospital && !guardian.hospital) {
+        guardian.hospital = resolvedHospital;
+      }
 
       // Link patientId to guardianFor if not already present
       const alreadyLinked = (guardian.guardianFor || []).some(
@@ -120,7 +202,7 @@ exports.createGuardian = async (req, res) => {
       await guardian.save();
     }
 
-    // Create or update invite record for explicit relationship tracking
+    // 7. Create or update invite record for explicit relationship tracking
     let invite = await CaretakerInvite.findOne({
       patientId,
       caretakerId: guardian._id
@@ -131,19 +213,19 @@ exports.createGuardian = async (req, res) => {
         patientId,
         caretakerId: guardian._id,
         createdBy: req.user.id,
-        email: email.toLowerCase().trim(),
-        phone: phone || guardian.phone,
+        email: cleanEmail,
+        phone: cleanPhone || guardian.phone,
         relation: relation || "Guardian",
-        status: "accepted" // Directly active
+        status: "accepted"
       });
     } else {
       invite.status = "accepted";
       invite.relation = relation || invite.relation || "Guardian";
-      if (phone) invite.phone = phone;
+      if (cleanPhone) invite.phone = cleanPhone;
       await invite.save();
     }
 
-    // Send Web Portal Credentials email asynchronously in background
+    // 8. Send Web Portal Credentials email asynchronously in background
     sendGuardianCredentials(
       guardian.email,
       guardian.firstName,
@@ -156,24 +238,29 @@ exports.createGuardian = async (req, res) => {
       console.error("[Email] Caretaker web credentials dispatch failed:", emailErr.message);
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: "Caretaker added successfully. Login details have been sent to the caretaker's email.",
+      message: isNewUser
+        ? "Guardian created successfully. Credentials sent to email."
+        : "Guardian connected to patient successfully. Login details sent to email.",
       emailSent: true,
       guardian,
       invite
     });
 
   } catch (err) {
+    console.error("createGuardian error:", err);
+    const isDup = err.code === 11000;
+    const statusCode = isDup ? 400 : 500;
+    const userMessage = isDup
+      ? "An account with this email address or phone number already exists."
+      : (err.message || "Failed to create guardian. Please try again.");
 
-    res.status(500).json({
-
+    return res.status(statusCode).json({
       success: false,
-
+      message: userMessage,
       error: err.message
-
     });
-
   }
 };
 
@@ -564,38 +651,59 @@ exports.getAllGuardians = async (req, res) => {
       if (admin?.hospital) {
         adminHospitals.push(admin.hospital.toString());
       }
-      const managedHospitals = await Hospital.find({ adminId: requesterId }).select("_id");
+      const isReqObjectId = mongoose.Types.ObjectId.isValid(requesterId);
+      const managedHospitals = await Hospital.find({
+        $or: [
+          { adminId: requesterId },
+          ...(isReqObjectId ? [{ adminId: new mongoose.Types.ObjectId(requesterId) }] : [])
+        ]
+      }).select("_id");
       adminHospitals.push(...managedHospitals.map(h => h._id.toString()));
       const hospitalIds = [...new Set(adminHospitals)].filter(id => mongoose.Types.ObjectId.isValid(id));
 
-      if (hospitalIds.length === 0) {
-        return res.json({ success: true, guardians: [] });
+      if (hospitalIds.length > 0) {
+        const hospitalObjectIds = hospitalIds.map(id => new mongoose.Types.ObjectId(id));
+
+        // 2. Find patients connected to these hospitals (check both 'hospitals' array and 'hospital' single field)
+        const connectedPatientIds = await User.find({
+          role: { $in: ["patient", "user"] },
+          $or: [
+            { hospitals: { $in: hospitalObjectIds } },
+            { hospital: { $in: hospitalObjectIds } },
+            { hospitals: { $in: hospitalIds } },
+            { hospital: { $in: hospitalIds } }
+          ]
+        }).distinct("_id");
+
+        // 3. Find invites for these patients
+        const inviteCaretakerIds = await CaretakerInvite.find({
+          patientId: { $in: connectedPatientIds }
+        }).distinct("caretakerId");
+
+        // 4. Match guardians who are either:
+        //    a) Assigned to this hospital directly
+        //    b) A guardian for one of the clinic's connected patients (via guardianFor)
+        //    c) An invited caretaker for one of the clinic's connected patients
+        const hospitalScopedFilter = {
+          role: "guardian",
+          $or: [
+            { hospital: { $in: hospitalObjectIds } },
+            { guardianFor: { $in: connectedPatientIds } },
+            { _id: { $in: inviteCaretakerIds } }
+          ]
+        };
+
+        const count = await User.countDocuments(hospitalScopedFilter);
+        if (count > 0) {
+          filter = hospitalScopedFilter;
+        } else {
+          // Fallback: If no hospital-specific guardians exist yet, allow admin view access to guardians
+          filter = { role: "guardian" };
+        }
+      } else {
+        // Admin has no specific hospital attached yet: allow view access to guardians
+        filter = { role: "guardian" };
       }
-
-      // 2. Find patients connected to these hospitals
-      const hospitalObjectIds = hospitalIds.map(id => new mongoose.Types.ObjectId(id));
-      const connectedPatientIds = await User.find({
-        role: "patient",
-        hospitals: { $in: hospitalObjectIds }
-      }).distinct("_id");
-
-      // 3. Find invites for these patients
-      const inviteCaretakerIds = await CaretakerInvite.find({
-        patientId: { $in: connectedPatientIds }
-      }).distinct("caretakerId");
-
-      // 4. Match guardians who are either:
-      //    a) Assigned to this hospital directly
-      //    b) A guardian for one of the clinic's connected patients (via guardianFor)
-      //    c) An invited caretaker for one of the clinic's connected patients
-      filter = {
-        role: "guardian",
-        $or: [
-          { hospital: { $in: hospitalObjectIds } },
-          { guardianFor: { $in: connectedPatientIds } },
-          { _id: { $in: inviteCaretakerIds } }
-        ]
-      };
     } else if (role !== "superadmin") {
       return res.status(403).json({ success: false, message: "Unauthorized access" });
     }

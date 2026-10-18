@@ -30,6 +30,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import api from "../Api/axios";
+import SubscriptionManager from "../Components/SubscriptionManager";
 
 export default function Patients() {
   const [patients, setPatients] = useState([]);
@@ -795,6 +796,27 @@ export default function Patients() {
                       </span>
                     </div>
                   </div>
+                </div>
+
+                {/* Subscription Management */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                    Subscription & Access
+                  </h4>
+                  <SubscriptionManager
+                    patient={selectedPatientForDetail}
+                    onUpdate={(updated) => {
+                      setSelectedPatientForDetail(updated);
+                      setPatients((prev) =>
+                        prev.map((p) =>
+                          (p._id === updated._id || p.id === updated.id)
+                            ? { ...p, ...updated }
+                            : p
+                        )
+                      );
+                    }}
+                    isSuperAdmin={isSuperAdmin}
+                  />
                 </div>
               </div>
 

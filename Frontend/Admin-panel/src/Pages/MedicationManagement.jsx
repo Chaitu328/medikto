@@ -27,9 +27,18 @@ import {
 } from "lucide-react";
 
 import api from "../Api/axios.js";
+import PatientAutocomplete from "../Components/PatientAutocomplete";
+import {
+  resolvePatient,
+  getPatientDisplayName,
+  getPatientIdentifier,
+  recordMatchesPatient,
+} from "../Utils/patientUtils";
 
 export default function MedicationManagement() {
   const [medications, setMedications] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   const [today, setToday] = useState([]);
 
@@ -52,9 +61,10 @@ const [selectedType, setSelectedType] =
     try {
       setLoading(true);
 
-      const [medicationsRes, todayRes] = await Promise.all([
+      const [medicationsRes, todayRes, usersRes] = await Promise.all([
         api.get("/medications"),
         api.get("/today"),
+        api.get("/users"),
       ]);
 
       const medicationData = Array.isArray(medicationsRes?.data)
@@ -68,6 +78,14 @@ const [selectedType, setSelectedType] =
         : Array.isArray(todayRes?.data?.schedules)
         ? todayRes.data.schedules
         : [];
+
+      const userData = Array.isArray(usersRes?.data?.users)
+        ? usersRes.data.users
+        : Array.isArray(usersRes?.data)
+        ? usersRes.data
+        : [];
+
+      setUsers(userData);
 
       const patientMedications = medicationData.filter(
         (item) => !item?.user?.role || item?.user?.role === "patient"
@@ -87,57 +105,67 @@ const [selectedType, setSelectedType] =
   };
 
   // ================= FILTER =================
- const filteredMedications = useMemo(() => {
-  return medications.filter((item) => {
+  const filteredMedications = useMemo(() => {
+    return medications.filter((item) => {
+      const matchesPatient =
+        !selectedPatient || recordMatchesPatient(item, selectedPatient, users);
 
-    const matchesSearch =
-      item?.name
-        ?.toLowerCase()
-        .includes(search.toLowerCase());
+      const matchesSearch =
+        item?.name
+          ?.toLowerCase()
+          .includes(search.toLowerCase());
 
-    const isItemActive = item?.status === "active" || item?.active === true || item?.active === undefined;
-    const matchesStatus =
-      selectedStatus === "all" ||
-      (selectedStatus === "active" && isItemActive) ||
-      (selectedStatus === "paused" && !isItemActive);
+      const isItemActive =
+        item?.status === "active" ||
+        item?.active === true ||
+        item?.active === undefined;
+      const matchesStatus =
+        selectedStatus === "all" ||
+        (selectedStatus === "active" && isItemActive) ||
+        (selectedStatus === "paused" && !isItemActive);
 
-    const matchesType =
-      selectedType === "all" ||
-      item?.type === selectedType;
+      const matchesType =
+        selectedType === "all" || item?.type === selectedType;
 
-    return (
-      matchesSearch &&
-      matchesStatus &&
-      matchesType
+      return (
+        matchesPatient &&
+        matchesSearch &&
+        matchesStatus &&
+        matchesType
+      );
+    });
+  }, [
+    medications,
+    users,
+    selectedPatient,
+    search,
+    selectedStatus,
+    selectedType,
+  ]);
+
+  const filteredToday = useMemo(() => {
+    if (!selectedPatient) return today;
+    return today.filter((item) =>
+      recordMatchesPatient(item, selectedPatient, users)
     );
-  });
-}, [
-  medications,
-  search,
-  selectedStatus,
-  selectedType,
-]);
+  }, [today, selectedPatient, users]);
 
- // ================= STATS =================
+  // ================= STATS =================
 
-const completedToday = today.filter(
-  (dose) =>
-    dose?.taken === true ||
-    dose?.taken === "true" ||
-    dose?.status === "taken" ||
-    dose?.status === "completed"
-).length;
+  const completedToday = filteredToday.filter(
+    (dose) =>
+      dose?.taken === true ||
+      dose?.taken === "true" ||
+      dose?.status === "taken" ||
+      dose?.status === "completed"
+  ).length;
 
-const pendingToday =
-  today.length - completedToday;
+  const pendingToday = filteredToday.length - completedToday;
 
-const adherence =
-  today.length > 0
-    ? Math.round(
-        (completedToday / today.length) *
-          100
-      )
-    : 0;
+  const adherence =
+    filteredToday.length > 0
+      ? Math.round((completedToday / filteredToday.length) * 100)
+      : 0;
 
 
     const isDoseTaken = (dose) => {
@@ -248,6 +276,18 @@ const adherence =
               Export
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* PATIENT AUTOCOMPLETE FILTER */}
+      <div className="relative z-40 bg-white rounded-2xl p-4 mb-6 border border-slate-200/60 shadow-xs">
+        <div className="w-full max-w-xl">
+          <PatientAutocomplete
+            selectedPatient={selectedPatient}
+            onSelectPatient={setSelectedPatient}
+            patients={users}
+            placeholder="Search patient by name, phone, or ID to view medications..."
+          />
         </div>
       </div>
 
@@ -440,9 +480,9 @@ const adherence =
 
                 <div className="flex items-center justify-between mt-5 pt-5 border-t border-slate-100">
                   <div className="flex items-center gap-2 text-sm text-[#64748B]">
-                    <UserCheck className="w-4 h-4" />
-                    <span className="truncate">
-                      {dose?.user?.firstName || dose?.user?.phone}
+                    <UserCheck className="w-4 h-4 text-[#2563EB]" />
+                    <span className="truncate font-medium text-[#0F172A]">
+                      {getPatientDisplayName(resolvePatient(dose, users))}
                     </span>
                   </div>
 
@@ -643,29 +683,41 @@ const adherence =
                     </td>
 
                     {/* FREQUENCY */}
-                   <td className="px-6 py-5">
-  <div className="flex items-center gap-3">
-    <img
-      src={
-        item?.user?.profilePic ||
-        "https://ui-avatars.com/api/?name=Patient"
-      }
-      alt="patient"
-      className="w-10 h-10 rounded-xl object-cover"
-    />
+                    <td className="px-6 py-5">
+                      {(() => {
+                        const pat = resolvePatient(item, users);
+                        const displayName = getPatientDisplayName(pat);
+                        const identifier = getPatientIdentifier(pat);
 
-    <div>
-      <h4 className="text-sm font-semibold text-[#0F172A]">
-        {item?.user?.firstName ||
-          item?.user?.phone}
-      </h4>
+                        return (
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center font-bold text-blue-600 text-sm overflow-hidden flex-shrink-0">
+                              {pat?.profilePic ? (
+                                <img
+                                  src={pat.profilePic}
+                                  alt={displayName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                displayName.charAt(0).toUpperCase() || (
+                                  <UserCheck className="w-5 h-5 text-blue-600" />
+                                )
+                              )}
+                            </div>
 
-      <p className="text-xs text-[#64748B]">
-        {item?.user?.phone}
-      </p>
-    </div>
-  </div>
-</td>
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-semibold text-[#0F172A] truncate">
+                                {displayName}
+                              </h4>
+
+                              <p className="text-xs text-[#64748B] truncate">
+                                {identifier || "No Identifier"}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </td>
 
                     {/* STATUS */}
                     <td className="px-6 py-5">

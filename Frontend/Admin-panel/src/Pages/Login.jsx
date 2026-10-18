@@ -26,6 +26,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import api from "../Api/axios";
+import config from "../config";
 
 // ═════════════════════════════════════════════════════════════════════════════
 // GOOGLE LOGO SVG COMPONENT
@@ -378,22 +379,23 @@ const MediktoLogin = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   useEffect(() => {
-  const token = params.get("token");
+    const token = params.get("token");
 
-  if (token) {
-    localStorage.setItem("token", token);
-    localStorage.setItem("role", "superadmin");
+    if (token) {
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", "superadmin");
 
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        role: "superadmin",
-      })
-    );
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          role: "superadmin",
+          name: "Super Administrator",
+        })
+      );
 
-    navigate("/", { replace: true });
-  }
-}, []);
+      navigate("/", { replace: true });
+    }
+  }, [location.search]);
   const [activeRole, setActiveRole] = useState("hospital");
 
   // Hospital Admin states
@@ -569,8 +571,9 @@ const MediktoLogin = () => {
   // };
 
   const handleGoogleLogin = () => {
-    window.location.href =
-      "https://api-prd.medikto.com/api/superadmin/google";
+    const origin = window.location.origin;
+    const apiBase = (config.API_BASE_URL || "https://api-prd.medikto.com/api").replace(/\/+$/, "");
+    window.location.href = `${apiBase}/superadmin/google?redirect_uri=${encodeURIComponent(origin)}`;
   };
 
   const handleGuardianLogin = async (e) => {
@@ -740,6 +743,39 @@ const MediktoLogin = () => {
                         <span className="text-xs font-semibold text-amber-700">Super Admin Only</span>
                       </div>
                     </div>
+
+                    {(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") && (
+                      <div className="pt-3 border-t border-slate-100 text-left space-y-2">
+                        <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                          Local Dev: Paste token or redirect URL
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Paste https://admin.medikto.com/superadmin/login?token=... here"
+                          onChange={(e) => {
+                            const val = e.target.value.trim();
+                            let extractedToken = val;
+                            if (val.includes("token=")) {
+                              const match = val.match(/token=([^&]+)/);
+                              if (match) extractedToken = match[1];
+                            }
+                            if (extractedToken && extractedToken.length > 20) {
+                              localStorage.setItem("token", extractedToken);
+                              localStorage.setItem("role", "superadmin");
+                              localStorage.setItem(
+                                "user",
+                                JSON.stringify({
+                                  role: "superadmin",
+                                  name: "Super Administrator",
+                                })
+                              );
+                              navigate("/", { replace: true });
+                            }
+                          }}
+                          className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 bg-slate-50"
+                        />
+                      </div>
+                    )}
                   </motion.div>
                 )}
 

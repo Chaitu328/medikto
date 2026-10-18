@@ -239,7 +239,7 @@ const ActionMenu = ({ caretaker, onView, onEdit, onDelete, onResend }) => {
 // ═════════════════════════════════════════════════════════════════════════════
 // RIGHT DRAWER
 // ═════════════════════════════════════════════════════════════════════════════
-const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, onApprove, loading }) => {
+const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, onApprove, loading, isSuperAdmin }) => {
   if (!caretaker) return null;
 
   return (
@@ -331,34 +331,45 @@ const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, onApp
 
         {/* Footer Actions */}
         <div className="px-6 py-5 border-t border-slate-100 space-y-3">
-          {caretaker.accountStatus === "pending" && (
+          {isSuperAdmin ? (
+            <>
+              {caretaker.accountStatus === "pending" && (
+                <button
+                  onClick={() => { onApprove(caretaker.id, "active"); onClose(); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+                >
+                  <CheckCircle2 size={16} /> Approve Guardian
+                </button>
+              )}
+              <button
+                onClick={() => { onEdit(caretaker); onClose(); }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+              >
+                <Pencil size={16} /> Edit Guardian
+              </button>
+              {caretaker.status === "pending" && (
+                <button
+                  onClick={() => { onResend(caretaker); onClose(); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#2563EB] border border-blue-200 rounded-xl text-sm font-medium hover:bg-blue-50 transition-colors"
+                >
+                  <Send size={16} /> Resend Credentials
+                </button>
+              )}
+              <button
+                onClick={() => { onDelete(caretaker); onClose(); }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={16} /> Remove Guardian
+              </button>
+            </>
+          ) : (
             <button
-              onClick={() => { onApprove(caretaker.id, "active"); onClose(); }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+              onClick={onClose}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors"
             >
-              <CheckCircle2 size={16} /> Approve Guardian
+              Close
             </button>
           )}
-          <button
-            onClick={() => { onEdit(caretaker); onClose(); }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            <Pencil size={16} /> Edit Guardian
-          </button>
-          {caretaker.status === "pending" && (
-            <button
-              onClick={() => { onResend(caretaker); onClose(); }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#2563EB] border border-blue-200 rounded-xl text-sm font-medium hover:bg-blue-50 transition-colors"
-            >
-              <Send size={16} /> Resend Credentials
-            </button>
-          )}
-          <button
-            onClick={() => { onDelete(caretaker); onClose(); }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
-          >
-            <Trash2 size={16} /> Remove Guardian
-          </button>
         </div>
       </div>
     </>
@@ -438,11 +449,15 @@ const InviteModal = ({
               >
                 <option value="">Select Patient</option>
 
-                {(patients || []).map((patient) => (
-                  <option key={patient._id} value={patient._id}>
-                    {patient.firstName}
-                  </option>
-                ))}
+                {(patients || []).map((patient) => {
+                  const displayName = patient.firstName || patient.name || "Patient";
+                  const identifier = patient.phone ? `(${patient.phone})` : patient._id ? `[${patient._id.slice(-6)}]` : "";
+                  return (
+                    <option key={patient._id} value={patient._id}>
+                      {displayName} {identifier}
+                    </option>
+                  );
+                })}
               </select>
             </FormField>
             <FormField label="Full Name" required>
@@ -598,21 +613,25 @@ const DeleteModal = ({ isOpen, onClose, onConfirm, itemName, loading }) => {
 // ═════════════════════════════════════════════════════════════════════════════
 // EMPTY STATE
 // ═════════════════════════════════════════════════════════════════════════════
-const EmptyState = ({ onInvite }) => (
+const EmptyState = ({ onInvite, isSuperAdmin }) => (
   <div className="flex flex-col items-center justify-center py-20 px-4">
     <div className="w-20 h-20 rounded-[20px] bg-slate-50 flex items-center justify-center mb-6">
       <Users size={36} className="text-slate-300" />
     </div>
     <h3 className="text-lg font-semibold text-slate-900">No Guardians Found</h3>
     <p className="text-sm text-slate-500 mt-2 text-center max-w-sm">
-      Create your first guardian to monitor patients and manage their healthcare needs.
+      {isSuperAdmin
+        ? "Create your first guardian to monitor patients and manage their healthcare needs."
+        : "No patient guardians or caretakers are currently linked."}
     </p>
-    <button
-      onClick={onInvite}
-      className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
-    >
-      <UserPlus size={16} /> Create Guardian
-    </button>
+    {isSuperAdmin && (
+      <button
+        onClick={onInvite}
+        className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+      >
+        <UserPlus size={16} /> Create Guardian
+      </button>
+    )}
   </div>
 );
 
@@ -620,6 +639,9 @@ const EmptyState = ({ onInvite }) => (
 // MAIN COMPONENT
 // ═════════════════════════════════════════════════════════════════════════════
 const GuardiansManagement = () => {
+  const currentRole = (localStorage.getItem("role") || "").toLowerCase();
+  const isSuperAdmin = currentRole === "superadmin";
+
   const [caretakers, setCaretakers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -651,13 +673,12 @@ const GuardiansManagement = () => {
 
   const ITEMS_PER_PAGE = 10;
 
-  // Fetch data from backend
   const fetchData = async () => {
     try {
       setLoading(true);
       const res = await api.get("/guardians");
 
-      const guardians = res.data.guardians || res.data || [];
+      const guardians = res.data?.guardians || res.data?.data || res.data?.caretakers || (Array.isArray(res.data) ? res.data : []);
 
       const data = guardians.map((item) => ({
         id: item._id,
@@ -700,10 +721,9 @@ passwordChanged: item.passwordChanged || false,
 const fetchPatients = async () => {
   try {
     const res = await api.get("/users");
-
-    // Only keep users having role = user
-    const patients = (res.data.users || []).filter(
-      (user) => user.role === "patient"
+    const userList = res.data?.users || (Array.isArray(res.data) ? res.data : []);
+    const patients = userList.filter(
+      (user) => user.role === "patient" || user.role === "user"
     );
 
     setPatients(patients);
@@ -837,6 +857,10 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
   };
 
   const handleInvite = async (formData) => {
+    if (!selectedPatient) {
+      toast.error("Please select a patient to connect with this guardian.");
+      return;
+    }
     setInviteLoading(true);
     try {
       const res = await api.post("/guardians/create", {
@@ -849,10 +873,12 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
       });
       await fetchData();
       setInviteModalOpen(false);
+      setSelectedPatient("");
       toast.success(res.data?.message || "Guardian created successfully. Credentials sent to email.");
     } catch (err) {
       console.error("Failed to create guardian:", err);
-      toast.error(err.response?.data?.message || "Failed to create guardian. Please try again.");
+      const errMsg = err.response?.data?.message || err.response?.data?.error || "Failed to create guardian. Please check the provided information.";
+      toast.error(errMsg);
     } finally {
       setInviteLoading(false);
     }
@@ -957,12 +983,14 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
             <RefreshCcw size={15} className={refreshing ? "animate-spin" : ""} />
             Refresh
           </button>
-          <button
-            onClick={() => setInviteModalOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-[#2563EB] text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-blue-700 transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98]"
-          >
-            <UserPlus size={16} /> Create Guardian
-          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => setInviteModalOpen(true)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 bg-[#2563EB] text-white rounded-xl text-xs sm:text-sm font-medium hover:bg-blue-700 transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-[0.98]"
+            >
+              <UserPlus size={16} /> Create Guardian
+            </button>
+          )}
         </div>
       </div>
 
@@ -1143,7 +1171,7 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
             </table>
           </div>
         ) : filteredCaretakers.length === 0 ? (
-          <EmptyState onInvite={() => setInviteModalOpen(true)} />
+          <EmptyState isSuperAdmin={isSuperAdmin} onInvite={() => setInviteModalOpen(true)} />
         ) : (
           <>
             <div className="overflow-x-auto w-full">
@@ -1253,43 +1281,47 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
                             <button
                               onClick={() => handleView(caretaker)}
                               className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-[#2563EB] transition-colors"
-                              title="View"
+                              title="View Details"
                             >
                               <Eye size={15} />
                             </button>
-                            {caretaker.accountStatus === "pending" && (
-                              <button
-                                onClick={() => handleUpdateStatus(caretaker.id, "active")}
-                                className="p-1.5 sm:p-2 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
-                                title="Approve Guardian"
-                              >
-                                <CheckCircle2 size={15} />
-                              </button>
+                            {isSuperAdmin && (
+                              <>
+                                {caretaker.accountStatus === "pending" && (
+                                  <button
+                                    onClick={() => handleUpdateStatus(caretaker.id, "active")}
+                                    className="p-1.5 sm:p-2 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
+                                    title="Approve Guardian"
+                                  >
+                                    <CheckCircle2 size={15} />
+                                  </button>
+                                )}
+                                {caretaker.status === "pending" && (
+                                  <button
+                                    onClick={() => handleResendCredentials(caretaker)}
+                                    disabled={resendLoading[caretaker.id]}
+                                    className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-[#2563EB] transition-colors disabled:opacity-50"
+                                    title="Resend Credentials"
+                                  >
+                                    {resendLoading[caretaker.id] ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteClick(caretaker)}
+                                  className="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                                <ActionMenu
+                                  caretaker={caretaker}
+                                  onView={handleView}
+                                  onEdit={handleEdit}
+                                  onDelete={handleDeleteClick}
+                                  onResend={handleResendCredentials}
+                                />
+                              </>
                             )}
-                            {caretaker.status === "pending" && (
-                              <button
-                                onClick={() => handleResendCredentials(caretaker)}
-                                disabled={resendLoading[caretaker.id]}
-                                className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-[#2563EB] transition-colors disabled:opacity-50"
-                                title="Resend Credentials"
-                              >
-                                {resendLoading[caretaker.id] ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteClick(caretaker)}
-                              className="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                            <ActionMenu
-                              caretaker={caretaker}
-                              onView={handleView}
-                              onEdit={handleEdit}
-                              onDelete={handleDeleteClick}
-                              onResend={handleResendCredentials}
-                            />
                           </div>
                         </td>
                       </tr>
@@ -1352,6 +1384,7 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
           onResend={handleResendCredentials}
           onApprove={handleUpdateStatus}
           loading={drawerLoading}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
 

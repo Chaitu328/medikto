@@ -100,6 +100,22 @@ exports.getAllUsers = async (req, res) => {
       if (uObj.profilePic) {
         uObj.profilePic = await resolveFileUrl(uObj.profilePic);
       }
+
+      const effective = getEffectiveSubscription(u);
+      uObj.subscription = effective.plan;
+      uObj.subscriptionDetails = {
+        plan: effective.plan,
+        status: effective.status,
+        isPremium: effective.isPremium,
+        trialUsed: effective.trialUsed,
+        subscriptionStart: effective.subscriptionStart,
+        subscriptionEnd: effective.subscriptionEnd,
+        trialStart: effective.trialStart,
+        trialEnd: effective.trialEnd,
+        grantType: u.subscriptionDetails?.grantType,
+        grantedAt: u.subscriptionDetails?.grantedAt,
+        durationDays: u.subscriptionDetails?.durationDays,
+      };
       if (hospitalId && uObj.phone) {
         // Find if there is an active OTP for this patient & hospital
         const linkOtp = await HospitalLinkOTP.findOne({

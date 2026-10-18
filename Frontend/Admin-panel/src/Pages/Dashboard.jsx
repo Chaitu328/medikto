@@ -59,6 +59,9 @@ export default function Dashboard() {
   const [actionLoading, setActionLoading] = useState({});
   const [toast, setToast] = useState(null);
 
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+  const isSuperAdmin = role === "superadmin";
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -316,8 +319,8 @@ export default function Dashboard() {
         </div>
 
         {/* KPI Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {[1, 2, 3, 4].map((i) => (
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isSuperAdmin ? "gap-5 sm:gap-6" : "lg:grid-cols-4 gap-4 sm:gap-5"}`}>
+          {(isSuperAdmin ? [1, 2] : [1, 2, 3, 4]).map((i) => (
             <div
               key={i}
               className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100 shadow-xs"
@@ -540,7 +543,7 @@ export default function Dashboard() {
       )}
 
       {/* KPI CARDS */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+      <section className={`grid grid-cols-1 sm:grid-cols-2 ${isSuperAdmin ? "gap-5 sm:gap-6" : "xl:grid-cols-4 gap-5"} mb-8`}>
         {/* PATIENTS */}
         <div className="group relative bg-white rounded-3xl p-6 border border-slate-200/60 shadow-sm hover:shadow-lg hover:shadow-[#2563EB]/[0.08] transition-all duration-300 hover:-translate-y-0.5 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -595,61 +598,65 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ADHERENCE */}
-        <div className="group relative bg-white rounded-3xl p-6 border border-slate-200/60 shadow-sm hover:shadow-lg hover:shadow-[#2563EB]/[0.08] transition-all duration-300 hover:-translate-y-0.5 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-5">
-              <span className="text-xs font-bold uppercase tracking-[0.15em] text-[#64748B]">
-                Adherence
-              </span>
-              <div className="w-12 h-12 rounded-2xl bg-[#2563EB]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Clock className="w-6 h-6 text-[#2563EB]" />
+        {/* ADHERENCE (Hidden for Super Admin) */}
+        {!isSuperAdmin && (
+          <div className="group relative bg-white rounded-3xl p-6 border border-slate-200/60 shadow-sm hover:shadow-lg hover:shadow-[#2563EB]/[0.08] transition-all duration-300 hover:-translate-y-0.5 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#2563EB]/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-5">
+                <span className="text-xs font-bold uppercase tracking-[0.15em] text-[#64748B]">
+                  Adherence
+                </span>
+                <div className="w-12 h-12 rounded-2xl bg-[#2563EB]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Clock className="w-6 h-6 text-[#2563EB]" />
+                </div>
               </div>
-            </div>
-            <h2 className="text-4xl font-bold text-[#0F172A] tracking-tight">
-              {todayPercentage}%
-            </h2>
-            <div className="mt-4">
-              <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  style={{ width: `${todayPercentage}%` }}
-                  className="h-full bg-gradient-to-r from-[#2563EB] to-[#3B82F6] rounded-full transition-all duration-700 ease-out"
-                />
+              <h2 className="text-4xl font-bold text-[#0F172A] tracking-tight">
+                {todayPercentage}%
+              </h2>
+              <div className="mt-4">
+                <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    style={{ width: `${todayPercentage}%` }}
+                    className="h-full bg-gradient-to-r from-[#2563EB] to-[#3B82F6] rounded-full transition-all duration-700 ease-out"
+                  />
+                </div>
+                <p className="text-[#64748B] text-sm mt-2 font-medium">
+                  {completedToday} of {totalToday} doses taken
+                </p>
               </div>
-              <p className="text-[#64748B] text-sm mt-2 font-medium">
-{completedToday} of {totalToday} doses taken
-              </p>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* MISSED */}
-        <div className="group relative bg-white rounded-3xl p-6 border border-red-100/60 shadow-sm hover:shadow-lg hover:shadow-[#EF4444]/[0.08] transition-all duration-300 hover:-translate-y-0.5 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#EF4444]/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-5">
-              <span className="text-xs font-bold uppercase tracking-[0.15em] text-[#64748B]">
-                Missed Doses
-              </span>
-              <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <AlertTriangle className="w-6 h-6 text-[#EF4444]" />
+        {/* MISSED DOSES (Hidden for Super Admin) */}
+        {!isSuperAdmin && (
+          <div className="group relative bg-white rounded-3xl p-6 border border-red-100/60 shadow-sm hover:shadow-lg hover:shadow-[#EF4444]/[0.08] transition-all duration-300 hover:-translate-y-0.5 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#EF4444]/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-5">
+                <span className="text-xs font-bold uppercase tracking-[0.15em] text-[#64748B]">
+                  Missed Doses
+                </span>
+                <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <AlertTriangle className="w-6 h-6 text-[#EF4444]" />
+                </div>
               </div>
-            </div>
-            <h2 className="text-4xl font-bold text-[#EF4444] tracking-tight">
-              {missedMedications}
-            </h2>
-            <div className="flex items-center gap-2 mt-3">
-              <div className="flex items-center gap-1 text-red-600 text-sm font-semibold bg-red-50 px-2 py-1 rounded-lg">
-                <TrendingDown className="w-3.5 h-3.5" />
-                Alert
+              <h2 className="text-4xl font-bold text-[#EF4444] tracking-tight">
+                {missedMedications}
+              </h2>
+              <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-1 text-red-600 text-sm font-semibold bg-red-50 px-2 py-1 rounded-lg">
+                  <TrendingDown className="w-3.5 h-3.5" />
+                  Alert
+                </div>
+                <span className="text-[#64748B] text-sm">
+                  Requires attention
+                </span>
               </div>
-              <span className="text-[#64748B] text-sm">
-                Requires attention
-              </span>
             </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* CHART + ALERTS */}

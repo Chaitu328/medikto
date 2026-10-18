@@ -26,4 +26,22 @@ api.interceptors.request.use((req) => {
   return req;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      console.warn("Session expired or unauthorized (401). Clearing stored auth tokens.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("user");
+
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes("/login")) {
+        window.location.href = "/admin/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

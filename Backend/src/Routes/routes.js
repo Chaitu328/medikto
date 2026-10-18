@@ -23,7 +23,8 @@
     getSubscriptionStatus,
     getPlans,
     startTrial,
-    updateSubscription
+    updateSubscription,
+    grantAdminSubscription,
   } = require("../controllers/subscriptionController");
 
   const {
@@ -172,25 +173,62 @@
   );
 
   // ================= SUPER ADMIN GOOGLE AUTH =================
+  const getFrontendOrigin = (req) => {
+    const defaultOrigin = process.env.ADMIN_URL || "https://admin.medikto.com";
+    let target = req.query?.redirect_uri || req.query?.returnTo;
 
-  // Login with Google
-  router.get(
-    "/superadmin/google",
+    if (!target && req.query?.state) {
+      try {
+        const decoded = JSON.parse(Buffer.from(req.query.state, "base64").toString("utf-8"));
+        target = decoded.origin;
+      } catch (e) {}
+    }
+
+    if (!target && req.headers?.referer) {
+      try {
+        const refUrl = new URL(req.headers.referer);
+        target = refUrl.origin;
+      } catch (e) {}
+    }
+
+    if (target) {
+      try {
+        const url = new URL(target);
+        if (
+          url.hostname === "localhost" ||
+          url.hostname === "127.0.0.1" ||
+          url.hostname.endsWith(".medikto.com") ||
+          url.hostname === "medikto.com"
+        ) {
+          return url.origin;
+        }
+      } catch (e) {}
+    }
+
+    return defaultOrigin;
+  };
+
+  // Login with Google (preserves frontend origin in OAuth state)
+  router.get("/superadmin/google", (req, res, next) => {
+    const origin = getFrontendOrigin(req);
+    const state = Buffer.from(JSON.stringify({ origin })).toString("base64");
     passport.authenticate("google", {
       scope: ["profile", "email"],
-    })
-  );
+      state,
+    })(req, res, next);
+  });
 
   // Google Callback
- router.get(
-    "/superadmin/google/callback",
-    passport.authenticate("google", {
-        session: false,
-        failureRedirect:
-            "https://admin.medikto.com/superadmin/login?error=unauthorized",
-    }),
-    loginSuccess
-);
+  router.get("/superadmin/google/callback", (req, res, next) => {
+    const origin = getFrontendOrigin(req);
+    passport.authenticate("google", { session: false }, (err, user, info) => {
+      if (err || !user) {
+        return res.redirect(`${origin}/superadmin/login?error=unauthorized`);
+      }
+      req.user = user;
+      return loginSuccess(req, res);
+    })(req, res, next);
+  });
 
 
   // ================= USER =================
@@ -206,6 +244,7 @@
   router.get("/subscription/plans", getPlans);
   router.post("/subscription/trial", auth, auth.blockGuardianWrite, startTrial);
   router.put("/subscription", auth, auth.blockGuardianWrite, updateSubscription);
+  router.post("/subscription/admin-grant", auth, grantAdminSubscription);
 
   // ================= HOSPITAL LINKS =================
   router.post("/hospitals/send-link-otp", auth, sendLinkOTP);          // admin-initiated (legacy)

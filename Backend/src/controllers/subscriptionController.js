@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const User = require("../models/userModel");
 const { PLAN_LIMITS, PLAN_PRICING } = require("../utils/planLimits");
 
@@ -272,6 +273,135 @@ exports.updateSubscription = async (req, res) => {
     console.error("UPDATE SUBSCRIPTION ERROR:", err.message);
     return res.status(500).json({
       success: false,
+      error: err.message
+    });
+  }
+};
+
+// ================= SUPER ADMIN: PATIENT-SPECIFIC SUBSCRIPTION GRANT/REVOKE =================
+exports.grantAdminSubscription = async (req, res) => {
+  try {
+    // 1. Enforce Super Admin authorization strictly on backend
+    if (req.user?.role !== "superadmin") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Only Super Admin can manage patient subscription grants."
+      });
+    }
+
+    const { patientId, action = "grant", durationDays = 30 } = req.body;
+
+    // 2. Validate patient ID
+    if (!patientId || !mongoose.Types.ObjectId.isValid(patientId)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid Patient ID is required"
+      });
+    }
+
+    // 3. Find target patient user
+    const patient = await User.findById(patientId);
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found"
+      });
+    }
+
+    // Ensure target account is a patient
+    if (patient.role && patient.role !== "patient" && patient.role !== "user") {
+      return res.status(400).json({
+        success: false,
+        message: `Subscription grants can only be applied to patient accounts (current role: ${patient.role})`
+      });
+    }
+
+    const now = new Date();
+    const currentDetails = patient.subscriptionDetails?.toObject
+      ? patient.subscriptionDetails.toObject()
+      : (patient.subscriptionDetails || {});
+
+    if (action === "grant") {
+      const days = parseInt(durationDays, 10) || 30;
+      if (days <= 0 || days > 3650) {
+        return res.status(400).json({
+          success: false,
+          message: "Grant duration must be between 1 and 3650 days"
+        });
+      }
+
+      const subscriptionEnd = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+      patient.subscription = "premium";
+      patient.subscriptionDetails = {
+        ...currentDetails,
+        plan: "premium",
+        status: "active",
+        subscriptionStart: now,
+        subscriptionEnd: subscriptionEnd,
+        grantedBy: req.user.id,
+        grantedAt: now,
+        grantType: "admin_grant",
+        durationDays: days
+      };
+
+      await patient.save();
+
+      const effective = getEffectiveSubscription(patient);
+
+      return res.status(200).json({
+        success: true,
+        message: `Premium granted to ${patient.firstName || "patient"} for ${days} days (valid until ${subscriptionEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}).`,
+        subscription: effective,
+        patient: {
+          _id: patient._id,
+          firstName: patient.firstName,
+          email: patient.email,
+          phone: patient.phone,
+          subscription: patient.subscription,
+          subscriptionDetails: patient.subscriptionDetails
+        }
+      });
+    } else if (action === "revoke") {
+      patient.subscription = "basic";
+      patient.subscriptionDetails = {
+        ...currentDetails,
+        plan: "basic",
+        status: "active",
+        subscriptionEnd: now,
+        revokedBy: req.user.id,
+        revokedAt: now,
+        grantType: "admin_revoked"
+      };
+
+      await patient.save();
+
+      const effective = getEffectiveSubscription(patient);
+
+      return res.status(200).json({
+        success: true,
+        message: `Premium access revoked for ${patient.firstName || "patient"}. Account reverted to Basic plan.`,
+        subscription: effective,
+        patient: {
+          _id: patient._id,
+          firstName: patient.firstName,
+          email: patient.email,
+          phone: patient.phone,
+          subscription: patient.subscription,
+          subscriptionDetails: patient.subscriptionDetails
+        }
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action. Supported actions: 'grant', 'revoke'"
+      });
+    }
+  } catch (err) {
+    console.error("GRANT ADMIN SUBSCRIPTION ERROR:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Failed to update subscription",
       error: err.message
     });
   }

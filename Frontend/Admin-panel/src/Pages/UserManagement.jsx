@@ -5,6 +5,7 @@ import api from "../Api/axios.js";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
+import SubscriptionManager from "../Components/SubscriptionManager";
 import {
   Search,
   RefreshCw,
@@ -249,7 +250,19 @@ const AnalyticsCard = ({ title, count, icon: Icon, color, description, trend, tr
 
 // ─── User Drawer ──────────────────────────────────────────────────────────
 
-const UserDrawer = ({ user, isOpen, onClose, onEdit, onResetPassword, onDeactivate, onDelete, onAssignHospital, onAssignGuardian }) => {
+const UserDrawer = ({
+  user,
+  isOpen,
+  onClose,
+  onEdit,
+  onResetPassword,
+  onDeactivate,
+  onDelete,
+  onAssignHospital,
+  onAssignGuardian,
+  onUserUpdated,
+  isSuperAdmin,
+}) => {
   if (!user) return null;
 
  const getRoleVariant = (role) => {
@@ -361,6 +374,15 @@ const UserDrawer = ({ user, isOpen, onClose, onEdit, onResetPassword, onDeactiva
                   } />
                 </div>
               </div>
+
+              {/* Patient Subscription Management */}
+              {user.role === "patient" && (
+                <SubscriptionManager
+                  patient={user}
+                  onUpdate={onUserUpdated}
+                  isSuperAdmin={isSuperAdmin}
+                />
+              )}
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-3">
@@ -590,7 +612,21 @@ const Pagination = ({ currentPage, totalPages, pageSize, onPageChange, onPageSiz
 
 const UserManagement = () => {
   const navigate = useNavigate();
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+  const isSuperAdmin = role === "superadmin";
+
   const [users, setUsers] = useState([]);
+
+  const handleUserUpdated = (updatedUser) => {
+    setSelectedUser(updatedUser);
+    setUsers((prev) =>
+      prev.map((u) =>
+        (u._id === updatedUser._id || u.id === updatedUser.id)
+          ? { ...u, ...updatedUser }
+          : u
+      )
+    );
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -1169,6 +1205,8 @@ const UserManagement = () => {
         onDelete={handleDelete}
         onAssignHospital={handleAssignHospital}
         onAssignGuardian={() => {}}
+        onUserUpdated={handleUserUpdated}
+        isSuperAdmin={isSuperAdmin}
       />
     </div>
   );

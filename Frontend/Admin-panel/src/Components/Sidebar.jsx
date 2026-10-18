@@ -27,11 +27,6 @@ const superAdminMenu = [
     path: "/",
   },
   {
-    icon: Users,
-    label: "Admins",
-    path: "/admins",
-  },
-  {
     icon: Building2,
     label: "Hospitals",
     path: "/hospitals",
