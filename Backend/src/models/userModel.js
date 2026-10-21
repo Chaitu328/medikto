@@ -50,7 +50,8 @@ const userSchema = new mongoose.Schema({
         "superadmin",
         "admin",
         "guardian",
-        "patient"
+        "patient",
+        "user"
     ],
     default: "patient"
 },
@@ -65,7 +66,7 @@ const userSchema = new mongoose.Schema({
     plan: {
       type: String,
       enum: ["free", "basic", "premium"],
-      default: "basic"
+      default: "free"
     },
     status: {
       type: String,
@@ -76,7 +77,13 @@ const userSchema = new mongoose.Schema({
     trialEnd: { type: Date },
     trialUsed: { type: Boolean, default: false },
     subscriptionStart: { type: Date },
-    subscriptionEnd: { type: Date }
+    subscriptionEnd: { type: Date },
+    grantedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    grantedAt: { type: Date },
+    grantType: { type: String, default: null },
+    durationDays: { type: Number },
+    revokedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    revokedAt: { type: Date }
   },
   familyMembers: [
     {

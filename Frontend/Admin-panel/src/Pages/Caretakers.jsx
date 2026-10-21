@@ -478,9 +478,13 @@ const InviteModal = ({
                 ))}
               </select>
             </FormField>
-            <FormField label="Assigned Hospital" required>
-              <select value={formData.hospital} onChange={(e) => setFormData({ ...formData, hospital: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white" required>
-                <option value="">Select Hospital</option>
+            <FormField label="Assigned Hospital (Optional)">
+              <select
+                value={formData.hospital}
+                onChange={(e) => setFormData({ ...formData, hospital: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white"
+              >
+                <option value="">Select Hospital (Optional)</option>
                 {(hospitals || []).map((h) => (
                   <option key={h._id} value={h._id}>{h.name}</option>
                 ))}
@@ -687,16 +691,11 @@ const GuardiansManagement = () => {
         phone: item.phone || "",
         relation: item.relation || "Other",
         isGuardian: item.relation === "Father" || item.relation === "Mother" || item.relation === "Guardian",
-        status:
-  item.accountStatus === "active"
-    ? "accepted"
-    : item.status || "pending",
-        accountStatus: item.accountStatus || "Pending Invitation",
-
-mustChangePassword: item.mustChangePassword,
-isFirstLogin: item.isFirstLogin,
-
-profilePic: item.profilePic || "",
+        status: item.status || (item.accountStatus === "active" ? "accepted" : "pending"),
+        accountStatus: item.accountStatus || (item.status === "accepted" ? "Active" : "Pending Invitation"),
+        mustChangePassword: item.mustChangePassword,
+        isFirstLogin: item.isFirstLogin,
+        profilePic: item.profilePic || "",
 createdAt: item.createdAt,
 patientName: item.patientName || "",
 connectedPatients: item.connectedPatients || [],
@@ -863,14 +862,20 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
     }
     setInviteLoading(true);
     try {
-      const res = await api.post("/guardians/create", {
+      const payload = {
         patientId: selectedPatient,
-        firstName: formData.name,
-        email: formData.email,
-        phone: formData.phone,
+        firstName: formData.name?.trim(),
+        email: formData.email?.trim()?.toLowerCase(),
+        phone: formData.phone?.trim(),
         relation: formData.relation,
-        hospital: formData.hospital,
-      });
+      };
+
+      const cleanHospital = formData.hospital?.trim();
+      if (cleanHospital && cleanHospital !== "" && cleanHospital !== "Select Hospital" && cleanHospital !== "Select Hospital (Optional)" && cleanHospital !== "undefined" && cleanHospital !== "null") {
+        payload.hospital = cleanHospital;
+      }
+
+      const res = await api.post("/guardians/create", payload);
       await fetchData();
       setInviteModalOpen(false);
       setSelectedPatient("");

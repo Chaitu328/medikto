@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   UploadCloud,
@@ -42,6 +43,9 @@ import {
 } from "../Utils/patientUtils";
 
 export default function ReportsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPatientId = searchParams.get("patientId");
+
   // ================= STATES =================
   const [reports, setReports] = useState([]);
   const [users, setUsers] = useState([]);
@@ -60,15 +64,17 @@ export default function ReportsPage() {
   // ================= FETCH =================
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [urlPatientId]);
 
   // ================= GET REPORTS =================
   const fetchReports = async () => {
     try {
       setLoading(true);
 
+      const params = urlPatientId ? { patientId: urlPatientId } : {};
+
       const [reportsRes, usersRes] = await Promise.all([
-        api.get("/reports"),
+        api.get("/reports", { params }),
         api.get("/users"),
       ]);
 
@@ -86,6 +92,17 @@ export default function ReportsPage() {
 
       setUsers(userData);
 
+      if (urlPatientId) {
+        const matched = userData.find(
+          (u) => (u._id || u.id)?.toString() === urlPatientId.toString()
+        );
+        if (matched) {
+          setSelectedPatient(matched);
+        } else {
+          setSelectedPatient({ _id: urlPatientId, firstName: "Patient", name: "Patient" });
+        }
+      }
+
       const patientReports = reportData.filter(
         (report) => !report?.user?.role || report?.user?.role === "patient"
       );
@@ -99,6 +116,15 @@ export default function ReportsPage() {
       console.log("REPORT FETCH ERROR:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectPatient = (patient) => {
+    setSelectedPatient(patient);
+    if (patient) {
+      setSearchParams({ patientId: patient._id || patient.id });
+    } else {
+      setSearchParams({});
     }
   };
 
@@ -407,18 +433,49 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* SEARCH + TOGGLE */}
-      <div className="relative z-40 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-8">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
-          {/* PATIENT AUTOCOMPLETE */}
-          <div className="flex-1 max-w-lg">
-            <PatientAutocomplete
-              selectedPatient={selectedPatient}
-              onSelectPatient={setSelectedPatient}
-              patients={users}
-              placeholder="Search patient by name, phone, or ID to view reports..."
-            />
+      {/* PATIENT CONTEXT BANNER & FILTER BAR */}
+      <div className="space-y-4 mb-8">
+        {selectedPatient && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                {getPatientDisplayName(selectedPatient).charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Filtered by Patient</span>
+                  <span className="text-xs font-mono bg-blue-100/80 text-blue-800 px-2 py-0.5 rounded-md font-semibold">
+                    ID: {selectedPatient._id || selectedPatient.id}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-[#0F172A] mt-0.5">
+                  {getPatientDisplayName(selectedPatient)} {getPatientIdentifier(selectedPatient) ? `• ${getPatientIdentifier(selectedPatient)}` : ""}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSelectPatient(null)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/60 rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+            >
+              <X className="w-3.5 h-3.5" />
+              View All Patients
+            </button>
           </div>
+        )}
+
+        {/* SEARCH + TOGGLE */}
+        <div className="relative z-40 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+            {/* PATIENT AUTOCOMPLETE */}
+            <div className="flex-1 max-w-lg">
+              <PatientAutocomplete
+                selectedPatient={selectedPatient}
+                onSelectPatient={handleSelectPatient}
+                patients={users}
+                placeholder="Search patient by name, phone, or ID to view reports..."
+              />
+            </div>
 
           {/* REPORT TITLE / TYPE SEARCH */}
           <div className="relative group w-full sm:w-[260px]">
@@ -472,6 +529,7 @@ export default function ReportsPage() {
           </button>
         </div>
       </div>
+    </div>
 
       {/* MAIN */}
       <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
@@ -597,8 +655,22 @@ export default function ReportsPage() {
               <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                 <Inbox className="w-7 h-7 text-[#94A3B8]" />
               </div>
-              <h3 className="font-semibold text-lg text-[#0F172A]">No Reports Found</h3>
-              <p className="text-[#64748B] text-sm mt-2">Try adjusting your search criteria</p>
+              <h3 className="font-semibold text-lg text-[#0F172A]">
+                {selectedPatient ? "No Reports Found for this Patient" : "No Reports Found"}
+              </h3>
+              <p className="text-[#64748B] text-sm mt-2">
+                {selectedPatient ? "No diagnostic reports found for this patient." : "Try adjusting your search criteria"}
+              </p>
+              {selectedPatient && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectPatient(null)}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#2563EB] text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear Filter & View All Patients
+                </button>
+              )}
             </div>
           )}
         </div>

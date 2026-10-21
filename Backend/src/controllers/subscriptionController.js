@@ -10,30 +10,31 @@ const { PLAN_LIMITS, PLAN_PRICING } = require("../utils/planLimits");
 const getEffectiveSubscription = (user) => {
   if (!user) {
     return {
-      plan: "basic",
+      plan: "free",
       status: "active",
       isPremium: false,
       trialUsed: false,
-      canClaimTrial: true,
-      limits: PLAN_LIMITS.basic,
+      canClaimTrial: false,
+      limits: PLAN_LIMITS.free || PLAN_LIMITS.basic,
       pricing: PLAN_PRICING
     };
   }
 
   const details = user.subscriptionDetails || {};
-  const rawPlan = (details.plan || user.subscription || "basic").toLowerCase();
+  const rawPlan = (details.plan || user.subscription || "free").toLowerCase();
   const rawStatus = (details.status || "active").toLowerCase();
   const trialUsed = details.trialUsed === true;
   const now = new Date();
 
-  let effectivePlan = rawPlan === "free" ? "basic" : rawPlan;
+  // Exactly two plans: Free and Premium. Map any legacy/basic/free to "free".
+  let effectivePlan = rawPlan === "premium" ? "premium" : "free";
   let effectiveStatus = rawStatus;
   let isPremium = false;
 
   // Auto-expiry check for Free Trial
   if (effectiveStatus === "trial") {
     if (details.trialEnd && new Date(details.trialEnd) < now) {
-      effectivePlan = "basic";
+      effectivePlan = "free";
       effectiveStatus = "expired";
       isPremium = false;
     } else {
@@ -43,7 +44,7 @@ const getEffectiveSubscription = (user) => {
   } else if (effectivePlan === "premium") {
     // Check if paid premium has expired
     if (details.subscriptionEnd && new Date(details.subscriptionEnd) < now) {
-      effectivePlan = "basic";
+      effectivePlan = "free";
       effectiveStatus = "expired";
       isPremium = false;
     } else {
@@ -53,7 +54,7 @@ const getEffectiveSubscription = (user) => {
       }
     }
   } else {
-    effectivePlan = "basic";
+    effectivePlan = "free";
     isPremium = false;
   }
 
@@ -69,7 +70,7 @@ const getEffectiveSubscription = (user) => {
     trialEnd: details.trialEnd || null,
     subscriptionStart: details.subscriptionStart || null,
     subscriptionEnd: details.subscriptionEnd || null,
-    limits: PLAN_LIMITS[effectivePlan] || PLAN_LIMITS.basic,
+    limits: PLAN_LIMITS[effectivePlan] || PLAN_LIMITS.free || PLAN_LIMITS.basic,
     pricing: PLAN_PRICING
   };
 };
@@ -93,8 +94,8 @@ exports.getSubscriptionStatus = async (req, res) => {
       user.subscriptionDetails?.status === "trial" &&
       effective.status === "expired"
     ) {
-      user.subscription = "basic";
-      user.subscriptionDetails.plan = "basic";
+      user.subscription = "free";
+      user.subscriptionDetails.plan = "free";
       user.subscriptionDetails.status = "expired";
       await user.save();
     }
@@ -222,11 +223,11 @@ exports.updateSubscription = async (req, res) => {
     if (!["free", "basic", "premium"].includes(normalizedPlan)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid subscription plan. Valid plans: basic, premium"
+        message: "Invalid subscription plan. Valid plans: free, premium"
       });
     }
 
-    const targetPlan = normalizedPlan === "free" ? "basic" : normalizedPlan;
+    const targetPlan = normalizedPlan === "premium" ? "premium" : "free";
     const user = await User.findById(userId);
 
     if (!user) {
@@ -251,10 +252,10 @@ exports.updateSubscription = async (req, res) => {
         subscriptionEnd: subscriptionEnd
       };
     } else {
-      user.subscription = "basic";
+      user.subscription = "free";
       user.subscriptionDetails = {
         ...currentDetails,
-        plan: "basic",
+        plan: "free",
         status: "active"
       };
     }
@@ -278,7 +279,7 @@ exports.updateSubscription = async (req, res) => {
   }
 };
 
-// ================= SUPER ADMIN: PATIENT-SPECIFIC SUBSCRIPTION GRANT/REVOKE =================
+// ================= SUPER ADMIN: PATIENT-SPECIFIC SUBSCRIPTION GRANT/REVOKE/UPGRADE =================
 exports.grantAdminSubscription = async (req, res) => {
   try {
     // 1. Enforce Super Admin authorization strictly on backend
@@ -289,10 +290,11 @@ exports.grantAdminSubscription = async (req, res) => {
       });
     }
 
-    const { patientId, action = "grant", durationDays = 30 } = req.body;
+    const targetId = req.body.patientId || req.body.userId;
+    const { action = "grant", durationDays = 365 } = req.body;
 
     // 2. Validate patient ID
-    if (!patientId || !mongoose.Types.ObjectId.isValid(patientId)) {
+    if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
       return res.status(400).json({
         success: false,
         message: "A valid Patient ID is required"
@@ -300,7 +302,7 @@ exports.grantAdminSubscription = async (req, res) => {
     }
 
     // 3. Find target patient user
-    const patient = await User.findById(patientId);
+    const patient = await User.findById(targetId);
     if (!patient) {
       return res.status(404).json({
         success: false,
@@ -322,7 +324,7 @@ exports.grantAdminSubscription = async (req, res) => {
       : (patient.subscriptionDetails || {});
 
     if (action === "grant") {
-      const days = parseInt(durationDays, 10) || 30;
+      const days = parseInt(durationDays, 10) || 365;
       if (days <= 0 || days > 3650) {
         return res.status(400).json({
           success: false,
@@ -351,22 +353,29 @@ exports.grantAdminSubscription = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: `Premium granted to ${patient.firstName || "patient"} for ${days} days (valid until ${subscriptionEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}).`,
+        message: `Upgraded ${patient.firstName || patient.name || "patient"} to Premium successfully.`,
         subscription: effective,
         patient: {
           _id: patient._id,
+          id: patient._id,
+          name: [patient.firstName, patient.lastName].filter(Boolean).join(" ") || patient.name || "Patient",
           firstName: patient.firstName,
           email: patient.email,
           phone: patient.phone,
-          subscription: patient.subscription,
-          subscriptionDetails: patient.subscriptionDetails
+          role: patient.role,
+          subscription: effective.plan,
+          subscriptionDetails: {
+            ...(patient.subscriptionDetails?.toObject ? patient.subscriptionDetails.toObject() : patient.subscriptionDetails),
+            plan: effective.plan,
+            isPremium: effective.isPremium
+          }
         }
       });
     } else if (action === "revoke") {
-      patient.subscription = "basic";
+      patient.subscription = "free";
       patient.subscriptionDetails = {
         ...currentDetails,
-        plan: "basic",
+        plan: "free",
         status: "active",
         subscriptionEnd: now,
         revokedBy: req.user.id,
@@ -380,15 +389,22 @@ exports.grantAdminSubscription = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: `Premium access revoked for ${patient.firstName || "patient"}. Account reverted to Basic plan.`,
+        message: `Subscription for ${patient.firstName || patient.name || "patient"} set to Free successfully.`,
         subscription: effective,
         patient: {
           _id: patient._id,
+          id: patient._id,
+          name: [patient.firstName, patient.lastName].filter(Boolean).join(" ") || patient.name || "Patient",
           firstName: patient.firstName,
           email: patient.email,
           phone: patient.phone,
-          subscription: patient.subscription,
-          subscriptionDetails: patient.subscriptionDetails
+          role: patient.role,
+          subscription: effective.plan,
+          subscriptionDetails: {
+            ...(patient.subscriptionDetails?.toObject ? patient.subscriptionDetails.toObject() : patient.subscriptionDetails),
+            plan: effective.plan,
+            isPremium: effective.isPremium
+          }
         }
       });
     } else {

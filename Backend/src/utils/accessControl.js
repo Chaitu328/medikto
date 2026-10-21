@@ -46,9 +46,16 @@ const filterRequestedPatient = (patientIds, requestedPatientId) => {
 
 const getAccessiblePatientIds = async (req, requestedPatientId) => {
   const role = req.user?.role;
-  const requesterId = req.user?.id;
+  const requesterId = req.user?.id || req.user?._id;
+  const targetPatientId = requestedPatientId || req.query?.patientId;
 
   if (role === "superadmin") {
+    if (targetPatientId) {
+      if (!isValidObjectId(targetPatientId)) {
+        return [];
+      }
+      return [targetPatientId.toString()];
+    }
     return null;
   }
 
@@ -85,7 +92,7 @@ const getAccessiblePatientIds = async (req, requestedPatientId) => {
 
     return filterRequestedPatient(
       uniqueIds(combinedPatientIds),
-      requestedPatientId
+      targetPatientId
     );
   }
 
@@ -96,12 +103,12 @@ const getAccessiblePatientIds = async (req, requestedPatientId) => {
 
     const guardian = await User.findById(requesterId).select("guardianFor");
     const patientIds = uniqueIds(guardian?.guardianFor || []);
-    return filterRequestedPatient(patientIds, requestedPatientId);
+    return filterRequestedPatient(patientIds, targetPatientId);
   }
 
   if (role === "patient") {
     const ownId = requesterId.toString();
-    return filterRequestedPatient([ownId], requestedPatientId);
+    return filterRequestedPatient([ownId], targetPatientId);
   }
 
   return [];
@@ -129,11 +136,14 @@ const buildPatientListFilter = async (req, requestedPatientId) => {
     return {};
   }
 
-  // Admin/Guardian -> only patient users
-  return {
-    role: "patient",
+  // Admin/Guardian -> only patient users; Superadmin -> patient ID match
+  const filter = {
     _id: { $in: patientIds },
   };
+  if (req.user?.role !== "superadmin") {
+    filter.role = "patient";
+  }
+  return filter;
 };
 
 const shouldPopulateUser = (req) => {

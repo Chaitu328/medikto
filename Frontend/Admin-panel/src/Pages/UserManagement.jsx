@@ -5,7 +5,6 @@ import api from "../Api/axios.js";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
-import SubscriptionManager from "../Components/SubscriptionManager";
 import {
   Search,
   RefreshCw,
@@ -263,26 +262,35 @@ const UserDrawer = ({
   onUserUpdated,
   isSuperAdmin,
 }) => {
+  const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState("");
+
   if (!user) return null;
 
- const getRoleVariant = (role) => {
-  switch (role?.toLowerCase()) {
-    case "superadmin":
-      return "dark";
+  const isPatient = (user?.role || "").toLowerCase() === "patient" || (user?.role || "").toLowerCase() === "user";
+  const isPremium =
+    (user?.subscription || "").toLowerCase() === "premium" ||
+    (user?.subscriptionDetails?.plan || "").toLowerCase() === "premium" ||
+    user?.subscriptionDetails?.isPremium === true;
+  const currentPlan = isPremium ? "Premium" : "Free";
+  const displayName = user.name || [user.firstName, user.lastName].filter(Boolean).join(" ") || "User";
 
-    case "admin":
-      return "blue";
-
-    case "guardian":
-      return "orange";
-
-    case "patient":
-      return "emerald";
-
-    default:
-      return "default";
-  }
-};
+  const getRoleVariant = (role) => {
+    switch (role?.toLowerCase()) {
+      case "superadmin":
+        return "dark";
+      case "admin":
+        return "blue";
+      case "guardian":
+        return "orange";
+      case "patient":
+      case "user":
+        return "emerald";
+      default:
+        return "default";
+    }
+  };
 
   const getStatusVariant = (status) => {
     switch (status?.toLowerCase()) {
@@ -296,9 +304,7 @@ const UserDrawer = ({
   const getSubscriptionVariant = (sub) => {
     switch (sub?.toLowerCase()) {
       case "premium": return "gold";
-      case "basic": return "blue";
-      case "free": return "gray";
-      default: return "default";
+      default: return "gray";
     }
   };
 
@@ -307,6 +313,51 @@ const UserDrawer = ({
     { icon: Calendar, label: "Account Created", date: user.createdAt, color: "text-blue-500" },
     { icon: Clock, label: "Last Login", date: user.lastLogin, color: "text-slate-500" },
   ].filter(item => item.date);
+
+  const handleConfirmUpgrade = async () => {
+    try {
+      setIsUpgrading(true);
+      setUpgradeError("");
+      const patientId = user._id || user.id;
+
+      const res = await api.post("/subscription/admin-grant", {
+        patientId,
+        action: "grant",
+        durationDays: 365,
+      });
+
+      if (res.data?.success) {
+        toast.success(`Upgraded ${displayName} to Premium successfully!`);
+        const updatedPatient = {
+          ...user,
+          subscription: "premium",
+          subscriptionDetails: {
+            ...(user.subscriptionDetails || {}),
+            plan: "premium",
+            status: "active",
+            isPremium: true,
+            subscriptionStart: res.data.patient?.subscriptionDetails?.subscriptionStart || new Date().toISOString(),
+            subscriptionEnd: res.data.patient?.subscriptionDetails?.subscriptionEnd,
+            grantType: "admin_grant",
+            durationDays: 365,
+          },
+        };
+
+        if (onUserUpdated) {
+          onUserUpdated(updatedPatient);
+        }
+        setShowUpgradeConfirm(false);
+      } else {
+        setUpgradeError(res.data?.message || "Failed to upgrade subscription");
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to upgrade subscription";
+      setUpgradeError(msg);
+      toast.error(msg);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -343,10 +394,10 @@ const UserDrawer = ({
                 <div className="relative inline-block">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 border-4 border-white shadow-lg flex items-center justify-center mx-auto">
                     {user.profilePicture ? (
-                      <img src={user.profilePicture} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                      <img src={user.profilePicture} alt={displayName} className="w-full h-full rounded-full object-cover" />
                     ) : (
                       <span className="text-3xl font-bold text-blue-600">
-                        {user.name?.charAt(0)?.toUpperCase() || "U"}
+                        {displayName?.charAt(0)?.toUpperCase() || "U"}
                       </span>
                     )}
                   </div>
@@ -354,8 +405,8 @@ const UserDrawer = ({
                     <div className="w-2 h-2 bg-white rounded-full" />
                   </div>
                 </div>
-                <h3 className="mt-4 text-xl font-bold text-slate-900">{user.name}</h3>
-                <p className="text-sm text-slate-500 mt-0.5">{user.email}</p>
+                <h3 className="mt-4 text-xl font-bold text-slate-900">{displayName}</h3>
+                <p className="text-sm text-slate-500 mt-0.5">{user.email || user.phone || "No contact"}</p>
                 <div className="flex items-center justify-center gap-2 mt-3">
                   <Badge variant={getRoleVariant(user.role)}>{user.role}</Badge>
                   <Badge variant={getStatusVariant(user.status)}>{user.status}</Badge>
@@ -370,19 +421,29 @@ const UserDrawer = ({
                   <InfoItem icon={Mail} label="Email" value={user.email || "N/A"} />
                   <InfoItem icon={Building2} label="Hospital" value={user.hospital || "N/A"} />
                   <InfoItem icon={Shield} label="Subscription" value={
-                    <Badge variant={getSubscriptionVariant(user.subscription)}>{user.subscription || "Free"}</Badge>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant={getSubscriptionVariant(currentPlan)}>
+                        {isPremium && <Crown className="w-3 h-3 text-amber-600 inline mr-0.5" />}
+                        {currentPlan}
+                      </Badge>
+                      {isPatient && !isPremium && isSuperAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUpgradeError("");
+                            setShowUpgradeConfirm(true);
+                          }}
+                          className="text-xs font-semibold text-[#2563EB] hover:text-blue-700 hover:underline inline-flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Upgrade patient to Premium"
+                        >
+                          <Crown className="w-3 h-3 text-amber-500" />
+                          Upgrade to Premium
+                        </button>
+                      )}
+                    </div>
                   } />
                 </div>
               </div>
-
-              {/* Patient Subscription Management */}
-              {user.role === "patient" && (
-                <SubscriptionManager
-                  patient={user}
-                  onUpdate={onUserUpdated}
-                  isSuperAdmin={isSuperAdmin}
-                />
-              )}
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-3">
@@ -411,6 +472,19 @@ const UserDrawer = ({
 
               {/* Actions */}
               <div className="space-y-2">
+                {isPatient && !isPremium && isSuperAdmin && (
+                  <Button
+                    variant="primary"
+                    className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm font-semibold border-0"
+                    icon={Crown}
+                    onClick={() => {
+                      setUpgradeError("");
+                      setShowUpgradeConfirm(true);
+                    }}
+                  >
+                    Upgrade to Premium
+                  </Button>
+                )}
                 <Button variant="primary" className="w-full" icon={Edit2} onClick={() => onEdit(user)}>
                   Edit User
                 </Button>
@@ -433,6 +507,108 @@ const UserDrawer = ({
               </div>
             </div>
           </motion.div>
+
+          {/* Upgrade Confirmation Modal inside Drawer */}
+          <AnimatePresence>
+            {showUpgradeConfirm && (
+              <div
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                onClick={() => !isUpgrading && setShowUpgradeConfirm(false)}
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                      <Crown className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">Upgrade to Premium</h3>
+                      <p className="text-xs text-slate-500">Confirm subscription upgrade for this patient</p>
+                    </div>
+                  </div>
+
+                  {/* Patient Details Summary */}
+                  <div className="bg-slate-50 rounded-xl p-4 mb-4 space-y-2 border border-slate-200/60 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 text-xs">Patient</span>
+                      <span className="font-semibold text-slate-800">{displayName}</span>
+                    </div>
+                    {user.phone && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 text-xs">Phone</span>
+                        <span className="text-slate-700 font-mono text-xs">{user.phone}</span>
+                      </div>
+                    )}
+                    {user.email && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 text-xs">Email</span>
+                        <span className="text-slate-700 text-xs">{user.email}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-200/60">
+                      <span className="text-slate-500 text-xs">Patient ID</span>
+                      <span className="text-slate-500 font-mono text-[11px] truncate max-w-[200px]">
+                        {user._id || user.id}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Plan Transition */}
+                  <div className="bg-amber-50/50 border border-amber-200/70 rounded-xl p-3.5 mb-5">
+                    <div className="flex items-center justify-between">
+                      <div className="text-center flex-1">
+                        <p className="text-[11px] text-slate-500 uppercase font-semibold">Current Plan</p>
+                        <Badge variant="gray" className="mt-1">Free</Badge>
+                      </div>
+                      <div className="px-3 text-amber-500 font-bold text-lg">&rarr;</div>
+                      <div className="text-center flex-1">
+                        <p className="text-[11px] text-amber-800 uppercase font-semibold">Upgraded Plan</p>
+                        <Badge variant="gold" className="mt-1">
+                          <Crown className="w-3 h-3 text-amber-600 inline mr-0.5" />
+                          Premium
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="text-xs text-amber-900/80 mt-3 text-center leading-relaxed">
+                      Grants unlimited medications, up to 250 reports, 3-month selfie retention, and full health analytics.
+                    </p>
+                  </div>
+
+                  {upgradeError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{upgradeError}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2.5">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowUpgradeConfirm(false)}
+                      disabled={isUpgrading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-sm font-semibold"
+                      icon={Crown}
+                      loading={isUpgrading}
+                      onClick={handleConfirmUpgrade}
+                    >
+                      Confirm Upgrade
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
@@ -445,7 +621,7 @@ const InfoItem = ({ icon: Icon, label, value }) => (
       <Icon className="w-3 h-3" />
       <span>{label}</span>
     </div>
-    <p className="text-sm font-medium text-slate-700">{value}</p>
+    <div className="text-sm font-medium text-slate-700">{value}</div>
   </div>
 );
 
@@ -458,7 +634,18 @@ const StatBox = ({ label, value }) => (
 
 // ─── Dropdown Menu ────────────────────────────────────────────────────────
 
-const ActionMenu = ({ user, onView, onEdit, onResetPassword, onChangeRole, onAssignHospital, onSuspend, onDelete }) => {
+const ActionMenu = ({
+  user,
+  onView,
+  onEdit,
+  onResetPassword,
+  onChangeRole,
+  onAssignHospital,
+  onSuspend,
+  onDelete,
+  onUpgradePatient,
+  isSuperAdmin,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = React.useRef(null);
 
@@ -470,8 +657,17 @@ const ActionMenu = ({ user, onView, onEdit, onResetPassword, onChangeRole, onAss
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isPatient = (user?.role || "").toLowerCase() === "patient" || (user?.role || "").toLowerCase() === "user";
+  const isPremium =
+    (user?.subscription || "").toLowerCase() === "premium" ||
+    (user?.subscriptionDetails?.plan || "").toLowerCase() === "premium" ||
+    user?.subscriptionDetails?.isPremium === true;
+
   const menuItems = [
     { icon: Eye, label: "View", action: () => { onView(user); setIsOpen(false); }, variant: "default" },
+    ...(isPatient && !isPremium && isSuperAdmin && onUpgradePatient ? [
+      { icon: Crown, label: "Upgrade to Premium", action: () => { onUpgradePatient(user); setIsOpen(false); }, variant: "primary" }
+    ] : []),
     { icon: Edit2, label: "Edit", action: () => { onEdit(user); setIsOpen(false); }, variant: "default" },
     { icon: Key, label: "Reset Password", action: () => { onResetPassword(user); setIsOpen(false); }, variant: "default" },
     { icon: UserCog, label: "Change Role", action: () => { onChangeRole(user); setIsOpen(false); }, variant: "default" },
@@ -631,6 +827,8 @@ const UserManagement = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [upgradeModalPatient, setUpgradeModalPatient] = useState(null);
+  const [isPageUpgrading, setIsPageUpgrading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [sortConfig, setSortConfig] = useState({ key: "createdAt", direction: "desc" });
@@ -701,7 +899,14 @@ const UserManagement = () => {
     }
 
     if (subscriptionFilter !== "all") {
-      result = result.filter((u) => u.subscription?.toLowerCase() === subscriptionFilter.toLowerCase());
+      result = result.filter((u) => {
+        const uIsPremium =
+          (u.subscription || "").toLowerCase() === "premium" ||
+          (u.subscriptionDetails?.plan || "").toLowerCase() === "premium" ||
+          u.subscriptionDetails?.isPremium === true;
+        const uPlan = uIsPremium ? "premium" : "free";
+        return uPlan === subscriptionFilter.toLowerCase();
+      });
     }
 
     // Sort
@@ -1049,7 +1254,6 @@ const UserManagement = () => {
             options={[
               { value: "all", label: "All Subscriptions" },
               { value: "free", label: "Free" },
-              { value: "basic", label: "Basic" },
               { value: "premium", label: "Premium" },
             ]}
             className="text-xs sm:text-sm"
@@ -1143,9 +1347,52 @@ const UserManagement = () => {
                       </Badge>
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <Badge variant={getSubscriptionVariant(user.subscription)}>
-                        {user.subscription || "Free"}
-                      </Badge>
+                      {(() => {
+                        const isPatient = (user.role || "").toLowerCase() === "patient" || (user.role || "").toLowerCase() === "user";
+                        const isPremium =
+                          (user.subscription || "").toLowerCase() === "premium" ||
+                          (user.subscriptionDetails?.plan || "").toLowerCase() === "premium" ||
+                          user.subscriptionDetails?.isPremium === true;
+
+                        if (isPatient) {
+                          if (isPremium) {
+                            return (
+                              <Badge variant="gold" className="gap-1 font-medium">
+                                <Crown className="w-3.5 h-3.5 text-amber-600 inline mr-0.5" />
+                                Premium
+                              </Badge>
+                            );
+                          }
+                          return (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isSuperAdmin) {
+                                  setUpgradeModalPatient(user);
+                                } else {
+                                  handleViewUser(user);
+                                }
+                              }}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border border-blue-200 bg-blue-50/70 hover:bg-blue-100 hover:border-blue-300 transition-all cursor-pointer group/sub"
+                              title={isSuperAdmin ? "Click to upgrade patient to Premium" : "Free Plan"}
+                            >
+                              <span className="capitalize font-medium text-slate-700">Free</span>
+                              {isSuperAdmin && (
+                                <span className="text-[10px] bg-blue-600 text-white rounded px-1.5 py-0.5 ml-0.5 group-hover/sub:bg-blue-700 flex items-center gap-0.5">
+                                  <Crown className="w-2.5 h-2.5" />
+                                  Upgrade
+                                </span>
+                              )}
+                            </button>
+                          );
+                        }
+                        return (
+                          <Badge variant={isPremium ? "gold" : "gray"}>
+                            {isPremium ? "Premium" : "Free"}
+                          </Badge>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       <Badge variant={getStatusVariant(user.status)}>
@@ -1171,6 +1418,8 @@ const UserManagement = () => {
                           onAssignHospital={handleAssignHospital}
                           onSuspend={handleSuspend}
                           onDelete={handleDelete}
+                          onUpgradePatient={(u) => setUpgradeModalPatient(u)}
+                          isSuperAdmin={isSuperAdmin}
                         />
                       </div>
                     </td>
@@ -1208,6 +1457,147 @@ const UserManagement = () => {
         onUserUpdated={handleUserUpdated}
         isSuperAdmin={isSuperAdmin}
       />
+
+      {/* ─── Upgrade Patient to Premium Modal (from Table / ActionMenu) ─── */}
+      <AnimatePresence>
+        {upgradeModalPatient && (
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => !isPageUpgrading && setUpgradeModalPatient(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <Crown className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Upgrade to Premium</h3>
+                    <p className="text-xs text-slate-500">Confirm subscription upgrade for this patient</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !isPageUpgrading && setUpgradeModalPatient(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Patient Details Summary */}
+              <div className="bg-slate-50 rounded-xl p-4 mb-4 space-y-2 border border-slate-200/60 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 text-xs">Patient</span>
+                  <span className="font-semibold text-slate-800">
+                    {upgradeModalPatient.name || [upgradeModalPatient.firstName, upgradeModalPatient.lastName].filter(Boolean).join(" ") || "Patient"}
+                  </span>
+                </div>
+                {upgradeModalPatient.phone && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 text-xs">Phone</span>
+                    <span className="text-slate-700 font-mono text-xs">{upgradeModalPatient.phone}</span>
+                  </div>
+                )}
+                {upgradeModalPatient.email && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 text-xs">Email</span>
+                    <span className="text-slate-700 text-xs">{upgradeModalPatient.email}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200/60">
+                  <span className="text-slate-500 text-xs">Patient ID</span>
+                  <span className="text-slate-500 font-mono text-[11px] truncate max-w-[200px]">
+                    {upgradeModalPatient._id || upgradeModalPatient.id}
+                  </span>
+                </div>
+              </div>
+
+              {/* Plan Transition */}
+              <div className="bg-amber-50/50 border border-amber-200/70 rounded-xl p-3.5 mb-5">
+                <div className="flex items-center justify-between">
+                  <div className="text-center flex-1">
+                    <p className="text-[11px] text-slate-500 uppercase font-semibold">Current Plan</p>
+                    <Badge variant="gray" className="mt-1">Free</Badge>
+                  </div>
+                  <div className="px-3 text-amber-500 font-bold text-lg">&rarr;</div>
+                  <div className="text-center flex-1">
+                    <p className="text-[11px] text-amber-800 uppercase font-semibold">Upgraded Plan</p>
+                    <Badge variant="gold" className="mt-1">
+                      <Crown className="w-3 h-3 text-amber-600 inline mr-0.5" />
+                      Premium
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-900/80 mt-3 text-center leading-relaxed">
+                  Grants unlimited medications, up to 250 reports, 3-month selfie retention, and full health analytics.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5">
+                <Button
+                  variant="secondary"
+                  onClick={() => setUpgradeModalPatient(null)}
+                  disabled={isPageUpgrading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-sm font-semibold"
+                  icon={Crown}
+                  loading={isPageUpgrading}
+                  onClick={async () => {
+                    try {
+                      setIsPageUpgrading(true);
+                      const patientId = upgradeModalPatient._id || upgradeModalPatient.id;
+                      const res = await api.post("/subscription/admin-grant", {
+                        patientId,
+                        action: "grant",
+                        durationDays: 365,
+                      });
+                      if (res.data?.success) {
+                        toast.success(`Upgraded ${upgradeModalPatient.firstName || upgradeModalPatient.name || "patient"} to Premium successfully!`);
+                        const updatedPatient = {
+                          ...upgradeModalPatient,
+                          subscription: "premium",
+                          subscriptionDetails: {
+                            ...(upgradeModalPatient.subscriptionDetails || {}),
+                            plan: "premium",
+                            status: "active",
+                            isPremium: true,
+                            subscriptionStart: res.data.patient?.subscriptionDetails?.subscriptionStart || new Date().toISOString(),
+                            subscriptionEnd: res.data.patient?.subscriptionDetails?.subscriptionEnd,
+                            grantType: "admin_grant",
+                            durationDays: 365,
+                          },
+                        };
+                        handleUserUpdated(updatedPatient);
+                        setUpgradeModalPatient(null);
+                      } else {
+                        toast.error(res.data?.message || "Failed to upgrade subscription");
+                      }
+                    } catch (err) {
+                      toast.error(err.response?.data?.message || err.message || "Failed to upgrade subscription");
+                    } finally {
+                      setIsPageUpgrading(false);
+                    }
+                  }}
+                >
+                  Confirm Upgrade
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

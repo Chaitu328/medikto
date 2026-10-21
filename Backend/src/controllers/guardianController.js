@@ -22,7 +22,7 @@ exports.createGuardian = async (req, res) => {
     } = req.body;
 
     // 1. Resolve patient ID: patient role can only add for themselves; admins/superadmin specify in body
-    const patientId = req.user?.role === "patient" ? req.user.id : (bodyPatientId || req.user?.id);
+    const patientId = req.user?.role === "patient" ? req.user.id : (bodyPatientId || (req.user?.role === "superadmin" || req.user?.role === "admin" ? null : req.user?.id));
     const firstName = (bodyFirstName || name || "").trim();
     const cleanEmail = (email || "").toLowerCase().trim();
     const cleanPhone = (phone && typeof phone === "string" && phone.trim() !== "") ? phone.trim() : undefined;
@@ -85,8 +85,12 @@ exports.createGuardian = async (req, res) => {
       }
     }
 
-    // 5. Resolve and validate hospital
+    // 5. Resolve and validate hospital (genuinely optional for Super Admin and patient)
     let resolvedHospital = hospital;
+    if (resolvedHospital === "Select Hospital" || resolvedHospital === "undefined" || resolvedHospital === "null" || resolvedHospital === "") {
+      resolvedHospital = undefined;
+    }
+
     if (resolvedHospital && typeof resolvedHospital === "string" && resolvedHospital.trim() !== "") {
       resolvedHospital = resolvedHospital.trim();
       if (!mongoose.Types.ObjectId.isValid(resolvedHospital)) {
@@ -137,7 +141,7 @@ exports.createGuardian = async (req, res) => {
       guardian = guardianByPhone;
     }
 
-    // Always generate fresh temporary password for web portal access
+    // Generate temporary password
     const temporaryPassword = crypto.randomBytes(4).toString("hex") + "@1";
     const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
     let isNewUser = false;
@@ -145,7 +149,7 @@ exports.createGuardian = async (req, res) => {
     if (!guardian) {
       isNewUser = true;
 
-      // Create new guardian directly with active status
+      // Create new guardian directly with active account status so they can log in to portal
       guardian = await User.create({
         firstName,
         email: cleanEmail,
@@ -157,7 +161,7 @@ exports.createGuardian = async (req, res) => {
         isFirstLogin: true,
         accountStatus: "active",
         hospital: resolvedHospital || undefined,
-        guardianFor: [patientId]
+        guardianFor: [] // Relationship becomes active when invitation is accepted
       });
     } else {
       // Existing account: Ensure they are a guardian
@@ -183,26 +187,19 @@ exports.createGuardian = async (req, res) => {
         guardian.phone = cleanPhone;
       }
 
-      // Update credentials and status for fresh login
-      guardian.password = hashedPassword;
-      guardian.mustChangePassword = true;
-      guardian.isFirstLogin = true;
-      guardian.accountStatus = "active";
       if (resolvedHospital && !guardian.hospital) {
         guardian.hospital = resolvedHospital;
       }
 
-      // Link patientId to guardianFor if not already present
-      const alreadyLinked = (guardian.guardianFor || []).some(
-        pId => pId.toString() === patientId.toString()
-      );
-      if (!alreadyLinked) {
-        guardian.guardianFor = [...(guardian.guardianFor || []), patientId];
+      // If guardian still has not logged in, update temporary password
+      if (guardian.isFirstLogin || guardian.mustChangePassword) {
+        guardian.password = hashedPassword;
       }
+
       await guardian.save();
     }
 
-    // 7. Create or update invite record for explicit relationship tracking
+    // 7. Create or update invite record with "pending" status to preserve the invitation lifecycle
     let invite = await CaretakerInvite.findOne({
       patientId,
       caretakerId: guardian._id
@@ -216,33 +213,48 @@ exports.createGuardian = async (req, res) => {
         email: cleanEmail,
         phone: cleanPhone || guardian.phone,
         relation: relation || "Guardian",
-        status: "accepted"
+        status: "pending"
       });
     } else {
-      invite.status = "accepted";
+      if (invite.status === "rejected") {
+        invite.status = "pending";
+      }
       invite.relation = relation || invite.relation || "Guardian";
       if (cleanPhone) invite.phone = cleanPhone;
       await invite.save();
     }
 
-    // 8. Send Web Portal Credentials email asynchronously in background
-    sendGuardianCredentials(
-      guardian.email,
-      guardian.firstName,
-      patient.firstName,
-      temporaryPassword,
-      relation || "Guardian"
-    ).then(emailRes => {
-      console.log(`[Email] Caretaker web credentials dispatched to ${guardian.email}:`, emailRes?.success !== false);
-    }).catch(emailErr => {
-      console.error("[Email] Caretaker web credentials dispatch failed:", emailErr.message);
-    });
+    // 8. Send credentials email for new user or access granted email for existing user
+    if (isNewUser) {
+      sendGuardianCredentials(
+        guardian.email,
+        guardian.firstName,
+        patient.firstName,
+        temporaryPassword,
+        relation || "Guardian"
+      ).then(emailRes => {
+        console.log(`[Email] Caretaker web credentials dispatched to ${guardian.email}:`, emailRes?.success !== false);
+      }).catch(emailErr => {
+        console.error("[Email] Caretaker web credentials dispatch failed:", emailErr.message);
+      });
+    } else {
+      sendGuardianAccessGrantedEmail(
+        guardian.email,
+        guardian.firstName,
+        patient.firstName,
+        relation || "Guardian"
+      ).then(emailRes => {
+        console.log(`[Email] Caretaker access update dispatched to ${guardian.email}:`, emailRes?.success !== false);
+      }).catch(emailErr => {
+        console.error("[Email] Caretaker access update dispatch failed:", emailErr.message);
+      });
+    }
 
     return res.status(201).json({
       success: true,
       message: isNewUser
         ? "Guardian created successfully. Credentials sent to email."
-        : "Guardian connected to patient successfully. Login details sent to email.",
+        : "Guardian invitation sent successfully to existing account.",
       emailSent: true,
       guardian,
       invite
@@ -766,8 +778,9 @@ exports.getAllGuardians = async (req, res) => {
         relation: inv.relation || "Guardian",
         status: inv.status
       }));
-      gObj.createdBy = gInvites[0]?.createdBy ? `${gInvites[0].createdBy.firstName || ""} ${gInvites[0].createdBy.lastName || ""}`.trim() : "";
-      gObj.hospital = g.hospital?.name || "";
+      const latestInvite = gInvites[0];
+      gObj.status = latestInvite?.status || (g.guardianFor?.length > 0 ? "accepted" : "pending");
+      gObj.accountStatus = g.accountStatus || "active";
       gObj.tempPasswordSent = true;
       gObj.passwordChanged = !g.mustChangePassword;
 

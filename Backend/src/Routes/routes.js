@@ -245,6 +245,7 @@
   router.post("/subscription/trial", auth, auth.blockGuardianWrite, startTrial);
   router.put("/subscription", auth, auth.blockGuardianWrite, updateSubscription);
   router.post("/subscription/admin-grant", auth, grantAdminSubscription);
+  router.post("/subscription/upgrade", auth, grantAdminSubscription);
 
   // ================= HOSPITAL LINKS =================
   router.post("/hospitals/send-link-otp", auth, sendLinkOTP);          // admin-initiated (legacy)

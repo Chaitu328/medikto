@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Plus,
   ChevronLeft,
@@ -28,11 +29,14 @@ import {
   Building2,
   Sparkles,
   ExternalLink,
+  Pill,
+  FileText,
+  FileBarChart,
 } from "lucide-react";
 import api from "../Api/axios";
-import SubscriptionManager from "../Components/SubscriptionManager";
 
 export default function Patients() {
+  const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -245,7 +249,7 @@ export default function Patients() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-6 sm:space-y-8 w-full max-w-full overflow-hidden">
       {/* ── HEADER BANNER ────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl shadow-slate-900/10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_50%)]" />
@@ -439,19 +443,20 @@ export default function Patients() {
       </div>
 
       {/* ── PATIENTS TABLE ──────────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[950px]">
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden w-full max-w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[1050px]">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th className="py-4 px-6">Patient</th>
-                <th className="py-4 px-4">Patient ID</th>
-                <th className="py-4 px-4">Demographics</th>
-                <th className="py-4 px-4">Contact</th>
-                <th className="py-4 px-4">Plan</th>
-                <th className="py-4 px-4">Adherence</th>
-                <th className="py-4 px-4">Status</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-4 px-5">Patient</th>
+                <th className="py-4 px-3">Patient ID</th>
+                <th className="py-4 px-3">Demographics</th>
+                <th className="py-4 px-3">Contact</th>
+                <th className="py-4 px-3">Plan</th>
+                <th className="py-4 px-3">Adherence</th>
+                <th className="py-4 px-3">Status</th>
+                <th className="py-4 px-3 text-center">Patient Records</th>
+                <th className="py-4 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -472,12 +477,12 @@ export default function Patients() {
                       className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
                     >
                       {/* Patient Name + Avatar */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3.5">
-                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
                             {getInitials(patient)}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 max-w-[170px]">
                             <h3 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors truncate">
                               {patientName}
                             </h3>
@@ -489,14 +494,14 @@ export default function Patients() {
                       </td>
 
                       {/* Monospace ID */}
-                      <td className="py-4 px-4">
-                        <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                      <td className="py-4 px-3">
+                        <span className="font-mono text-xs font-semibold px-2 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
                           #{patient?._id?.slice(-6).toUpperCase() || "N/A"}
                         </span>
                       </td>
 
                       {/* Demographics */}
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-3">
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/60 text-xs font-semibold text-slate-700">
                           <span>{patient?.age ? `${patient.age} yrs` : "Age N/A"}</span>
                           <span className="text-slate-300">•</span>
@@ -507,17 +512,17 @@ export default function Patients() {
                       </td>
 
                       {/* Contact */}
-                      <td className="py-4 px-4">
-                        <div className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
-                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      <td className="py-4 px-3">
+                        <div className="text-xs font-medium text-slate-700 flex items-center gap-1.5 whitespace-nowrap">
+                          <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{phone}</span>
                         </div>
                       </td>
 
                       {/* Subscription */}
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-3">
                         <span
-                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
                             subPlan === "premium"
                               ? "bg-gradient-to-r from-amber-50 to-amber-100 text-amber-800 border border-amber-300/60 shadow-xs"
                               : subPlan === "basic"
@@ -525,19 +530,19 @@ export default function Patients() {
                               : "bg-slate-100 text-slate-600 border border-slate-200"
                           }`}
                         >
-                          {subPlan === "premium" && <Crown className="w-3 h-3 text-amber-600" />}
+                          {subPlan === "premium" && <Crown className="w-3 h-3 text-amber-600 shrink-0" />}
                           {patient?.subscription || "Free"}
                         </span>
                       </td>
 
                       {/* Adherence */}
-                      <td className="py-4 px-4">
-                        <div className="space-y-1.5 w-28">
+                      <td className="py-4 px-3">
+                        <div className="space-y-1.5 w-24">
                           <div className="flex items-center justify-between text-[11px] font-bold">
                             <span
                               className={
                                 compliance === "High"
-                                  ? "text-emerald-700"
+                                   ? "text-emerald-700"
                                   : compliance === "Medium"
                                   ? "text-amber-700"
                                   : "text-rose-700"
@@ -563,25 +568,55 @@ export default function Patients() {
                       </td>
 
                       {/* Status / Link */}
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-3">
                         {isLinked ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                             Connected
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap">
                             Unlinked
                           </span>
                         )}
                       </td>
 
+                      {/* Patient-Specific Record Actions */}
+                      <td className="py-4 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="inline-flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => navigate(`/medications?patientId=${patient._id}`)}
+                            title={`View Medications for ${patientName}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-all hover:scale-105 shadow-2xs whitespace-nowrap"
+                          >
+                            <Pill className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Meds</span>
+                          </button>
+                          <button
+                            onClick={() => navigate(`/prescriptions?patientId=${patient._id}`)}
+                            title={`View Prescriptions for ${patientName}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-all hover:scale-105 shadow-2xs whitespace-nowrap"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Rx</span>
+                          </button>
+                          <button
+                            onClick={() => navigate(`/reports?patientId=${patient._id}`)}
+                            title={`View Reports for ${patientName}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50/70 hover:bg-purple-100 text-purple-700 text-xs font-semibold transition-all hover:scale-105 shadow-2xs whitespace-nowrap"
+                          >
+                            <FileBarChart className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Reports</span>
+                          </button>
+                        </div>
+                      </td>
+
                       {/* Actions */}
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => openPatientDetail(patient)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 text-xs font-semibold transition-all shadow-xs"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 text-xs font-semibold transition-all shadow-xs"
                           >
                             <Eye className="w-3.5 h-3.5 text-slate-500" />
                             Profile
@@ -590,7 +625,7 @@ export default function Patients() {
                           {!isGuardian && !isLinked && (
                             <button
                               onClick={() => openHospitalLinkModal(patient)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all shadow-sm"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all shadow-sm"
                             >
                               Connect
                             </button>
@@ -603,7 +638,7 @@ export default function Patients() {
               ) : (
                 /* Empty State */
                 <tr>
-                  <td colSpan={8} className="py-16 text-center">
+                  <td colSpan={9} className="py-16 text-center">
                     <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                       <Search className="w-8 h-8 text-slate-400" />
                     </div>
@@ -798,25 +833,51 @@ export default function Patients() {
                   </div>
                 </div>
 
-                {/* Subscription Management */}
+                {/* Patient Records Navigation in Drawer */}
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                    Subscription & Access
+                    Patient Records & Clinical History
                   </h4>
-                  <SubscriptionManager
-                    patient={selectedPatientForDetail}
-                    onUpdate={(updated) => {
-                      setSelectedPatientForDetail(updated);
-                      setPatients((prev) =>
-                        prev.map((p) =>
-                          (p._id === updated._id || p.id === updated.id)
-                            ? { ...p, ...updated }
-                            : p
-                        )
-                      );
-                    }}
-                    isSuperAdmin={isSuperAdmin}
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <button
+                      onClick={() => navigate(`/medications?patientId=${selectedPatientForDetail._id}`)}
+                      className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/70 text-left transition-all group flex flex-col justify-between shadow-2xs hover:scale-102 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center mb-2 shadow-xs group-hover:scale-105 transition-transform">
+                        <Pill className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">Medications</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Doses & regimens</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => navigate(`/prescriptions?patientId=${selectedPatientForDetail._id}`)}
+                      className="p-3.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/70 text-left transition-all group flex flex-col justify-between shadow-2xs hover:scale-102 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center mb-2 shadow-xs group-hover:scale-105 transition-transform">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">Prescriptions</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Scripts & Rx docs</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => navigate(`/reports?patientId=${selectedPatientForDetail._id}`)}
+                      className="p-3.5 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100/70 text-left transition-all group flex flex-col justify-between shadow-2xs hover:scale-102 cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center mb-2 shadow-xs group-hover:scale-105 transition-transform">
+                        <FileBarChart className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">Reports</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Lab & diagnostic</p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   Search,
@@ -36,6 +37,9 @@ import {
 } from "../Utils/patientUtils";
 
 export default function MedicationManagement() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPatientId = searchParams.get("patientId");
+
   const [medications, setMedications] = useState([]);
   const [users, setUsers] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -55,15 +59,17 @@ const [selectedType, setSelectedType] =
   // ================= FETCH =================
   useEffect(() => {
     fetchMedicationData();
-  }, []);
+  }, [urlPatientId]);
 
   const fetchMedicationData = async () => {
     try {
       setLoading(true);
 
+      const params = urlPatientId ? { patientId: urlPatientId } : {};
+
       const [medicationsRes, todayRes, usersRes] = await Promise.all([
-        api.get("/medications"),
-        api.get("/today"),
+        api.get("/medications", { params }),
+        api.get("/today", { params }),
         api.get("/users"),
       ]);
 
@@ -87,6 +93,17 @@ const [selectedType, setSelectedType] =
 
       setUsers(userData);
 
+      if (urlPatientId) {
+        const matched = userData.find(
+          (u) => (u._id || u.id)?.toString() === urlPatientId.toString()
+        );
+        if (matched) {
+          setSelectedPatient(matched);
+        } else {
+          setSelectedPatient({ _id: urlPatientId, firstName: "Patient", name: "Patient" });
+        }
+      }
+
       const patientMedications = medicationData.filter(
         (item) => !item?.user?.role || item?.user?.role === "patient"
       );
@@ -101,6 +118,16 @@ const [selectedType, setSelectedType] =
       console.log("Medication Error:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectPatient = (patient) => {
+    setSelectedPatient(patient);
+    if (patient) {
+      const pId = patient._id || patient.id;
+      setSearchParams({ patientId: pId });
+    } else {
+      setSearchParams({});
     }
   };
 
@@ -279,15 +306,46 @@ const [selectedType, setSelectedType] =
         </div>
       </div>
 
-      {/* PATIENT AUTOCOMPLETE FILTER */}
-      <div className="relative z-40 bg-white rounded-2xl p-4 mb-6 border border-slate-200/60 shadow-xs">
-        <div className="w-full max-w-xl">
-          <PatientAutocomplete
-            selectedPatient={selectedPatient}
-            onSelectPatient={setSelectedPatient}
-            patients={users}
-            placeholder="Search patient by name, phone, or ID to view medications..."
-          />
+      {/* PATIENT AUTOCOMPLETE FILTER & CONTEXT BANNER */}
+      <div className="space-y-4 mb-6">
+        {selectedPatient && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                {getPatientDisplayName(selectedPatient).charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Filtered by Patient</span>
+                  <span className="text-xs font-mono bg-blue-100/80 text-blue-800 px-2 py-0.5 rounded-md font-semibold">
+                    ID: {selectedPatient._id || selectedPatient.id}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-[#0F172A] mt-0.5">
+                  {getPatientDisplayName(selectedPatient)} {getPatientIdentifier(selectedPatient) ? `• ${getPatientIdentifier(selectedPatient)}` : ""}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSelectPatient(null)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/60 rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+            >
+              <X className="w-3.5 h-3.5" />
+              View All Patients
+            </button>
+          </div>
+        )}
+
+        <div className="relative z-40 bg-white rounded-2xl p-4 border border-slate-200/60 shadow-xs">
+          <div className="w-full max-w-xl">
+            <PatientAutocomplete
+              selectedPatient={selectedPatient}
+              onSelectPatient={handleSelectPatient}
+              patients={users}
+              placeholder="Search patient by name, phone, or ID to view medications..."
+            />
+          </div>
         </div>
       </div>
 
@@ -769,8 +827,22 @@ const [selectedType, setSelectedType] =
                     <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                       <Search className="w-7 h-7 text-[#94A3B8]" />
                     </div>
-                    <p className="text-sm font-semibold text-[#0F172A]">No Medications Found</p>
-                    <p className="text-xs text-[#64748B] mt-1">Try adjusting your search criteria</p>
+                    <p className="text-sm font-semibold text-[#0F172A]">
+                      {selectedPatient ? "No medications found for this patient." : "No Medications Found"}
+                    </p>
+                    <p className="text-xs text-[#64748B] mt-1">
+                      {selectedPatient ? "This patient currently has no active or recorded medications." : "Try adjusting your search criteria"}
+                    </p>
+                    {selectedPatient && (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectPatient(null)}
+                        className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#2563EB] text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Clear Filter & View All Patients
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}

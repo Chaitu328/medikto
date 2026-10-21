@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   Plus,
@@ -39,6 +40,9 @@ import {
 } from "../Utils/patientUtils";
 
 export default function Patients() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPatientId = searchParams.get("patientId");
+
   const [patients, setPatients] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -57,7 +61,7 @@ export default function Patients() {
   useEffect(() => {
     fetchPatients();
     fetchPrescriptions();
-  }, []);
+  }, [urlPatientId]);
 
   // ================= FETCH PATIENTS =================
   const fetchPatients = async () => {
@@ -73,6 +77,17 @@ export default function Patients() {
         : [];
 
       setPatients(patientData);
+
+      if (urlPatientId) {
+        const matched = patientData.find(
+          (u) => (u._id || u.id)?.toString() === urlPatientId.toString()
+        );
+        if (matched) {
+          setSelectedPatient(matched);
+        } else {
+          setSelectedPatient({ _id: urlPatientId, firstName: "Patient", name: "Patient" });
+        }
+      }
     } catch (error) {
       console.log("FETCH ERROR:", error);
     } finally {
@@ -83,7 +98,8 @@ export default function Patients() {
   // ================= FETCH PRESCRIPTIONS =================
   const fetchPrescriptions = async () => {
     try {
-      const response = await api.get("/prescriptions");
+      const params = urlPatientId ? { patientId: urlPatientId } : {};
+      const response = await api.get("/prescriptions", { params });
 
       const prescriptionData = Array.isArray(response?.data)
         ? response.data
@@ -94,6 +110,15 @@ export default function Patients() {
       setPrescriptions(prescriptionData);
     } catch (error) {
       console.log("PRESCRIPTION ERROR:", error);
+    }
+  };
+
+  const handleSelectPatient = (patient) => {
+    setSelectedPatient(patient);
+    if (patient) {
+      setSearchParams({ patientId: patient._id || patient.id });
+    } else {
+      setSearchParams({});
     }
   };
 
@@ -371,61 +396,92 @@ const pendingReviews =
         </div>
       </div>
 
-      {/* FILTER BAR */}
-      <div className="relative z-40 bg-white rounded-2xl p-4 mb-6 border border-slate-200/60 shadow-xs">
-        <div className="relative flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-          {/* PATIENT AUTOCOMPLETE */}
-          <div className="flex-1">
-            <PatientAutocomplete
-              selectedPatient={selectedPatient}
-              onSelectPatient={setSelectedPatient}
-              patients={patients}
-              placeholder="Search patient by name, phone, or ID to filter records..."
-            />
-          </div>
-
-          {/* SUBSCRIPTION */}
-          <div className="relative group">
-            <select
-              value={subscriptionFilter}
-              onChange={(e) => setSubscriptionFilter(e.target.value)}
-              className="h-12 px-4 pr-10 rounded-xl border border-slate-200 bg-white text-sm text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 cursor-pointer appearance-none transition-all duration-200 hover:border-slate-300 min-w-[160px]"
+      {/* PATIENT CONTEXT BANNER & FILTER BAR */}
+      <div className="space-y-4 mb-6">
+        {selectedPatient && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                {getPatientDisplayName(selectedPatient).charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">Filtered by Patient</span>
+                  <span className="text-xs font-mono bg-blue-100/80 text-blue-800 px-2 py-0.5 rounded-md font-semibold">
+                    ID: {selectedPatient._id || selectedPatient.id}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-[#0F172A] mt-0.5">
+                  {getPatientDisplayName(selectedPatient)} {getPatientIdentifier(selectedPatient) ? `• ${getPatientIdentifier(selectedPatient)}` : ""}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSelectPatient(null)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/60 rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-xs"
             >
-              <option value="All">All Plans</option>
-              <option value="premium">Premium</option>
-<option value="basic">Basic</option>
-<option value="free">Free</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B] pointer-events-none" />
+              <X className="w-3.5 h-3.5" />
+              View All Patients
+            </button>
           </div>
+        )}
 
-          {/* STATUS */}
-          <div className="relative group">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-12 px-4 pr-10 rounded-xl border border-slate-200 bg-white text-sm text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 cursor-pointer appearance-none transition-all duration-200 hover:border-slate-300 min-w-[140px]"
+        <div className="relative z-40 bg-white rounded-2xl p-4 border border-slate-200/60 shadow-xs">
+          <div className="relative flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+            {/* PATIENT AUTOCOMPLETE */}
+            <div className="flex-1">
+              <PatientAutocomplete
+                selectedPatient={selectedPatient}
+                onSelectPatient={handleSelectPatient}
+                patients={patients}
+                placeholder="Search patient by name, phone, or ID to filter records..."
+              />
+            </div>
+
+            {/* SUBSCRIPTION */}
+            <div className="relative group">
+              <select
+                value={subscriptionFilter}
+                onChange={(e) => setSubscriptionFilter(e.target.value)}
+                className="h-12 px-4 pr-10 rounded-xl border border-slate-200 bg-white text-sm text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 cursor-pointer appearance-none transition-all duration-200 hover:border-slate-300 min-w-[160px]"
+              >
+                <option value="All">All Plans</option>
+                <option value="premium">Premium</option>
+                <option value="basic">Basic</option>
+                <option value="free">Free</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B] pointer-events-none" />
+            </div>
+
+            {/* STATUS */}
+            <div className="relative group">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="h-12 px-4 pr-10 rounded-xl border border-slate-200 bg-white text-sm text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10 cursor-pointer appearance-none transition-all duration-200 hover:border-slate-300 min-w-[140px]"
+              >
+                <option value="All">All Status</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B] pointer-events-none" />
+            </div>
+
+            {/* CLEAR */}
+            <button
+              onClick={() => {
+                handleSelectPatient(null);
+                setSubscriptionFilter("All");
+                setStatusFilter("All");
+              }}
+              className="h-12 px-5 rounded-xl border border-slate-200 text-[#2563EB] font-semibold text-sm hover:bg-[#2563EB]/5 hover:border-[#2563EB]/30 transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap"
             >
-              <option value="All">All Status</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B] pointer-events-none" />
+              <Filter className="w-4 h-4" />
+              Clear
+            </button>
           </div>
-
-          {/* CLEAR */}
-          <button
-            onClick={() => {
-              setSelectedPatient(null);
-              setSubscriptionFilter("All");
-              setStatusFilter("All");
-            }}
-            className="h-12 px-5 rounded-xl border border-slate-200 text-[#2563EB] font-semibold text-sm hover:bg-[#2563EB]/5 hover:border-[#2563EB]/30 transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap"
-          >
-            <Filter className="w-4 h-4" />
-            Clear
-          </button>
         </div>
       </div>
 
@@ -764,12 +820,24 @@ const pendingReviews =
                 <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                   <FileText className="w-7 h-7 text-[#94A3B8]" />
                 </div>
-                <h3 className="font-semibold text-lg text-[#0F172A]">No Prescriptions</h3>
+                <h3 className="font-semibold text-lg text-[#0F172A]">
+                  {selectedPatient ? "No Prescriptions Found for this Patient" : "No Prescriptions"}
+                </h3>
                 <p className="text-[#64748B] text-sm mt-2">
                   {selectedPatient
-                    ? "No prescriptions found for the selected patient."
+                    ? "No prescriptions found for this patient."
                     : "No prescriptions found."}
                 </p>
+                {selectedPatient && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPatient(null)}
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#2563EB] text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Clear Filter & View All Patients
+                  </button>
+                )}
               </div>
             )}
           </div>

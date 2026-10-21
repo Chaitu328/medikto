@@ -309,7 +309,11 @@ exports.getMedications = async (req, res) => {
   try {
     const filter = await buildUserAccessFilter(req, req.query.patientId);
 
-    const query = Medication.find({ ...filter, status: "active" }).sort({ createdAt: -1 });
+    const statusQuery = req.query.status
+      ? (req.query.status === "all" ? { status: { $ne: "cancelled" } } : { status: req.query.status })
+      : (req.user?.role === "patient" ? { status: "active" } : { status: { $ne: "cancelled" } });
+
+    const query = Medication.find({ ...filter, ...statusQuery }).sort({ createdAt: -1 });
     if (shouldPopulateUser(req)) {
       query.populate("user", "firstName lastName phone email profilePic subscription hospitals role");
     }
