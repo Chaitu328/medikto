@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import api from "../Api/axios.js";
-import { toast } from "react-toastify";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 import {
   Search,
   RefreshCcw,
@@ -12,6 +13,7 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  AlertCircle,
   Eye,
   Pencil,
   Trash2,
@@ -409,43 +411,107 @@ const InviteModal = ({
     hospital: "",
   });
 
+  const [errors, setErrors] = useState({});
+
+  const patientSelectRef = useRef(null);
+  const nameInputRef = useRef(null);
+  const emailInputRef = useRef(null);
+  const phoneInputRef = useRef(null);
+
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleClose = () => {
+    setErrors({});
+    onClose();
+  };
+
+  const validate = () => {
+    const newErrors = {};
+
+    if (!selectedPatient) {
+      newErrors.patient = "Please select a valid patient.";
+    }
+
+    if (!formData.name?.trim()) {
+      newErrors.name = "Guardian full name is required.";
+    }
+
+    const email = formData.email?.trim() || "";
+    if (!email) {
+      newErrors.email = "Guardian email address is required.";
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        newErrors.email = "Please enter a valid email address (e.g. name@example.com).";
+      }
+    }
+
+    if (!formData.phone?.trim()) {
+      newErrors.phone = "Phone number is required.";
+    }
+
+    setErrors(newErrors);
+
+    // Focus the first invalid field
+    if (newErrors.patient && patientSelectRef.current) {
+      patientSelectRef.current.focus();
+    } else if (newErrors.name && nameInputRef.current) {
+      nameInputRef.current.focus();
+    } else if (newErrors.email && emailInputRef.current) {
+      emailInputRef.current.focus();
+    } else if (newErrors.phone && phoneInputRef.current) {
+      phoneInputRef.current.focus();
+    }
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
 
-    onSave(formData);
-
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      relation: "Father",
-      hospital: "",
-    });
-
-    setSelectedPatient("");
+    const success = await onSave(formData);
+    if (success) {
+      // Clear fields only on confirmed success!
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        relation: "Father",
+        hospital: "",
+      });
+      setSelectedPatient("");
+      setErrors({});
+    }
   };
 
   return (
     <>
-      <div className="fixed inset-0 bg-slate-900/20 z-50" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-900/20 z-50 backdrop-blur-sm" onClick={handleClose} />
       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-[20px] shadow-2xl shadow-slate-900/10 z-50 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <h3 className="text-lg font-semibold text-slate-900">Create Guardian</h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+          <button onClick={handleClose} aria-label="Close modal" className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
             <X size={18} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-5">
           <div className="space-y-4">
             <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Guardian Details</h4>
-            <FormField label="Patient" required>
+            
+            <FormField label="Patient" required error={errors.patient}>
               <select
+                ref={patientSelectRef}
                 value={selectedPatient}
-                onChange={(e) => setSelectedPatient(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200"
-                required
+                onChange={(e) => {
+                  setSelectedPatient(e.target.value);
+                  if (errors.patient) setErrors((prev) => ({ ...prev, patient: "" }));
+                }}
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm text-slate-900 bg-white transition-all outline-none focus:ring-2 ${
+                  errors.patient
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-rose-200"
+                    : "border-slate-200 focus:border-blue-400 focus:ring-blue-500/20"
+                }`}
               >
                 <option value="">Select Patient</option>
 
@@ -460,24 +526,75 @@ const InviteModal = ({
                 })}
               </select>
             </FormField>
-            <FormField label="Full Name" required>
-              <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="Enter guardian name" required />
+
+            <FormField label="Full Name" required error={errors.name}>
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={formData.name}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
+                }}
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm text-slate-900 placeholder-slate-400 transition-all outline-none focus:ring-2 ${
+                  errors.name
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-rose-200"
+                    : "border-slate-200 focus:border-blue-400 focus:ring-blue-500/20"
+                }`}
+                placeholder="Enter guardian name"
+              />
             </FormField>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField label="Email" required>
-                <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="email@example.com" required />
+              <FormField label="Email" required error={errors.email}>
+                <input
+                  ref={emailInputRef}
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-xl border text-sm text-slate-900 placeholder-slate-400 transition-all outline-none focus:ring-2 ${
+                    errors.email
+                      ? "border-rose-400 focus:border-rose-500 focus:ring-rose-200"
+                      : "border-slate-200 focus:border-blue-400 focus:ring-blue-500/20"
+                  }`}
+                  placeholder="email@example.com"
+                />
               </FormField>
-              <FormField label="Phone" required>
-                <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all" placeholder="+1 (555) 000-0000" required />
+
+              <FormField label="Phone" required error={errors.phone}>
+                <input
+                  ref={phoneInputRef}
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    setFormData({ ...formData, phone: e.target.value });
+                    if (errors.phone) setErrors((prev) => ({ ...prev, phone: "" }));
+                  }}
+                  className={`w-full px-4 py-2.5 rounded-xl border text-sm text-slate-900 placeholder-slate-400 transition-all outline-none focus:ring-2 ${
+                    errors.phone
+                      ? "border-rose-400 focus:border-rose-500 focus:ring-rose-200"
+                      : "border-slate-200 focus:border-blue-400 focus:ring-blue-500/20"
+                  }`}
+                  placeholder="+1 (555) 000-0000"
+                />
               </FormField>
             </div>
+
             <FormField label="Relation" required>
-              <select value={formData.relation} onChange={(e) => setFormData({ ...formData, relation: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white">
+              <select
+                value={formData.relation}
+                onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-white"
+              >
                 {["Father", "Mother", "Brother", "Sister", "Friend", "Doctor", "Guardian", "Other"].map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
             </FormField>
+
             <FormField label="Assigned Hospital (Optional)">
               <select
                 value={formData.hospital}
@@ -493,12 +610,21 @@ const InviteModal = ({
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={loading}
+              className="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed shadow-sm"
+            >
               {loading && <Loader2 size={14} className="animate-spin" />}
-              <Send size={14} /> Create Guardian
+              <Send size={14} /> {loading ? "Creating guardian..." : "Create Guardian"}
             </button>
           </div>
         </form>
@@ -575,12 +701,18 @@ const EditModal = ({ isOpen, onClose, onSave, caretaker, loading }) => {
   );
 };
 
-const FormField = ({ label, children, required }) => (
+const FormField = ({ label, children, required, error }) => (
   <div>
     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
       {label} {required && <span className="text-red-500">*</span>}
     </label>
     {children}
+    {error && (
+      <p className="text-xs text-rose-600 font-medium mt-1.5 flex items-center gap-1 animate-in fade-in">
+        <AlertCircle size={12} className="flex-shrink-0" />
+        {error}
+      </p>
+    )}
   </div>
 );
 
@@ -857,10 +989,15 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
 
   const handleInvite = async (formData) => {
     if (!selectedPatient) {
-      toast.error("Please select a patient to connect with this guardian.");
-      return;
+      notify.error("Unable to create guardian", "Please select a valid patient.");
+      return false;
     }
     setInviteLoading(true);
+    const loadingToastId = notify.loading(
+      "Creating guardian...",
+      "Please wait while the request is processing."
+    );
+
     try {
       const payload = {
         patientId: selectedPatient,
@@ -871,19 +1008,49 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
       };
 
       const cleanHospital = formData.hospital?.trim();
-      if (cleanHospital && cleanHospital !== "" && cleanHospital !== "Select Hospital" && cleanHospital !== "Select Hospital (Optional)" && cleanHospital !== "undefined" && cleanHospital !== "null") {
+      if (
+        cleanHospital &&
+        cleanHospital !== "" &&
+        cleanHospital !== "Select Hospital" &&
+        cleanHospital !== "Select Hospital (Optional)" &&
+        cleanHospital !== "undefined" &&
+        cleanHospital !== "null"
+      ) {
         payload.hospital = cleanHospital;
       }
 
       const res = await api.post("/guardians/create", payload);
       await fetchData();
+
+      notify.dismiss(loadingToastId);
+
+      if (res.data?.emailSent === false) {
+        notify.warn(
+          "Guardian created with warning",
+          "The guardian has been saved, but the credentials email could not be sent. You can resend credentials anytime."
+        );
+      } else {
+        notify.success(
+          "Guardian created successfully",
+          res.data?.message || "The guardian has been saved."
+        );
+      }
+
       setInviteModalOpen(false);
       setSelectedPatient("");
-      toast.success(res.data?.message || "Guardian created successfully. Credentials sent to email.");
+      return true;
     } catch (err) {
       console.error("Failed to create guardian:", err);
-      const errMsg = err.response?.data?.message || err.response?.data?.error || "Failed to create guardian. Please check the provided information.";
-      toast.error(errMsg);
+      notify.dismiss(loadingToastId);
+
+      const normalized = normalizeApiError(
+        err,
+        "Unable to create guardian",
+        "Failed to create guardian. Please check the provided information."
+      );
+
+      notify.error(normalized.title, normalized.description);
+      return false;
     } finally {
       setInviteLoading(false);
     }
@@ -897,6 +1064,7 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
 
   const handleSaveEdit = (formData) => {
     setEditLoading(true);
+    try {
       setCaretakers((prev) =>
         prev.map((c) =>
           c.id === formData.id
@@ -911,19 +1079,26 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
             : c
         )
       );
-      setEditLoading(false);
       setEditModalOpen(false);
       setEditingCaretaker(null);
+      notify.success("Guardian updated", "Guardian details updated successfully.");
+    } catch (err) {
+      const { title, description } = normalizeApiError(err, "Unable to update guardian");
+      notify.error(title, description);
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const handleResendCredentials = async (caretaker) => {
     setResendLoading((prev) => ({ ...prev, [caretaker.id]: true }));
     try {
       const res = await api.post(`/guardians/${caretaker.id}/resend`);
-      toast.success(res.data?.message || "Guardian credentials resent successfully.");
+      notify.success("Credentials resent", res.data?.message || "Guardian credentials resent successfully.");
     } catch (err) {
       console.error("Failed to resend credentials:", err);
-      toast.error(err.response?.data?.message || "Failed to resend credentials.");
+      const { title, description } = normalizeApiError(err, "Unable to resend credentials");
+      notify.error(title, description);
     } finally {
       setResendLoading((prev) => ({ ...prev, [caretaker.id]: false }));
     }
@@ -933,10 +1108,11 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
     try {
       const res = await api.patch(`/guardians/${id}/status`, { status });
       await fetchData();
-      toast.success(res.data?.message || `Guardian status updated to ${status}.`);
+      notify.success("Status updated", res.data?.message || `Guardian status updated to ${status}.`);
     } catch (err) {
       console.error("Failed to update status:", err);
-      toast.error(err.response?.data?.message || "Failed to update status.");
+      const { title, description } = normalizeApiError(err, "Unable to update status");
+      notify.error(title, description);
     }
   };
 
@@ -947,16 +1123,18 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
   };
 
   const handleConfirmDelete = async () => {
+    if (!deletingCaretaker) return;
     setDeleteLoading(true);
     try {
       const res = await api.delete(`/guardians/${deletingCaretaker.id}`);
       await fetchData();
       setDeleteModalOpen(false);
       setDeletingCaretaker(null);
-      toast.success(res.data?.message || "Guardian removed successfully.");
+      notify.success("Guardian removed", res.data?.message || "The guardian has been removed successfully.");
     } catch (err) {
       console.error("Failed to delete guardian:", err);
-      toast.error(err.response?.data?.message || "Failed to remove guardian. Please try again.");
+      const { title, description } = normalizeApiError(err, "Unable to remove guardian");
+      notify.error(title, description);
     } finally {
       setDeleteLoading(false);
     }

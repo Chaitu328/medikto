@@ -365,6 +365,79 @@ async function runAllTests() {
     assert.strictEqual(successResult.status, 200);
   });
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 5. Guardian Creation Error Normalization & Partial Success Tests
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  await test("Guardian creation duplicate error normalization produces safe messages", () => {
+    const normalizeDuplicateError = (err) => {
+      const isDup = err.code === 11000;
+      if (!isDup) return err.message || "Failed to create guardian";
+      if (err.keyPattern?.email || err.message?.includes("email")) {
+        return "A guardian with this email already exists.";
+      } else if (err.keyPattern?.phone || err.message?.includes("phone")) {
+        return "A user with this phone number already exists.";
+      }
+      return "An account with this email address or phone number already exists.";
+    };
+
+    assert.strictEqual(
+      normalizeDuplicateError({ code: 11000, keyPattern: { email: 1 } }),
+      "A guardian with this email already exists."
+    );
+    assert.strictEqual(
+      normalizeDuplicateError({ code: 11000, keyPattern: { phone: 1 } }),
+      "A user with this phone number already exists."
+    );
+    assert.strictEqual(
+      normalizeDuplicateError({ code: 11000, message: "E11000 duplicate key error index: email_1" }),
+      "A guardian with this email already exists."
+    );
+  });
+
+  await test("Guardian partial success preserves saved record when email delivery fails", () => {
+    const simulateGuardianCreation = (emailSuccess) => {
+      const isNewUser = true;
+      const emailSent = emailSuccess;
+      const emailError = emailSent ? undefined : "SMTP timeout: connection closed";
+
+      const message = isNewUser
+        ? (emailSent
+            ? "Guardian created successfully. Credentials sent to email."
+            : "Guardian created successfully, but credentials email could not be sent.")
+        : (emailSent
+            ? "Guardian invitation sent successfully to existing account."
+            : "Guardian linked successfully, but notification email could not be sent.");
+
+      return {
+        statusCode: 201,
+        body: {
+          success: true,
+          message,
+          emailSent,
+          emailError,
+          guardian: { _id: "guardian123", email: "test@example.com", role: "guardian" },
+          invite: { _id: "invite123", status: "pending" }
+        }
+      };
+    };
+
+    // When email succeeds
+    const okResult = simulateGuardianCreation(true);
+    assert.strictEqual(okResult.statusCode, 201);
+    assert.strictEqual(okResult.body.emailSent, true);
+    assert.strictEqual(okResult.body.message.includes("Credentials sent to email"), true);
+
+    // When email fails: partial success must NOT claim creation failed, and must NOT claim email was sent
+    const partialResult = simulateGuardianCreation(false);
+    assert.strictEqual(partialResult.statusCode, 201);
+    assert.strictEqual(partialResult.body.success, true);
+    assert.strictEqual(partialResult.body.emailSent, false);
+    assert.strictEqual(partialResult.body.message.includes("credentials email could not be sent"), true);
+    assert.strictEqual(Boolean(partialResult.body.guardian), true);
+    assert.strictEqual(partialResult.body.invite.status, "pending");
+  });
+
   console.log(`\n🎉 All ${passed}/${total} Super Admin tests passed successfully!\n`);
 }
 

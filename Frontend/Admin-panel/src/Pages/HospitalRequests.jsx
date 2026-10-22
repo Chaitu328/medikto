@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import api from "../Api/axios.js";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 import {
   Search,
   RefreshCcw,
@@ -403,32 +405,6 @@ const DeleteModal = ({ isOpen, onClose, onConfirm, itemName, loading }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TOAST NOTIFICATION
-// ─────────────────────────────────────────────────────────────────────────────
-const Toast = ({ message, type, onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  const configs = {
-    success: { bg: "bg-emerald-500", icon: CheckCircle2 },
-    error: { bg: "bg-red-500", icon: XCircle },
-    info: { bg: "bg-blue-500", icon: AlertCircle },
-  };
-  const config = configs[type] || configs.info;
-  const Icon = config.icon;
-
-  return (
-    <div className={`fixed bottom-6 right-6 z-[60] flex items-center gap-3 px-5 py-3 rounded-xl ${config.bg} text-white shadow-lg shadow-slate-900/20 animate-in slide-in-from-bottom-2 duration-300`}>
-      <Icon size={18} />
-      <span className="text-sm font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 hover:opacity-70"><X size={14} /></button>
-    </div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 const HospitalRequests = () => {
@@ -450,7 +426,6 @@ const HospitalRequests = () => {
   const [deletingRequest, setDeletingRequest] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState({});
-  const [toast, setToast] = useState(null);
 
   const ITEMS_PER_PAGE = 10;
 
@@ -466,7 +441,8 @@ setHospitals(
 );
     } catch (err) {
       console.error("Failed to fetch hospitals:", err);
-      setToast({ message: "Failed to load hospitals", type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to load hospitals");
+      notify.error(title, description);
     }
   }, []);
 
@@ -506,7 +482,8 @@ setHospitals(
       setRequests(normalized);
     } catch (err) {
       console.error("Failed to fetch requests:", err);
-      setToast({ message: err.response?.data?.message || "Failed to load requests", type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to load requests");
+      notify.error(title, description);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -641,9 +618,10 @@ setHospitals(
     try {
       await api.patch(`/hospitals/${request.id}/status`, { status: "approved" });
       setRequests((prev) => prev.map((r) => (r.id === request.id ? { ...r, status: "approved" } : r)));
-      setToast({ message: "Request approved successfully", type: "success" });
+      notify.success("Request approved", "Hospital request approved successfully.");
     } catch (err) {
-      setToast({ message: err.response?.data?.message || "Failed to approve request", type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to approve request");
+      notify.error(title, description);
     } finally {
       setActionLoading((prev) => ({ ...prev, [request.id]: null }));
     }
@@ -654,9 +632,10 @@ setHospitals(
     try {
       await api.patch(`/hospitals/${request.id}/status`, { status: "rejected" });
       setRequests((prev) => prev.map((r) => (r.id === request.id ? { ...r, status: "rejected" } : r)));
-      setToast({ message: "Request rejected", type: "success" });
+      notify.success("Request rejected", "Hospital request rejected.");
     } catch (err) {
-      setToast({ message: err.response?.data?.message || "Failed to reject request", type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to reject request");
+      notify.error(title, description);
     } finally {
       setActionLoading((prev) => ({ ...prev, [request.id]: null }));
     }
@@ -672,9 +651,10 @@ setHospitals(
     try {
       await api.delete(`/hospitals/${deletingRequest.id}`);
       setRequests((prev) => prev.filter((r) => r.id !== deletingRequest.id));
-      setToast({ message: "Request deleted successfully", type: "success" });
+      notify.success("Request deleted", "Hospital request deleted successfully.");
     } catch (err) {
-      setToast({ message: err.response?.data?.message || "Failed to delete request", type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to delete request");
+      notify.error(title, description);
     } finally {
       setDeleteLoading(false);
       setDeleteModalOpen(false);
@@ -1089,17 +1069,6 @@ setHospitals(
         itemName={deletingRequest?.patientName}
         loading={deleteLoading}
       />
-
-      {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* TOAST */}
-      {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
     </div>
   );
 };

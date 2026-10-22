@@ -205,6 +205,13 @@ exports.createGuardian = async (req, res) => {
       caretakerId: guardian._id
     });
 
+    if (invite && invite.status === "accepted") {
+      return res.status(400).json({
+        success: false,
+        message: "This guardian is already connected to the selected patient."
+      });
+    }
+
     if (!invite) {
       invite = await CaretakerInvite.create({
         patientId,
@@ -225,37 +232,56 @@ exports.createGuardian = async (req, res) => {
     }
 
     // 8. Send credentials email for new user or access granted email for existing user
+    let emailSent = true;
+    let emailError = null;
+
+    try {
+      if (isNewUser) {
+        const emailRes = await sendGuardianCredentials(
+          guardian.email,
+          guardian.firstName,
+          patient.firstName,
+          temporaryPassword,
+          relation || "Guardian"
+        );
+        emailSent = emailRes?.success !== false;
+        if (!emailSent) {
+          emailError = emailRes?.error || "Failed to deliver email";
+        }
+      } else {
+        const emailRes = await sendGuardianAccessGrantedEmail(
+          guardian.email,
+          guardian.firstName,
+          patient.firstName,
+          relation || "Guardian"
+        );
+        emailSent = emailRes?.success !== false;
+        if (!emailSent) {
+          emailError = emailRes?.error || "Failed to deliver email";
+        }
+      }
+    } catch (emailErr) {
+      console.error("[Email] Guardian credentials dispatch failed:", emailErr.message);
+      emailSent = false;
+      emailError = emailErr.message;
+    }
+
+    let message = "";
     if (isNewUser) {
-      sendGuardianCredentials(
-        guardian.email,
-        guardian.firstName,
-        patient.firstName,
-        temporaryPassword,
-        relation || "Guardian"
-      ).then(emailRes => {
-        console.log(`[Email] Caretaker web credentials dispatched to ${guardian.email}:`, emailRes?.success !== false);
-      }).catch(emailErr => {
-        console.error("[Email] Caretaker web credentials dispatch failed:", emailErr.message);
-      });
+      message = emailSent
+        ? "Guardian created successfully. Credentials sent to email."
+        : "Guardian created successfully, but credentials email could not be sent.";
     } else {
-      sendGuardianAccessGrantedEmail(
-        guardian.email,
-        guardian.firstName,
-        patient.firstName,
-        relation || "Guardian"
-      ).then(emailRes => {
-        console.log(`[Email] Caretaker access update dispatched to ${guardian.email}:`, emailRes?.success !== false);
-      }).catch(emailErr => {
-        console.error("[Email] Caretaker access update dispatch failed:", emailErr.message);
-      });
+      message = emailSent
+        ? "Guardian invitation sent successfully to existing account."
+        : "Guardian linked successfully, but notification email could not be sent.";
     }
 
     return res.status(201).json({
       success: true,
-      message: isNewUser
-        ? "Guardian created successfully. Credentials sent to email."
-        : "Guardian invitation sent successfully to existing account.",
-      emailSent: true,
+      message,
+      emailSent,
+      emailError: emailSent ? undefined : emailError,
       guardian,
       invite
     });
@@ -264,9 +290,17 @@ exports.createGuardian = async (req, res) => {
     console.error("createGuardian error:", err);
     const isDup = err.code === 11000;
     const statusCode = isDup ? 400 : 500;
-    const userMessage = isDup
-      ? "An account with this email address or phone number already exists."
-      : (err.message || "Failed to create guardian. Please try again.");
+    let userMessage = err.message || "Failed to create guardian. Please try again.";
+
+    if (isDup) {
+      if (err.keyPattern?.email || err.message?.includes("email")) {
+        userMessage = "A guardian with this email already exists.";
+      } else if (err.keyPattern?.phone || err.message?.includes("phone")) {
+        userMessage = "A user with this phone number already exists.";
+      } else {
+        userMessage = "An account with this email address or phone number already exists.";
+      }
+    }
 
     return res.status(statusCode).json({
       success: false,

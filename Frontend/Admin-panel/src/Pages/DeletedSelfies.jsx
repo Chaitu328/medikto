@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 
 import api from "../Api/axios";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 
 export default function DeletedSelfies() {
 
@@ -161,48 +163,32 @@ export default function DeletedSelfies() {
 
   // ================= RECOVER =================
 
-  const recoverSelfie =
-    async (id) => {
-
-      try {
-
-        await api.put(
-          `/admin/recover-selfie/${id}`
-        );
-
-        fetchDeletedSelfies();
-
-      } catch (error) {
-
-        console.log(error);
-      }
-    };
+  const recoverSelfie = async (id) => {
+    try {
+      await api.put(`/admin/recover-selfie/${id}`);
+      notify.success("Selfie recovered", "Selfie record restored successfully.");
+      fetchDeletedSelfies();
+    } catch (error) {
+      const { title, description } = normalizeApiError(error, "Failed to recover selfie");
+      notify.error(title, description);
+    }
+  };
 
   // ================= DELETE FOREVER =================
 
-  const deleteForever =
-    async (id) => {
+  const deleteForever = async (id) => {
+    const confirmDelete = window.confirm("Delete permanently? This action cannot be undone.");
+    if (!confirmDelete) return;
 
-      const confirmDelete =
-        window.confirm(
-          "Delete permanently?"
-        );
-
-      if (!confirmDelete) return;
-
-      try {
-
-        await api.delete(
-          `/admin/delete-selfie/${id}`
-        );
-
-        fetchDeletedSelfies();
-
-      } catch (error) {
-
-        console.log(error);
-      }
-    };
+    try {
+      await api.delete(`/admin/delete-selfie/${id}`);
+      notify.success("Selfie deleted", "Selfie record permanently removed.");
+      fetchDeletedSelfies();
+    } catch (error) {
+      const { title, description } = normalizeApiError(error, "Failed to delete selfie");
+      notify.error(title, description);
+    }
+  };
 
   // ================= STATS =================
 

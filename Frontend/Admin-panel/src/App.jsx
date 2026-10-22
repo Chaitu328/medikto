@@ -41,6 +41,7 @@ import GuardianCompliance from "./Pages/Guardian/GuardianCompliance";
 import GuardianChangePassword from "./Pages/Guardian/GuardianChangePassword";
 
 import "./App.css";
+import ToastContainer from "./Components/Notification/ToastContainer";
 
 function GoogleCallback() {
   const navigate = useNavigate();
@@ -95,6 +96,9 @@ function GuardianProtectedRoute({ children }) {
 function App() {
   return (
     <BrowserRouter>
+      {/* Global Notification Container */}
+      <ToastContainer />
+
       <Routes>
         {/* ================= PUBLIC AUTH ROUTES ================= */}
         <Route path="/login" element={<Navigate to="/admin/login" replace />} />

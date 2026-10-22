@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 import api from "../Api/axios";
+import { notify } from "../Components/Notification";
 import PatientAutocomplete from "../Components/PatientAutocomplete";
 import {
   resolvePatient,
@@ -802,7 +803,7 @@ const pendingReviews =
                           if (prescription?.fileUrl) {
                             window.open(prescription.fileUrl, "_blank", "noopener,noreferrer");
                           } else {
-                            alert("Prescription file not available.");
+                            notify.warn("File unavailable", "Prescription file not available.");
                           }
                         }}
                         className="h-9 px-3 rounded-xl border border-slate-200 flex items-center gap-1.5 text-xs font-semibold text-[#2563EB] hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200"

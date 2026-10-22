@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../Api/axios.js";
 import { format } from "date-fns";
-import { toast } from "react-toastify";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -327,7 +328,7 @@ const UserDrawer = ({
       });
 
       if (res.data?.success) {
-        toast.success(`Upgraded ${displayName} to Premium successfully!`);
+        notify.success("Subscription upgraded", `Upgraded ${displayName} to Premium successfully!`);
         const updatedPatient = {
           ...user,
           subscription: "premium",
@@ -348,12 +349,14 @@ const UserDrawer = ({
         }
         setShowUpgradeConfirm(false);
       } else {
-        setUpgradeError(res.data?.message || "Failed to upgrade subscription");
+        const msg = res.data?.message || "Failed to upgrade subscription";
+        setUpgradeError(msg);
+        notify.error("Upgrade failed", msg);
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || "Failed to upgrade subscription";
-      setUpgradeError(msg);
-      toast.error(msg);
+      const { title, description } = normalizeApiError(err, "Unable to upgrade subscription");
+      setUpgradeError(description);
+      notify.error(title, description);
     } finally {
       setIsUpgrading(false);
     }
@@ -851,7 +854,8 @@ const UserManagement = () => {
       const response = await api.get("/users");
       setUsers(response.data?.users || []);
     } catch (error) {
-      toast.error("Failed to fetch users");
+      const { title, description } = normalizeApiError(error, "Unable to fetch users");
+      notify.error(title, description);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -979,7 +983,7 @@ const UserManagement = () => {
     a.download = `users_export_${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    toast.success("Users exported successfully");
+    notify.success("Export successful", "Users exported successfully.");
   };
 
   const handleViewUser = (user) => {
@@ -992,15 +996,15 @@ const UserManagement = () => {
   };
 
   const handleResetPassword = async (user) => {
-    toast.info("Password changes can be performed directly by the user in Settings or upon login.");
+    notify.info("Password information", "Password changes can be performed directly by the user in Settings or upon login.");
   };
 
   const handleChangeRole = async (user) => {
-    toast.info("User roles are managed through their respective modules (Admins, Hospitals, Guardians).");
+    notify.info("Role information", "User roles are managed through their respective modules (Admins, Hospitals, Guardians).");
   };
 
   const handleAssignHospital = async (user) => {
-    toast.info("Hospital affiliations are managed via Hospital Management and Patient OTP connection.");
+    notify.info("Affiliation information", "Hospital affiliations are managed via Hospital Management and Patient OTP connection.");
   };
 
   const handleSuspend = async (user) => {
@@ -1012,10 +1016,11 @@ const UserManagement = () => {
       } else if (user.role === "guardian") {
         await api.patch(`/guardians/${user._id || user.id}/status`, { accountStatus: action === "suspend" ? "disabled" : "active" });
       }
-      toast.success(`User ${action === "suspend" ? "suspended" : "activated"} successfully`);
+      notify.success("Status updated", `User ${action === "suspend" ? "suspended" : "activated"} successfully.`);
       fetchUsers();
     } catch (error) {
-      toast.error(error.response?.data?.message || `Failed to ${action} user`);
+      const { title, description } = normalizeApiError(error, `Unable to ${action} user`);
+      notify.error(title, description);
     }
   };
 
@@ -1027,14 +1032,15 @@ const UserManagement = () => {
       } else if (user.role === "guardian") {
         await api.delete(`/profile/caretakers/${user._id || user.id}`);
       }
-      toast.success("User deleted successfully");
+      notify.success("User deleted", "User deleted successfully.");
       fetchUsers();
       if (selectedUser?._id === user._id || selectedUser?.id === user.id) {
         setDrawerOpen(false);
         setSelectedUser(null);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to delete user");
+      const { title, description } = normalizeApiError(error, "Unable to delete user");
+      notify.error(title, description);
     }
   };
 
@@ -1564,7 +1570,10 @@ const UserManagement = () => {
                         durationDays: 365,
                       });
                       if (res.data?.success) {
-                        toast.success(`Upgraded ${upgradeModalPatient.firstName || upgradeModalPatient.name || "patient"} to Premium successfully!`);
+                        notify.success(
+                          "Subscription upgraded",
+                          `Upgraded ${upgradeModalPatient.firstName || upgradeModalPatient.name || "patient"} to Premium successfully!`
+                        );
                         const updatedPatient = {
                           ...upgradeModalPatient,
                           subscription: "premium",
@@ -1582,10 +1591,11 @@ const UserManagement = () => {
                         handleUserUpdated(updatedPatient);
                         setUpgradeModalPatient(null);
                       } else {
-                        toast.error(res.data?.message || "Failed to upgrade subscription");
+                        notify.error("Upgrade failed", res.data?.message || "Failed to upgrade subscription");
                       }
                     } catch (err) {
-                      toast.error(err.response?.data?.message || err.message || "Failed to upgrade subscription");
+                      const { title, description } = normalizeApiError(err, "Unable to upgrade subscription");
+                      notify.error(title, description);
                     } finally {
                       setIsPageUpgrading(false);
                     }

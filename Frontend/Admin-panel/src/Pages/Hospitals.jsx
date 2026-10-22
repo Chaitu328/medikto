@@ -24,7 +24,8 @@ import {
   Filter,
 } from "lucide-react";
 import api from "../Api/axios.js";
-import { toast } from "react-toastify";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 
 // ─── STATUS BADGE ───────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
@@ -576,7 +577,8 @@ const HospitalManagement = () => {
       setHospitals(data);
     } catch (error) {
       console.error("Error fetching hospitals:", error);
-      toast.error(error.response?.data?.message || "Failed to load hospitals");
+      const { title, description } = normalizeApiError(error, "Unable to load hospitals");
+      notify.error(title, description);
       setHospitals([]);
     } finally {
       setLoading(false);
@@ -622,7 +624,8 @@ const HospitalManagement = () => {
       setSelectedHospital(response.data?.data || response.data.hospital);
     } catch (error) {
       console.error("Error fetching hospital:", error);
-      toast.error(error.response?.data?.message || "Failed to load details");
+      const { title, description } = normalizeApiError(error, "Unable to load hospital details");
+      notify.error(title, description);
       setSelectedHospital(hospital);
     } finally {
       setDrawerLoading(false);
@@ -652,7 +655,7 @@ const HospitalManagement = () => {
           name: formData.name,
           address: formData.address,
         });
-        toast.success("Hospital updated successfully");
+        notify.success("Hospital updated", "Hospital updated successfully.");
       } else {
         const res = await api.post("/hospitals/create-with-admin", {
           hospitalName: formData.name,
@@ -663,9 +666,15 @@ const HospitalManagement = () => {
         });
 
         if (res.data?.emailSent !== false) {
-          toast.success(res.data?.message || "Hospital and admin created successfully. Login email sent.");
+          notify.success(
+            "Hospital created successfully",
+            res.data?.message || "Hospital and admin created successfully. Login email sent."
+          );
         } else {
-          toast.warn("Hospital created successfully, but login email could not be sent.");
+          notify.warn(
+            "Hospital created with warning",
+            "Hospital created successfully, but login credentials email could not be sent."
+          );
         }
       }
       setFormModalOpen(false);
@@ -673,7 +682,8 @@ const HospitalManagement = () => {
       await fetchHospitals();
     } catch (error) {
       console.error("Error saving hospital:", error);
-      toast.error(error.response?.data?.message || "Failed to save hospital");
+      const { title, description } = normalizeApiError(error, "Unable to save hospital");
+      notify.error(title, description);
     } finally {
       setFormLoading(false);
     }
@@ -692,13 +702,14 @@ const HospitalManagement = () => {
     try {
       const id = statusHospital._id || statusHospital.id;
       await api.patch(`/hospitals/${id}/status`, { status: newStatus });
-      toast.success("Status updated successfully");
+      notify.success("Status updated", "Hospital status updated successfully.");
       setStatusModalOpen(false);
       setStatusHospital(null);
       await fetchHospitals();
     } catch (error) {
       console.error("Error updating status:", error);
-      toast.error(error.response?.data?.message || "Failed to update status");
+      const { title, description } = normalizeApiError(error, "Unable to update status");
+      notify.error(title, description);
     } finally {
       setStatusLoading(false);
     }
@@ -717,13 +728,14 @@ const HospitalManagement = () => {
     try {
       const id = deletingHospital._id || deletingHospital.id;
       await api.delete(`/hospitals/${id}`);
-      toast.success("Hospital deleted successfully");
+      notify.success("Hospital deleted", "Hospital has been deleted successfully.");
       setDeleteModalOpen(false);
       setDeletingHospital(null);
       await fetchHospitals();
     } catch (error) {
       console.error("Error deleting hospital:", error);
-      toast.error(error.response?.data?.message || "Failed to delete hospital");
+      const { title, description } = normalizeApiError(error, "Unable to delete hospital");
+      notify.error(title, description);
     } finally {
       setDeleteLoading(false);
     }

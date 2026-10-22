@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../Api/axios.js";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 import {
   Search,
   ChevronDown,
@@ -32,25 +34,7 @@ const formatDate = (isoString) => {
   });
 };
 
-// ═════════════════════════════════════════════════════════════════════════════
-// TOAST
-// ═════════════════════════════════════════════════════════════════════════════
-const Toast = ({ message, type, onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
 
-  const bg = type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800";
-  const icon = type === "success" ? <Check size={16} className="text-emerald-500" /> : <X size={16} className="text-red-500" />;
-
-  return (
-    <div className={`fixed top-6 right-6 z-[100] flex items-center gap-2.5 px-5 py-3.5 rounded-2xl border shadow-lg shadow-slate-200/50 animate-in slide-in-from-right fade-in duration-300 ${bg}`}>
-      {icon}
-      <span className="text-sm font-semibold">{message}</span>
-    </div>
-  );
-};
 
 // ═════════════════════════════════════════════════════════════════════════════
 // SKELETON CARD
@@ -345,7 +329,6 @@ const PendingRequests = () => {
   const [acceptLoading, setAcceptLoading] = useState(null);
   const [rejectLoading, setRejectLoading] = useState(null);
   const [removingIds, setRemovingIds] = useState(new Set());
-  const [toast, setToast] = useState(null);
 
   // Modals
   const [confirmModal, setConfirmModal] = useState({ open: false, type: null, invitation: null });
@@ -360,7 +343,8 @@ const PendingRequests = () => {
       setInvitations(data);
     } catch (err) {
       console.error("Failed to fetch invitations:", err);
-      setToast({ message: err.response?.data?.message || "Failed to load invitations", type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to load invitations");
+      notify.error(title, description);
       setInvitations([]);
     } finally {
       setLoading(false);
@@ -412,7 +396,7 @@ const PendingRequests = () => {
 
     try {
       await api.post(`/guardian/invitations/${invitation._id}/accept`);
-      setToast({ message: "Invitation accepted successfully.", type: "success" });
+      notify.success("Invitation accepted", "Invitation accepted successfully.");
 
       // Animate removal
       setRemovingIds((prev) => new Set(prev).add(invitation._id));
@@ -426,7 +410,8 @@ const PendingRequests = () => {
       }, 400);
     } catch (err) {
       console.error("Failed to accept invitation:", err);
-      setToast({ message: err.response?.data?.message || "Failed to accept invitation", type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to accept invitation");
+      notify.error(title, description);
     } finally {
       setAcceptLoading(null);
     }
@@ -446,7 +431,7 @@ const PendingRequests = () => {
 
     try {
       await api.post(`/guardian/invitations/${invitation._id}/reject`);
-      setToast({ message: "Invitation rejected successfully.", type: "error" });
+      notify.success("Invitation rejected", "Invitation rejected successfully.");
 
       // Animate removal
       setRemovingIds((prev) => new Set(prev).add(invitation._id));
@@ -460,7 +445,8 @@ const PendingRequests = () => {
       }, 400);
     } catch (err) {
       console.error("Failed to reject invitation:", err);
-      setToast({ message: err.response?.data?.message || "Failed to reject invitation", type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to reject invitation");
+      notify.error(title, description);
     } finally {
       setRejectLoading(null);
     }
@@ -475,9 +461,6 @@ const PendingRequests = () => {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Toast */}
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       {/* HEADER */}
       {/* ═══════════════════════════════════════════════════════════════════════ */}

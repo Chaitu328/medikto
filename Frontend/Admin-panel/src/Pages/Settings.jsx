@@ -37,6 +37,8 @@ import {
   Check,
 } from "lucide-react";
 import api from "../Api/axios.js";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 
 
 // =====================================================
@@ -69,36 +71,7 @@ const Skeleton = ({ className = "" }) => (
   <div className={`animate-pulse bg-gray-200 rounded-xl ${className}`} />
 );
 
-const Toast = ({ message, type = "success", onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3500);
-    return () => clearTimeout(timer);
-  }, [onClose]);
 
-  const styles = {
-    success: "bg-emerald-50 border-emerald-200 text-emerald-800",
-    error: "bg-red-50 border-red-200 text-red-800",
-    warning: "bg-amber-50 border-amber-200 text-amber-800",
-  };
-
-  const icons = {
-    success: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
-    error: <XCircle className="w-5 h-5 text-red-500" />,
-    warning: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-  };
-
-  return (
-    <div
-      className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl border shadow-lg animate-in slide-in-from-top-2 fade-in duration-300 ${styles[type]}`}
-    >
-      {icons[type]}
-      <span className="font-medium text-sm">{message}</span>
-      <button onClick={onClose} className="ml-2 hover:opacity-70 transition-opacity">
-        <XCircle className="w-4 h-4" />
-      </button>
-    </div>
-  );
-};
 
 const ConfirmDialog = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Confirm", cancelText = "Cancel" }) => {
   if (!isOpen) return null;
@@ -433,31 +406,31 @@ const SecuritySection = ({ user, onToast }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!allMet) {
-      onToast("Please meet all password requirements", "error");
+      notify.error("Validation error", "Please meet all password requirements");
       return;
     }
     if (!passwordsMatch) {
-      onToast("Passwords do not match", "error");
+      notify.error("Validation error", "Passwords do not match");
       return;
     }
     if (!currentPassword) {
-      onToast("Please enter your current password", "error");
+      notify.error("Validation error", "Please enter your current password");
       return;
     }
 
     setLoading(true);
     try {
       const endpoint =
-  user?.role === "admin"
-    ? "/admin/change-password"
-    : "/guardian/change-password";
+        user?.role === "admin"
+          ? "/admin/change-password"
+          : "/guardian/change-password";
 
-await api.put(endpoint, {
-  oldPassword: currentPassword,
-  newPassword,
-});
+      await api.put(endpoint, {
+        oldPassword: currentPassword,
+        newPassword,
+      });
 
-      onToast("Password updated successfully", "success");
+      notify.success("Password updated", "Password updated successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -469,7 +442,8 @@ await api.put(endpoint, {
         special: false,
       });
     } catch (error) {
-      onToast(error?.response?.data?.message || "Failed to update password", "error");
+      const { title, description } = normalizeApiError(error, "Failed to update password");
+      notify.error(title, description);
     } finally {
       setLoading(false);
     }
@@ -864,7 +838,6 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("account");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
   const [pendingInvitations, setPendingInvitations] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [platformStats, setPlatformStats] = useState({
@@ -980,7 +953,9 @@ useEffect(() => {
   }
 }, [user]);
   const showToast = useCallback((message, type = "success") => {
-    setToast({ message, type });
+    if (type === "success") notify.success("Success", message);
+    else if (type === "error") notify.error("Error", message);
+    else notify.info("Information", message);
   }, []);
 
   const renderContent = () => {
@@ -1007,9 +982,6 @@ useEffect(() => {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Toast */}
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       {/* Page Header */}
       <div className="flex items-center gap-3">
         <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 flex-shrink-0">

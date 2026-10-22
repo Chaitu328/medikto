@@ -34,6 +34,8 @@ import {
 } from "lucide-react";
 
 import api from "../Api/axios";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 import PatientAutocomplete from "../Components/PatientAutocomplete";
 import {
   resolvePatient,
@@ -136,19 +138,14 @@ export default function ReportsPage() {
       if (!file) return;
 
       setUploading(true);
+      notify.loading("Uploading report...", "Please wait while the file is uploading.");
 
       const formData = new FormData();
-
       formData.append("file", file);
-
       formData.append("title", file.name);
-
       formData.append("description", "Uploaded report");
-
       formData.append("condition", "normal");
-
       formData.append("type", "medical");
-
       formData.append("date", new Date());
 
       await api.post("/reports", formData, {
@@ -157,9 +154,12 @@ export default function ReportsPage() {
         },
       });
 
+      notify.success("Report uploaded", "Report was uploaded and saved successfully.");
       fetchReports();
     } catch (error) {
       console.log("UPLOAD ERROR:", error);
+      const { title, description } = normalizeApiError(error, "Failed to upload report");
+      notify.error(title, description);
     } finally {
       setUploading(false);
     }
@@ -167,12 +167,15 @@ export default function ReportsPage() {
 
   // ================= DELETE =================
   const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this report?")) return;
     try {
       await api.delete(`/reports/${id}`);
-
+      notify.success("Report deleted", "Report was removed successfully.");
       fetchReports();
     } catch (error) {
       console.log("DELETE ERROR:", error);
+      const { title, description } = normalizeApiError(error, "Failed to delete report");
+      notify.error(title, description);
     }
   };
 

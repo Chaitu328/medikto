@@ -42,6 +42,8 @@ import {
 } from "recharts";
 
 import api from "../Api/axios.js";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 
 export default function Dashboard() {
   const [dashboard, setDashboard] = useState({
@@ -57,7 +59,6 @@ export default function Dashboard() {
 
   const [chartData, setChartData] = useState([]);
   const [actionLoading, setActionLoading] = useState({});
-  const [toast, setToast] = useState(null);
 
   const role = (localStorage.getItem("role") || "").toLowerCase();
   const isSuperAdmin = role === "superadmin";
@@ -72,13 +73,6 @@ export default function Dashboard() {
     window.addEventListener("hospital_link_updated", handleSync);
     return () => window.removeEventListener("hospital_link_updated", handleSync);
   }, []);
-
-  // Auto-dismiss toast
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   const normalizeArray = (response, key) => {
     if (Array.isArray(response?.data)) {
@@ -192,7 +186,7 @@ export default function Dashboard() {
     const phone = patient.phone;
 
     if (!phone) {
-      setToast({ message: "Patient phone number is missing.", type: "error" });
+      notify.error("Validation error", "Patient phone number is missing.");
       return;
     }
 
@@ -210,25 +204,17 @@ export default function Dashboard() {
           ),
         }));
 
-        setToast({
-          message: `${patientName} connected successfully!`,
-          type: "success",
-        });
+        notify.success("Connection approved", `${patientName} connected successfully!`);
 
         // Notify Header & refresh dashboard in background
         window.dispatchEvent(new Event("hospital_link_updated"));
         fetchDashboardData();
       } else {
-        setToast({
-          message: res.data?.message || "Failed to approve connection.",
-          type: "error",
-        });
+        notify.error("Connection failed", res.data?.message || "Failed to approve connection.");
       }
     } catch (err) {
-      const msg =
-        err?.response?.data?.message ||
-        "Failed to approve connection. Please try again.";
-      setToast({ message: msg, type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to approve connection");
+      notify.error(title, description);
       if (err?.response?.status === 400 || err?.response?.status === 404) {
         fetchDashboardData();
       }
@@ -244,7 +230,7 @@ export default function Dashboard() {
     const phone = patient.phone;
 
     if (!phone) {
-      setToast({ message: "Patient phone number is missing.", type: "error" });
+      notify.error("Validation error", "Patient phone number is missing.");
       return;
     }
 
@@ -258,25 +244,17 @@ export default function Dashboard() {
           patients: prev.patients.filter((p) => p._id !== patientId),
         }));
 
-        setToast({
-          message: `Connection request from ${patientName} rejected.`,
-          type: "info",
-        });
+        notify.info("Connection rejected", `Connection request from ${patientName} rejected.`);
 
         // Notify Header & refresh dashboard in background
         window.dispatchEvent(new Event("hospital_link_updated"));
         fetchDashboardData();
       } else {
-        setToast({
-          message: res.data?.message || "Failed to reject connection.",
-          type: "error",
-        });
+        notify.error("Action failed", res.data?.message || "Failed to reject connection.");
       }
     } catch (err) {
-      const msg =
-        err?.response?.data?.message ||
-        "Failed to reject connection. Please try again.";
-      setToast({ message: msg, type: "error" });
+      const { title, description } = normalizeApiError(err, "Failed to reject connection");
+      notify.error(title, description);
       if (err?.response?.status === 400 || err?.response?.status === 404) {
         fetchDashboardData();
       }
@@ -977,34 +955,6 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
-
-      {/* FLOATING TOAST NOTIFICATION */}
-      {toast && (
-        <div
-          className={`fixed bottom-8 right-8 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl border shadow-xl animate-in slide-in-from-bottom-3 duration-300 ${
-            toast.type === "success"
-              ? "bg-emerald-600 text-white border-emerald-500 shadow-emerald-500/20"
-              : toast.type === "error"
-              ? "bg-red-600 text-white border-red-500 shadow-red-500/20"
-              : "bg-slate-900 text-white border-slate-700 shadow-slate-900/30"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-          ) : toast.type === "error" ? (
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          ) : (
-            <Sparkles className="w-5 h-5 flex-shrink-0 text-blue-300" />
-          )}
-          <span className="text-sm font-semibold">{toast.message}</span>
-          <button
-            onClick={() => setToast(null)}
-            className="ml-2 p-1 hover:bg-white/20 rounded-lg transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

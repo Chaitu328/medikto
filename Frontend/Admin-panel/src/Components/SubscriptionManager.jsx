@@ -12,7 +12,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import api from "../Api/axios.js";
-import { toast } from "react-toastify";
+import { notify } from "./Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 
 /**
  * SubscriptionManager Component
@@ -77,7 +78,7 @@ export default function SubscriptionManager({ patient, onUpdate, isSuperAdmin })
   // Handle Grant / Extend
   const handleGrant = async () => {
     if (!isSuperAdmin) {
-      toast.error("Only Super Admin is authorized to grant Premium access.");
+      notify.error("Access restricted", "Only Super Admin is authorized to grant Premium access.");
       return;
     }
     setLoading(true);
@@ -90,7 +91,7 @@ export default function SubscriptionManager({ patient, onUpdate, isSuperAdmin })
       });
 
       if (res.data?.success) {
-        toast.success(res.data.message || "Premium access granted successfully!");
+        notify.success("Subscription updated", res.data.message || "Premium access granted successfully!");
         if (onUpdate) {
           onUpdate({
             ...patient,
@@ -105,16 +106,15 @@ export default function SubscriptionManager({ patient, onUpdate, isSuperAdmin })
           });
         }
       } else {
-        setErrorMessage(res.data?.message || "Failed to grant Premium access.");
+        const msg = res.data?.message || "Failed to grant Premium access.";
+        setErrorMessage(msg);
+        notify.error("Grant failed", msg);
       }
     } catch (err) {
       console.error("Grant Premium error:", err);
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Failed to grant Premium access.";
-      setErrorMessage(msg);
-      toast.error(msg);
+      const { title, description } = normalizeApiError(err, "Failed to grant Premium access.");
+      setErrorMessage(description);
+      notify.error(title, description);
     } finally {
       setLoading(false);
     }
@@ -123,7 +123,7 @@ export default function SubscriptionManager({ patient, onUpdate, isSuperAdmin })
   // Handle Revoke
   const handleRevoke = async () => {
     if (!isSuperAdmin) {
-      toast.error("Only Super Admin is authorized to revoke Premium access.");
+      notify.error("Access restricted", "Only Super Admin is authorized to revoke Premium access.");
       return;
     }
     setLoading(true);
@@ -135,7 +135,7 @@ export default function SubscriptionManager({ patient, onUpdate, isSuperAdmin })
       });
 
       if (res.data?.success) {
-        toast.success(res.data.message || "Premium access revoked successfully.");
+        notify.success("Subscription updated", res.data.message || "Premium access revoked successfully.");
         setConfirmRevoke(false);
         if (onUpdate) {
           onUpdate({
@@ -150,16 +150,15 @@ export default function SubscriptionManager({ patient, onUpdate, isSuperAdmin })
           });
         }
       } else {
-        setErrorMessage(res.data?.message || "Failed to revoke Premium access.");
+        const msg = res.data?.message || "Failed to revoke Premium access.";
+        setErrorMessage(msg);
+        notify.error("Revocation failed", msg);
       }
     } catch (err) {
       console.error("Revoke Premium error:", err);
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Failed to revoke Premium access.";
-      setErrorMessage(msg);
-      toast.error(msg);
+      const { title, description } = normalizeApiError(err, "Failed to revoke Premium access.");
+      setErrorMessage(description);
+      notify.error(title, description);
     } finally {
       setLoading(false);
     }

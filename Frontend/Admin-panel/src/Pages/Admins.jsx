@@ -40,6 +40,8 @@ import {
   Check,
 } from "lucide-react";
 import api from "../Api/axios.js";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 
 // ─── STATUS BADGE ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
@@ -259,7 +261,9 @@ const AddAdminModal = ({ isOpen, onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error("Failed to create hospital and admin:", err);
-      setError(err.response?.data?.message || err.response?.data?.error || "Failed to create administrator");
+      const { title, description } = normalizeApiError(err, "Failed to create administrator");
+      setError(description);
+      notify.error(title, description);
     } finally {
       setLoading(false);
     }
@@ -664,6 +668,8 @@ const Admins = () => {
       setAdmins(adminUsers);
     } catch (error) {
       console.error("Failed to fetch admins:", error);
+      const { title, description } = normalizeApiError(error, "Unable to load administrators");
+      notify.error(title, description);
       setAdmins([]);
     } finally {
       setLoading(false);
@@ -744,15 +750,17 @@ const Admins = () => {
   };
 
   const handleDisable = async (admin) => {
+    const enable = !admin.isVerified;
     try {
-      const enable = !admin.isVerified;
       await api.patch(`/admins/${admin._id || admin.id}/status`, { isVerified: enable });
+      notify.success("Status updated", `Administrator ${enable ? "enabled" : "disabled"} successfully.`);
       await fetchAdmins();
       if (selectedAdmin && (selectedAdmin._id === admin._id || selectedAdmin.id === admin.id)) {
         setSelectedAdmin({ ...selectedAdmin, isVerified: enable });
       }
     } catch (error) {
-      alert(error.response?.data?.message || "Something went wrong toggling admin status");
+      const { title, description } = normalizeApiError(error, "Failed to update administrator status");
+      notify.error(title, description);
     }
   };
 
@@ -760,10 +768,12 @@ const Admins = () => {
     if (!window.confirm(`Are you sure you want to delete administrator "${admin.name || admin.firstName}"?`)) return;
     try {
       await api.delete(`/admins/${admin._id || admin.id}`);
+      notify.success("Administrator deleted", "Administrator removed successfully.");
       setDrawerOpen(false);
       await fetchAdmins();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to delete admin");
+      const { title, description } = normalizeApiError(error, "Failed to delete administrator");
+      notify.error(title, description);
     }
   };
 
@@ -793,6 +803,7 @@ const Admins = () => {
     a.download = `admins_export_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+    notify.success("Export successful", "Administrators exported successfully.");
   };
 
   const formatDate = (d) => {
@@ -803,6 +814,7 @@ const Admins = () => {
 
   const handleAdminCreated = (creationData) => {
     setCredentialsData(creationData);
+    notify.success("Administrator created", "Hospital and administrator account provisioned successfully.");
     fetchAdmins();
   };
 

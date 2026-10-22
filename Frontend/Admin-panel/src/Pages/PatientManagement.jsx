@@ -34,6 +34,8 @@ import {
   FileBarChart,
 } from "lucide-react";
 import api from "../Api/axios";
+import { notify } from "../Components/Notification";
+import { normalizeApiError } from "../Utils/apiErrorHandler";
 
 export default function Patients() {
   const navigate = useNavigate();
@@ -81,6 +83,8 @@ export default function Patients() {
       setPatients(patientData);
     } catch (error) {
       console.log("FETCH ERROR:", error);
+      const { title, description } = normalizeApiError(error, "Unable to load patients");
+      notify.error(title, description);
     } finally {
       setLoading(false);
     }
@@ -184,11 +188,16 @@ export default function Patients() {
       });
       if (response.data.success) {
         setOtpSent(true);
+        notify.success("OTP Sent", "Verification code dispatched to patient.");
       } else {
-        setOtpError(response.data.message || "Failed to dispatch verification code.");
+        const msg = response.data.message || "Failed to dispatch verification code.";
+        setOtpError(msg);
+        notify.error("Failed to send OTP", msg);
       }
     } catch (err) {
-      setOtpError(err?.response?.data?.message || err.message || "Failed to send code.");
+      const { title, description } = normalizeApiError(err, "Failed to send code");
+      setOtpError(description);
+      notify.error(title, description);
     } finally {
       setOtpLoading(false);
     }
@@ -208,15 +217,20 @@ export default function Patients() {
       });
       if (response.data.success) {
         setOtpSuccess(true);
+        notify.success("Patient connected", "Hospital linkage successfully authorized.");
         fetchPatients();
         setTimeout(() => {
           closeHospitalLinkModal();
         }, 2000);
       } else {
-        setOtpError(response.data.message || "Invalid or expired authorization code.");
+        const msg = response.data.message || "Invalid or expired authorization code.";
+        setOtpError(msg);
+        notify.error("Verification failed", msg);
       }
     } catch (err) {
-      setOtpError(err?.response?.data?.message || err.message || "Verification failed.");
+      const { title, description } = normalizeApiError(err, "Verification failed");
+      setOtpError(description);
+      notify.error(title, description);
     } finally {
       setOtpLoading(false);
     }
