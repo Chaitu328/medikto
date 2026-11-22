@@ -322,7 +322,7 @@ const CaretakerDrawer = ({ caretaker, onClose, onEdit, onDelete, onResend, onApp
                     </div>
                   )}
                   <DrawerInfo icon={User} label="Created By" value={caretaker.createdBy || "—"} />
-                  <DrawerInfo icon={Building} label="Hospital" value={caretaker.hospital || "—"} />
+                  <DrawerInfo icon={Building} label="Hospital" value={typeof caretaker.hospital === 'object' ? (caretaker.hospital?.name || "—") : (caretaker.hospital || "—")} />
                   <DrawerInfo icon={CheckCircle2} label="Temporary Password Sent" value={caretaker.tempPasswordSent ? "Yes" : "No"} />
                   <DrawerInfo icon={CheckCircle2} label="Password Changed" value={caretaker.passwordChanged ? "Yes" : "No"} />
                 </div>
@@ -831,8 +831,8 @@ const GuardiansManagement = () => {
 createdAt: item.createdAt,
 patientName: item.patientName || "",
 connectedPatients: item.connectedPatients || [],
-createdBy: item.createdBy || "",
-hospital: item.hospital || "",
+createdBy: typeof item.createdBy === "object" ? `${item.createdBy.firstName || ""} ${item.createdBy.lastName || ""}`.trim() : (item.createdBy || ""),
+hospital: item.hospital?.name || (typeof item.hospital === "string" ? item.hospital : "") || "",
 tempPasswordSent: item.tempPasswordSent || false,
 passwordChanged: item.passwordChanged || false,
       }));
@@ -885,7 +885,11 @@ const fetchHospitals = async () => {
   }, [caretakers]);
 
   const uniqueHospitals = useMemo(() => {
-    const hospitals = new Set(caretakers.filter((c) => c.hospital).map((c) => c.hospital));
+    const hospitals = new Set(
+      caretakers
+        .map((c) => (typeof c.hospital === "object" ? c.hospital?.name : c.hospital))
+        .filter(Boolean)
+    );
     return Array.from(hospitals).sort();
   }, [caretakers]);
 
@@ -907,7 +911,7 @@ const fetchHospitals = async () => {
           c.phone.includes(q) ||
           c.relation.toLowerCase().includes(q) ||
           (c.patientName && c.patientName.toLowerCase().includes(q)) ||
-          (c.hospital && c.hospital.toLowerCase().includes(q))
+          (c.hospital && (typeof c.hospital === "string" ? c.hospital : c.hospital?.name || "").toLowerCase().includes(q))
       );
     }
 
@@ -1268,9 +1272,10 @@ const active = caretakers.filter((c) => c.status === "accepted").length;
                 className="w-full lg:w-40 pl-9 pr-8 py-2 sm:py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all appearance-none bg-white cursor-pointer font-medium"
               >
                 <option value="all">All Hospitals</option>
-                {uniqueHospitals.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
+                {uniqueHospitals.map((h) => {
+                  const val = typeof h === "object" ? (h?.name || "") : h;
+                  return <option key={val} value={val}>{val}</option>;
+                })}
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>

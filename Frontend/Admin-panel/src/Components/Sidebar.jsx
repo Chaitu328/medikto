@@ -24,67 +24,67 @@ const superAdminMenu = [
   {
     icon: LayoutDashboard,
     label: "Dashboard",
-    path: "/",
+    path: "/superadmin/dashboard",
   },
   {
     icon: Building2,
     label: "Hospitals",
-    path: "/hospitals",
+    path: "/superadmin/hospitals",
   },
   {
     icon: ShieldCheck,
     label: "Caretakers",
-    path: "/caretakers",
+    path: "/superadmin/caretakers",
   },
   {
     icon: Users,
     label: "Patients",
-    path: "/patients",
+    path: "/superadmin/patients",
   },
   {
     icon: Pill,
     label: "Medications",
-    path: "/medications",
+    path: "/superadmin/medications",
   },
   {
     icon: Calendar,
     label: "Schedule",
-    path: "/today-schedule",
+    path: "/superadmin/today-schedule",
   },
   {
     icon: FileText,
     label: "Prescriptions",
-    path: "/prescriptions",
+    path: "/superadmin/prescriptions",
   },
   {
     icon: ClipboardList,
     label: "Reports",
-    path: "/reports",
+    path: "/superadmin/reports",
   },
   {
     icon: HeartPulse,
     label: "Vitals",
-    path: "/vitals",
+    path: "/superadmin/vitals",
   },
   {
     icon: CheckCircle2,
     label: "Compliance",
-    path: "/compliance",
+    path: "/superadmin/compliance",
   },
   {
     icon: Trash2,
     label: "Deleted Selfies",
-    path: "/deletedselfie",
+    path: "/superadmin/deletedselfie",
   },
   {
     icon: User,
     label: "User Management",
-    path: "/users",
+    path: "/superadmin/users",
   },
   {
     icon: Settings,
     label: "Settings",
-    path: "/settings",
+    path: "/superadmin/settings",
   },
 ];
 
@@ -92,52 +92,52 @@ const adminMenu = [
   {
     icon: LayoutDashboard,
     label: "Dashboard",
-    path: "/",
+    path: "/admin/dashboard",
   },
   {
     icon: Users,
     label: "Patients",
-    path: "/patients",
+    path: "/admin/patients",
   },
   {
     icon: ShieldCheck,
     label: "Caretakers",
-    path: "/caretakers",
+    path: "/admin/caretakers",
   },
   {
     icon: Pill,
     label: "Medications",
-    path: "/medications",
+    path: "/admin/medications",
   },
   {
     icon: Calendar,
     label: "Schedule",
-    path: "/today-schedule",
+    path: "/admin/today-schedule",
   },
   {
     icon: FileText,
     label: "Prescriptions",
-    path: "/prescriptions",
+    path: "/admin/prescriptions",
   },
   {
     icon: ClipboardList,
     label: "Reports",
-    path: "/reports",
+    path: "/admin/reports",
   },
   {
     icon: HeartPulse,
     label: "Vitals",
-    path: "/vitals",
+    path: "/admin/vitals",
   },
   {
     icon: CheckCircle2,
     label: "Compliance",
-    path: "/compliance",
+    path: "/admin/compliance",
   },
   {
     icon: Settings,
     label: "Settings",
-    path: "/settings",
+    path: "/admin/settings",
   },
 ];
 

@@ -52,15 +52,32 @@ function GoogleCallback() {
 
     if (token) {
       localStorage.setItem("token", token);
-      window.history.replaceState({}, "", "/");
+      localStorage.setItem("role", "superadmin");
+      navigate("/superadmin/dashboard", { replace: true });
     }
   }, [navigate]);
 
   return <div>Signing in...</div>;
 }
 
-// ================= ADMIN / SUPERADMIN ROUTE GUARD =================
-function AdminProtectedRoute({ children }) {
+// ================= ROLE-BASED ROUTE GUARDS =================
+function SuperAdminProtectedRoute({ children }) {
+  const token = localStorage.getItem("token");
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+
+  if (!token) {
+    return <Navigate to="/superadmin/login" replace />;
+  }
+
+  // Only superadmin can access superadmin routes
+  if (role !== "superadmin") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return children;
+}
+
+function HospitalAdminProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
   const role = (localStorage.getItem("role") || "").toLowerCase();
 
@@ -68,12 +85,55 @@ function AdminProtectedRoute({ children }) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  // Strictly block Guardians from accessing Admin/Superadmin areas
   if (role === "guardian") {
     return <Navigate to="/guardian" replace />;
   }
 
+  // If a Super Admin enters /admin/*, seamlessly redirect to /superadmin/*
+  if (role === "superadmin") {
+    return <Navigate to="/superadmin/dashboard" replace />;
+  }
+
   return children;
+}
+
+// ================= ROOT & FLAT URL SMART REDIRECTOR =================
+function RootRedirect() {
+  const token = localStorage.getItem("token");
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+
+  if (!token) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  if (role === "superadmin") {
+    return <Navigate to="/superadmin/dashboard" replace />;
+  }
+
+  if (role === "guardian") {
+    return <Navigate to="/guardian" replace />;
+  }
+
+  return <Navigate to="/admin/dashboard" replace />;
+}
+
+function LegacyRoleRedirect({ subpath }) {
+  const token = localStorage.getItem("token");
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+
+  if (!token) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  if (role === "superadmin") {
+    return <Navigate to={`/superadmin/${subpath}`} replace />;
+  }
+
+  if (role === "guardian") {
+    return <Navigate to="/guardian" replace />;
+  }
+
+  return <Navigate to={`/admin/${subpath}`} replace />;
 }
 
 // ================= GUARDIAN ROUTE GUARD =================
@@ -105,7 +165,7 @@ function App() {
         <Route path="/admin/login" element={<Login />} />
         <Route path="/guardian/login" element={<Login />} />
         <Route path="/superadmin/login" element={<Login />} />
-        <Route path="/superadmin" element={<GoogleCallback />} />
+        <Route path="/superadmin/callback" element={<GoogleCallback />} />
 
         {/* ================= GUARDIAN PORTAL ROUTES ================= */}
         <Route
@@ -207,17 +267,18 @@ function App() {
           }
         />
 
-        {/* ================= ADMIN / CLINICIAN PROTECTED ROUTES ================= */}
+        {/* ================= SUPER ADMIN NAMESPACED ROUTES (/superadmin/*) ================= */}
         <Route
-          path="/*"
+          path="/superadmin/*"
           element={
-            <AdminProtectedRoute>
+            <SuperAdminProtectedRoute>
               <Layout>
                 <Routes>
-                  {/* DASHBOARD */}
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/admins" element={<Admins />} />
-                  <Route path="/pendingrequests" element={<PendingRequests />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/hospitals" element={<Hospitals />} />
+                  <Route path="/hospital-requests" element={<HospitalRequests />} />
+                  <Route path="/caretakers" element={<Caretakers />} />
                   <Route path="/patients" element={<Patients />} />
                   <Route path="/medications" element={<MedicationManagement />} />
                   <Route path="/today-schedule" element={<TodaySchedule />} />
@@ -226,16 +287,68 @@ function App() {
                   <Route path="/reports" element={<ReportsPage />} />
                   <Route path="/vitals" element={<VitalsPage />} />
                   <Route path="/compliance" element={<ComplianceTracker />} />
-                  <Route path="/hospitals" element={<Hospitals />} />
-                  <Route path="/hospital-requests" element={<HospitalRequests />} />
-                  <Route path="/caretakers" element={<Caretakers />} />
-                  <Route path="/settings" element={<Settings />} />
                   <Route path="/users" element={<UserManagement />} />
+                  <Route path="/admins" element={<Admins />} />
+                  <Route path="/pendingrequests" element={<PendingRequests />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="/superadmin/dashboard" replace />} />
                 </Routes>
               </Layout>
-            </AdminProtectedRoute>
+            </SuperAdminProtectedRoute>
           }
         />
+
+        {/* ================= HOSPITAL ADMIN NAMESPACED ROUTES (/admin/*) ================= */}
+        <Route
+          path="/admin/*"
+          element={
+            <HospitalAdminProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/patients" element={<Patients />} />
+                  <Route path="/caretakers" element={<Caretakers />} />
+                  <Route path="/medications" element={<MedicationManagement />} />
+                  <Route path="/today-schedule" element={<TodaySchedule />} />
+                  <Route path="/deletedselfie" element={<DeletedSelfies />} />
+                  <Route path="/prescriptions" element={<PrescriptionPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/vitals" element={<VitalsPage />} />
+                  <Route path="/compliance" element={<ComplianceTracker />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+                </Routes>
+              </Layout>
+            </HospitalAdminProtectedRoute>
+          }
+        />
+
+        {/* ================= ROOT & LEGACY FLAT ROUTE REDIRECTS ================= */}
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/dashboard" element={<RootRedirect />} />
+
+        {/* Superadmin-only legacy routes */}
+        <Route path="/hospitals" element={<Navigate to="/superadmin/hospitals" replace />} />
+        <Route path="/hospital-requests" element={<Navigate to="/superadmin/hospital-requests" replace />} />
+        <Route path="/users" element={<Navigate to="/superadmin/users" replace />} />
+        <Route path="/admins" element={<Navigate to="/superadmin/admins" replace />} />
+        <Route path="/pendingrequests" element={<Navigate to="/superadmin/pendingrequests" replace />} />
+
+        {/* Shared legacy routes dynamically redirect to the active role namespace */}
+        <Route path="/caretakers" element={<LegacyRoleRedirect subpath="caretakers" />} />
+        <Route path="/patients" element={<LegacyRoleRedirect subpath="patients" />} />
+        <Route path="/medications" element={<LegacyRoleRedirect subpath="medications" />} />
+        <Route path="/today-schedule" element={<LegacyRoleRedirect subpath="today-schedule" />} />
+        <Route path="/deletedselfie" element={<LegacyRoleRedirect subpath="deletedselfie" />} />
+        <Route path="/prescriptions" element={<LegacyRoleRedirect subpath="prescriptions" />} />
+        <Route path="/reports" element={<LegacyRoleRedirect subpath="reports" />} />
+        <Route path="/vitals" element={<LegacyRoleRedirect subpath="vitals" />} />
+        <Route path="/compliance" element={<LegacyRoleRedirect subpath="compliance" />} />
+        <Route path="/settings" element={<LegacyRoleRedirect subpath="settings" />} />
+
+        {/* Catch-all */}
+        <Route path="*" element={<RootRedirect />} />
       </Routes>
     </BrowserRouter>
   );

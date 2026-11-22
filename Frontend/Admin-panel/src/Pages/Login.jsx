@@ -393,7 +393,7 @@ const MediktoLogin = () => {
         })
       );
 
-      navigate("/", { replace: true });
+      navigate("/superadmin/dashboard", { replace: true });
     }
   }, [location.search]);
   const [activeRole, setActiveRole] = useState("hospital");
@@ -505,7 +505,7 @@ const MediktoLogin = () => {
       localStorage.setItem("user", JSON.stringify(user));
       if (rememberMe) localStorage.setItem("rememberEmail", email);
       else localStorage.removeItem("rememberEmail");
-      navigate("/");
+      navigate("/admin/dashboard");
     } catch (error) {
       setApiError(error.response?.data?.message || "Invalid email or password");
     } finally {
@@ -769,7 +769,7 @@ const MediktoLogin = () => {
                                   name: "Super Administrator",
                                 })
                               );
-                              navigate("/", { replace: true });
+                              navigate("/superadmin/dashboard", { replace: true });
                             }
                           }}
                           className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 bg-slate-50"
