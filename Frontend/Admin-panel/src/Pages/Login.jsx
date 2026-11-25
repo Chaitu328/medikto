@@ -354,19 +354,30 @@ const LeftPanel = () => {
 // ═════════════════════════════════════════════════════════════════════════════
 const ErrorToast = ({ message, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 5000);
+    const isSecurityError = message.toLowerCase().includes("access denied") || message.toLowerCase().includes("not authorized");
+    const timer = setTimeout(onClose, isSecurityError ? 15000 : 6000);
     return () => clearTimeout(timer);
-  }, [onClose]);
+  }, [message, onClose]);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.95 }}
-      className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium"
+      className="flex items-start gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium shadow-sm"
     >
-      <AlertCircle size={16} className="flex-shrink-0" />
-      <span>{message}</span>
+      <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-red-600" />
+      <span className="flex-1 leading-snug">{message}</span>
+      {onClose && (
+        <button
+          onClick={onClose}
+          type="button"
+          aria-label="Close error"
+          className="text-red-400 hover:text-red-700 text-sm font-bold ml-1 focus:outline-none"
+        >
+          ✕
+        </button>
+      )}
     </motion.div>
   );
 };
@@ -399,35 +410,14 @@ const MediktoLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  useEffect(() => {
-    const token = params.get("token");
 
-    if (token) {
-      // Finding 1 Fix: Immediately remove ?token= from URL to prevent exposure in logs/history
-      window.history.replaceState({}, document.title, window.location.pathname);
-
-      const payload = decodeJwtPayload(token);
-      if (!payload || payload.role !== "superadmin") {
-        setApiError("Access Denied: The provided token does not belong to an authorized Super Administrator.");
-        return;
-      }
-
-      localStorage.setItem("token", token);
-      localStorage.setItem("role", "superadmin");
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          role: "superadmin",
-          name: payload.name || "Super Administrator",
-          email: payload.email || "",
-        })
-      );
-
-      navigate("/superadmin/dashboard", { replace: true });
+  const [activeRole, setActiveRole] = useState(() => {
+    if (typeof window !== "undefined") {
+      if (window.location.pathname.startsWith("/superadmin")) return "superadmin";
+      if (window.location.pathname.startsWith("/guardian")) return "guardian";
     }
-  }, [location.search]);
-  const [activeRole, setActiveRole] = useState("hospital");
+    return "hospital";
+  });
 
   // Hospital Admin states
   const [email, setEmail] = useState("");
@@ -462,38 +452,69 @@ const MediktoLogin = () => {
       bg: "bg-blue-50",
     },
     guardian: {
-  title: "Guardian Login",
-  subtitle: "Monitor Your Assigned Patients",
-  icon: HeartPulse,
-  color: "text-emerald-600",
-  bg: "bg-emerald-50",
-},
+      title: "Guardian Login",
+      subtitle: "Monitor Your Assigned Patients",
+      icon: HeartPulse,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
   };
 
   useEffect(() => {
-  if (params.get("error") === "unauthorized") {
-    setApiError(
-      "This Google account is not authorized to access the Super Admin portal."
-    );
-  }
-}, [location.search]);
+    const errorParam = params.get("error");
+    if (errorParam === "unauthorized") {
+      setApiError(
+        "Access Denied: This account is not authorized to access the Super Administrator portal."
+      );
+    }
+
+    const token = params.get("token");
+    if (token) {
+      // Finding 1 Fix: Immediately remove ?token= from URL to prevent exposure in logs/history
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      const payload = decodeJwtPayload(token);
+      if (!payload || payload.role !== "superadmin") {
+        const detectedRole = payload?.role ? `'${payload.role}'` : "invalid credentials";
+        setApiError(`Access Denied: The provided token belongs to ${detectedRole}, not an authorized Super Administrator.`);
+        return;
+      }
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", "superadmin");
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          role: "superadmin",
+          name: payload.name || "Super Administrator",
+          email: payload.email || "",
+        })
+      );
+
+      navigate("/superadmin/dashboard", { replace: true });
+    }
+  }, [location.search]);
 
   useEffect(() => {
-  if (location.pathname === "/superadmin/login") {
-    setActiveRole("superadmin");
-  } else if (location.pathname === "/admin/login") {
-    setActiveRole("hospital");
-  } else if (location.pathname === "/guardian/login") {
-    setActiveRole("guardian");
-  }
-}, [location.pathname]);
+    if (location.pathname === "/superadmin/login") {
+      setActiveRole("superadmin");
+    } else if (location.pathname === "/admin/login") {
+      setActiveRole("hospital");
+    } else if (location.pathname === "/guardian/login") {
+      setActiveRole("guardian");
+    }
+  }, [location.pathname]);
 
-  // Reset form when role changes
+  // Reset form inputs when role changes (do NOT wipe apiError if it's an authorization denial)
+  const prevRole = useRef(activeRole);
   useEffect(() => {
-    setApiError("");
-    setErrors({});
-    setCaretakerStep("phone");
-    setOtp("");
+    if (prevRole.current !== activeRole) {
+      prevRole.current = activeRole;
+      setErrors({});
+      setCaretakerStep("phone");
+      setOtp("");
+    }
   }, [activeRole]);
 
   const validateHospitalForm = () => {
