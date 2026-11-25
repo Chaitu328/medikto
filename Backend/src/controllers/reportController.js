@@ -7,6 +7,7 @@ const {
   generateReportKey,
   resolveFileUrl,
   deleteS3Object,
+  streamS3Object,
 } = require("../config/s3");
 const {
   buildUserAccessFilter,
@@ -271,5 +272,32 @@ exports.getReportsByType = async (req, res) => {
     res.status(500).json({
       error: err.message,
     });
+  }
+};
+
+// ================= AUTHENTICATED REPORT FILE STREAMING =================
+exports.downloadReportFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const accessFilter = await buildUserAccessFilter(req);
+    const report = await Report.findOne({ _id: id, ...accessFilter });
+
+    if (!report) {
+      return res.status(404).json({ message: "Report not found or access denied" });
+    }
+
+    if (!report.fileUrl) {
+      return res.status(404).json({ message: "No document attached to this report" });
+    }
+
+    // If legacy HTTP/HTTPS URL, redirect; if private S3 key, stream with auth verification
+    if (report.fileUrl.startsWith("http://") || report.fileUrl.startsWith("https://")) {
+      return res.redirect(report.fileUrl);
+    }
+
+    return await streamS3Object(report.fileUrl, res);
+  } catch (err) {
+    console.error("Report download error:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 };

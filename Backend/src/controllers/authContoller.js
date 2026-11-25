@@ -645,3 +645,35 @@ exports.completeGoogleRegistration = async (req, res) => {
     });
   }
 };
+
+// ================= LOGOUT & SESSION INVALIDATION =================
+exports.logout = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User identity missing from session" });
+    }
+
+    const now = new Date();
+    // Update User model (patients, hospital admins, guardians)
+    let updated = await User.findByIdAndUpdate(userId, { lastLogoutAt: now });
+
+    // If not found in User, update SuperAdmin model
+    if (!updated) {
+      const SuperAdmin = require("../models/SuperadminModel");
+      await SuperAdmin.findByIdAndUpdate(userId, { lastLogoutAt: now });
+    }
+
+    return res.json({
+      success: true,
+      message: "Logged out successfully. Session invalidated."
+    });
+  } catch (err) {
+    console.error("Logout Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to process logout",
+      error: err.message
+    });
+  }
+};

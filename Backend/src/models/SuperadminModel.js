@@ -13,6 +13,10 @@ const superAdminSchema = new mongoose.Schema(
         type: String,
         default: "superadmin",
     },
+    lastLogoutAt: {
+        type: Date,
+        default: null,
+    },
 },
 {
     timestamps: true,

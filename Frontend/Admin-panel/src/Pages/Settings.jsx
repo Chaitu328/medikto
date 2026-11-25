@@ -106,15 +106,18 @@ const ConfirmDialog = ({ isOpen, title, message, onConfirm, onCancel, confirmTex
   );
 };
 
-const ToggleSwitch = ({ checked, onChange, label, description }) => (
+const ToggleSwitch = ({ checked, onChange, label, description, disabled = false }) => (
   <div className="flex items-center justify-between py-4">
     <div className="flex-1 pr-4">
-      <p className="font-semibold text-gray-900 text-sm">{label}</p>
+      {label && <p className="font-semibold text-gray-900 text-sm">{label}</p>}
       {description && <p className="text-gray-500 text-xs mt-0.5">{description}</p>}
     </div>
     <button
-      onClick={() => onChange(!checked)}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
       className={`relative w-14 h-8 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${
+        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      } ${
         checked ? "bg-blue-600" : "bg-gray-200"
       }`}
     >
@@ -637,6 +640,7 @@ const SecuritySection = ({ user, onToast }) => {
 };
 
 const NotificationsSection = ({ user }) => {
+  const isAuthorized = user?.role === "superadmin" || user?.role === "admin";
   const [settings, setSettings] = useState({
     emailNotifications: true,
     pushNotifications: true,
@@ -645,6 +649,10 @@ const NotificationsSection = ({ user }) => {
   });
 
   const handleToggle = (key) => {
+    if (!isAuthorized) {
+      notify("Only administrators have permission to alter system notification configurations.", "error");
+      return;
+    }
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -702,10 +710,17 @@ const NotificationsSection = ({ user }) => {
             <ToggleSwitch
               checked={settings[item.key]}
               onChange={() => handleToggle(item.key)}
+              disabled={!isAuthorized}
             />
           </div>
         ))}
       </div>
+
+      {!isAuthorized && (
+        <div className="mt-4 p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-700 flex items-center gap-2">
+          <span>Note: System notification configurations are restricted and can only be altered by authorized administrators.</span>
+        </div>
+      )}
     </div>
   );
 };

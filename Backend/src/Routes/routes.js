@@ -71,7 +71,8 @@
     getReportsByType,
     getReportById,
     updateReport,
-    deleteReport
+    deleteReport,
+    downloadReportFile,
   } = require("../controllers/reportController");
 
   const {
@@ -84,6 +85,7 @@
     checkPhone,
     googleAuth,
     completeGoogleRegistration,
+    logout,
   } = require("../controllers/authContoller");
 
   const {
@@ -108,7 +110,8 @@
     getPrescriptions,
     getPrescriptionById,
     updatePrescription,
-    deletePrescription
+    deletePrescription,
+    downloadPrescriptionFile,
   } = require("../controllers/prescriptionController");
 
   const {
@@ -152,6 +155,7 @@
   router.post("/auth/check-phone", checkPhone);
   router.post("/auth/google", googleAuth);
   router.post("/auth/google/complete-registration", completeGoogleRegistration);
+  router.post("/auth/logout", auth, logout);
 
   // ================= SUPPORT & ISSUE REPORTING =================
   router.post("/support/report-issue", auth, reportIssue);
@@ -163,12 +167,14 @@
   router.patch(
     "/admins/:id/status",
     auth,
+    auth.requireSuperAdmin,
     toggleAdminStatus
   );
 
   router.delete(
     "/admins/:id",
     auth,
+    auth.requireSuperAdmin,
     deleteAdmin
   );
 
@@ -233,7 +239,7 @@
 
   // ================= USER =================
   router.get("/profile", auth, getProfile);
-  router.get("/users", auth, getAllUsers);
+  router.get("/users", auth, auth.requireAdminOrSuperAdmin, getAllUsers);
   router.put("/profile", auth, upload.single("image"), updateProfile);
   router.delete("/profile", auth, deleteProfile);
   router.post("/family-members", auth, auth.blockGuardianWrite, addFamilyMember);
@@ -244,25 +250,25 @@
   router.get("/subscription/plans", getPlans);
   router.post("/subscription/trial", auth, auth.blockGuardianWrite, startTrial);
   router.put("/subscription", auth, auth.blockGuardianWrite, updateSubscription);
-  router.post("/subscription/admin-grant", auth, grantAdminSubscription);
-  router.post("/subscription/upgrade", auth, grantAdminSubscription);
+  router.post("/subscription/admin-grant", auth, auth.requireAdminOrSuperAdmin, grantAdminSubscription);
+  router.post("/subscription/upgrade", auth, auth.requireAdminOrSuperAdmin, grantAdminSubscription);
 
   // ================= HOSPITAL LINKS =================
-  router.post("/hospitals/send-link-otp", auth, sendLinkOTP);          // admin-initiated (legacy)
-  router.post("/hospitals/verify-link", auth, verifyAndLink);           // admin verifies (legacy)
+  router.post("/hospitals/send-link-otp", auth, auth.requireAdminOrSuperAdmin, sendLinkOTP);          // admin-initiated (legacy)
+  router.post("/hospitals/verify-link", auth, auth.requireAdminOrSuperAdmin, verifyAndLink);           // admin verifies (legacy)
   router.post("/hospitals/request-link", auth, requestHospitalLink);    // patient initiates request
-  router.post("/hospitals/approve-link", auth, approvePatientLink);     // admin approves request
-  router.post("/hospitals/reject-link", auth, rejectPatientLink);       // admin rejects request
+  router.post("/hospitals/approve-link", auth, auth.requireAdminOrSuperAdmin, approvePatientLink);     // admin approves request
+  router.post("/hospitals/reject-link", auth, auth.requireAdminOrSuperAdmin, rejectPatientLink);       // admin rejects request
   router.get("/profile/hospitals", auth, getConnectedHospitals);
   router.delete("/profile/hospitals/:hospitalId", auth, unlinkHospital);
 
   // ================= SUPER ADMIN HOSPITAL MANAGEMENT =================
-  router.post("/hospitals/create-with-admin", auth, createHospitalWithAdmin);
-  router.get("/hospitals", auth, getHospitals);
-  router.get("/hospitals/:id", auth, getHospitalById);
-  router.put("/hospitals/:id", auth, updateHospital);
-  router.patch("/hospitals/:id/status", auth, updateHospitalStatus);
-  router.delete("/hospitals/:id", auth, deleteHospital);
+  router.post("/hospitals/create-with-admin", auth, auth.requireSuperAdmin, createHospitalWithAdmin);
+  router.get("/hospitals", auth, auth.requireAdminOrSuperAdmin, getHospitals);
+  router.get("/hospitals/:id", auth, auth.requireAdminOrSuperAdmin, getHospitalById);
+  router.put("/hospitals/:id", auth, auth.requireSuperAdmin, updateHospital);
+  router.patch("/hospitals/:id/status", auth, auth.requireSuperAdmin, updateHospitalStatus);
+  router.delete("/hospitals/:id", auth, auth.requireSuperAdmin, deleteHospital);
 
   // ================= CARETAKERS / OBSERVERS =================
   router.post("/profile/caretakers/invite", auth, createGuardian);
@@ -272,6 +278,7 @@
   router.post(
     "/guardians/create",
     auth,
+    auth.requireAdminOrSuperAdmin,
     createGuardian
   );
   router.post("/guardian/login", guardianLogin);
@@ -300,21 +307,25 @@
   router.get(
       "/guardians",
       auth,
+      auth.requireAdminOrSuperAdmin,
       getAllGuardians
   );
   router.patch(
       "/guardians/:id/status",
       auth,
+      auth.requireAdminOrSuperAdmin,
       updateGuardianStatus
   );
   router.post(
       "/guardians/:id/resend",
       auth,
+      auth.requireAdminOrSuperAdmin,
       resendGuardianCredentials
   );
   router.delete(
       "/guardians/:id",
       auth,
+      auth.requireAdminOrSuperAdmin,
       deleteGuardian
   );
 
@@ -332,9 +343,9 @@
   router.delete("/dose/:doseId/selfie", auth, auth.blockGuardianWrite, deleteSelfie);
 
   //====== admin ==========
-  router.put("/admin/recover-selfie/:id", auth, auth.blockGuardianWrite, recoverSelfie);
-  router.delete("/admin/delete-selfie/:id", auth, auth.blockGuardianWrite, adminDeleteSelfie);
-  router.get("/admin/deleted-selfies", auth, getDeletedSelfies);
+  router.put("/admin/recover-selfie/:id", auth, auth.requireAdminOrSuperAdmin, recoverSelfie);
+  router.delete("/admin/delete-selfie/:id", auth, auth.requireAdminOrSuperAdmin, adminDeleteSelfie);
+  router.get("/admin/deleted-selfies", auth, auth.requireAdminOrSuperAdmin, getDeletedSelfies);
 
 
   // ================= LOGS ================= 
@@ -350,6 +361,7 @@
   router.get("/reports", auth, getReports);
   router.get("/reports/type/:type", auth, getReportsByType);
   router.get("/reports/:id", auth, getReportById);
+  router.get("/reports/:id/file", auth, downloadReportFile);
   router.put("/reports/:id", auth, auth.blockGuardianWrite, upload.single("file"), updateReport);
   router.delete("/reports/:id", auth, auth.blockGuardianWrite, deleteReport);
 
@@ -370,6 +382,7 @@
   router.post("/prescriptions", auth, auth.blockGuardianWrite, upload.single("file"), addPrescription);
   router.get("/prescriptions", auth, getPrescriptions);
   router.get("/prescriptions/:id", auth, getPrescriptionById);
+  router.get("/prescriptions/:id/file", auth, downloadPrescriptionFile);
   router.put("/prescriptions/:id", auth, auth.blockGuardianWrite, upload.single("file"), updatePrescription);
   router.delete("/prescriptions/:id", auth, auth.blockGuardianWrite, deletePrescription);
 

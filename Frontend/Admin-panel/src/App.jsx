@@ -43,6 +43,24 @@ import GuardianChangePassword from "./Pages/Guardian/GuardianChangePassword";
 import "./App.css";
 import ToastContainer from "./Components/Notification/ToastContainer";
 
+const decodeJwtPayload = (jwtToken) => {
+  try {
+    const parts = (jwtToken || "").split(".");
+    if (parts.length !== 3) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+};
+
 function GoogleCallback() {
   const navigate = useNavigate();
 
@@ -51,9 +69,15 @@ function GoogleCallback() {
     const token = params.get("token");
 
     if (token) {
-      localStorage.setItem("token", token);
-      localStorage.setItem("role", "superadmin");
-      navigate("/superadmin/dashboard", { replace: true });
+      window.history.replaceState({}, document.title, window.location.pathname);
+      const payload = decodeJwtPayload(token);
+      if (payload && payload.role === "superadmin") {
+        localStorage.setItem("token", token);
+        localStorage.setItem("role", "superadmin");
+        navigate("/superadmin/dashboard", { replace: true });
+      } else {
+        navigate("/superadmin/login?error=unauthorized", { replace: true });
+      }
     }
   }, [navigate]);
 
@@ -63,15 +87,18 @@ function GoogleCallback() {
 // ================= ROLE-BASED ROUTE GUARDS =================
 function SuperAdminProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
-  const role = (localStorage.getItem("role") || "").toLowerCase();
 
   if (!token) {
     return <Navigate to="/superadmin/login" replace />;
   }
 
-  // Only superadmin can access superadmin routes
-  if (role !== "superadmin") {
-    return <Navigate to="/admin/dashboard" replace />;
+  const payload = decodeJwtPayload(token);
+  // Strictly enforce that the cryptographically signed JWT role is superadmin!
+  if (!payload || payload.role !== "superadmin") {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("user");
+    return <Navigate to="/superadmin/login?error=unauthorized" replace />;
   }
 
   return children;
@@ -79,19 +106,27 @@ function SuperAdminProtectedRoute({ children }) {
 
 function HospitalAdminProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
-  const role = (localStorage.getItem("role") || "").toLowerCase();
 
   if (!token) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  if (role === "guardian") {
+  const payload = decodeJwtPayload(token);
+  if (!payload) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  if (payload.role === "guardian") {
     return <Navigate to="/guardian" replace />;
   }
 
   // If a Super Admin enters /admin/*, seamlessly redirect to /superadmin/*
-  if (role === "superadmin") {
+  if (payload.role === "superadmin") {
     return <Navigate to="/superadmin/dashboard" replace />;
+  }
+
+  if (payload.role !== "admin") {
+    return <Navigate to="/admin/login" replace />;
   }
 
   return children;

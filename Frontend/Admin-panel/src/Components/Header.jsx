@@ -202,8 +202,14 @@
 
     // ================= COMPLETE LOGOUT =================
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const role = localStorage.getItem("role");
+
+    try {
+      await api.post("/auth/logout");
+    } catch (e) {
+      console.warn("Backend logout failed:", e.message);
+    }
 
     localStorage.clear();
     sessionStorage.clear();

@@ -49,12 +49,13 @@ const uploadBufferToS3 = async (buffer, key, contentType = "application/octet-st
 
 /**
  * Generates a time-limited presigned GET URL for an authorized user.
+ * Default expiration hardened to 300 seconds (5 minutes) to prevent replay/unauthorized access.
  *
  * @param {string} key - S3 object key.
- * @param {number} expiresInSeconds - Lifetime of presigned URL in seconds (default: 3600 = 1 hour).
+ * @param {number} expiresInSeconds - Lifetime of presigned URL in seconds (default: 300 = 5 minutes).
  * @returns {Promise<string>}
  */
-const getPresignedDownloadUrl = async (key, expiresInSeconds = 3600) => {
+const getPresignedDownloadUrl = async (key, expiresInSeconds = 300) => {
   if (!key) return null;
 
   const command = new GetObjectCommand({
@@ -63,6 +64,60 @@ const getPresignedDownloadUrl = async (key, expiresInSeconds = 3600) => {
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds });
+};
+
+/**
+ * Streams an S3 object directly to an HTTP response stream for authenticated requests.
+ * Prevents exposing presigned URLs to unauthorized parties or incognito sessions.
+ *
+ * @param {string} key - S3 object key.
+ * @param {object} res - Express response object.
+ */
+const streamS3Object = async (key, res) => {
+  if (!key) {
+    return res.status(404).json({ message: "File key is missing" });
+  }
+
+  try {
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+    });
+
+    const response = await s3Client.send(command);
+
+    res.setHeader("Content-Type", response.ContentType || "application/octet-stream");
+    if (response.ContentLength) {
+      res.setHeader("Content-Length", response.ContentLength);
+    }
+
+    const filename = path.basename(key).replace(/^\d+_/, "") || "document.pdf";
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${encodeURIComponent(filename)}"`
+    );
+
+    if (response.Body && typeof response.Body.pipe === "function") {
+      response.Body.pipe(res);
+    } else if (response.Body) {
+      const { Readable } = require("stream");
+      if (typeof Readable.fromWeb === "function") {
+        Readable.fromWeb(response.Body).pipe(res);
+      } else {
+        res.status(500).json({ message: "Unable to stream file body" });
+      }
+    } else {
+      res.status(500).json({ message: "Unable to stream file body" });
+    }
+  } catch (err) {
+    console.error(`Error streaming S3 object "${key}":`, err.message);
+    if (!res.headersSent) {
+      res.status(err.$metadata?.httpStatusCode || 500).json({
+        message: "Failed to download file from secure storage",
+        error: err.message,
+      });
+    }
+  }
 };
 
 /**
@@ -143,7 +198,7 @@ const deleteS3Prefix = async (prefix) => {
  * @param {number} expiresInSeconds - Presigned URL validity duration.
  * @returns {Promise<string|null>}
  */
-const resolveFileUrl = async (storedValue, expiresInSeconds = 3600) => {
+const resolveFileUrl = async (storedValue, expiresInSeconds = 300) => {
   if (!storedValue) return null;
 
   // Legacy compatibility: If it's already a full HTTP(S) URL (e.g. Cloudinary), return as is
@@ -188,6 +243,7 @@ module.exports = {
   REGION,
   uploadBufferToS3,
   getPresignedDownloadUrl,
+  streamS3Object,
   deleteS3Object,
   deleteS3Prefix,
   resolveFileUrl,

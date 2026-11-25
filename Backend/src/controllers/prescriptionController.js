@@ -4,6 +4,7 @@ const {
   generatePrescriptionKey,
   resolveFileUrl,
   deleteS3Object,
+  streamS3Object,
 } = require("../config/s3");
 const {
   buildUserAccessFilter,
@@ -219,5 +220,32 @@ exports.deletePrescription = async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// ================= AUTHENTICATED PRESCRIPTION FILE STREAMING =================
+exports.downloadPrescriptionFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const accessFilter = await buildUserAccessFilter(req);
+    const prescription = await Prescription.findOne({ _id: id, ...accessFilter });
+
+    if (!prescription) {
+      return res.status(404).json({ message: "Prescription not found or access denied" });
+    }
+
+    if (!prescription.fileUrl) {
+      return res.status(404).json({ message: "No document attached to this prescription" });
+    }
+
+    // If legacy HTTP/HTTPS URL, redirect; if private S3 key, stream with auth verification
+    if (prescription.fileUrl.startsWith("http://") || prescription.fileUrl.startsWith("https://")) {
+      return res.redirect(prescription.fileUrl);
+    }
+
+    return await streamS3Object(prescription.fileUrl, res);
+  } catch (err) {
+    console.error("Prescription download error:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 };

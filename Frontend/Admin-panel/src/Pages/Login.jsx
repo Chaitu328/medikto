@@ -372,6 +372,27 @@ const ErrorToast = ({ message, onClose }) => {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
+// JWT PAYLOAD DECODER HELPER
+// ═════════════════════════════════════════════════════════════════════════════
+const decodeJwtPayload = (jwtToken) => {
+  try {
+    const parts = (jwtToken || "").split(".");
+    if (parts.length !== 3) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
 // MAIN LOGIN COMPONENT
 // ═════════════════════════════════════════════════════════════════════════════
 const MediktoLogin = () => {
@@ -382,6 +403,15 @@ const MediktoLogin = () => {
     const token = params.get("token");
 
     if (token) {
+      // Finding 1 Fix: Immediately remove ?token= from URL to prevent exposure in logs/history
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      const payload = decodeJwtPayload(token);
+      if (!payload || payload.role !== "superadmin") {
+        setApiError("Access Denied: The provided token does not belong to an authorized Super Administrator.");
+        return;
+      }
+
       localStorage.setItem("token", token);
       localStorage.setItem("role", "superadmin");
 
@@ -389,7 +419,8 @@ const MediktoLogin = () => {
         "user",
         JSON.stringify({
           role: "superadmin",
-          name: "Super Administrator",
+          name: payload.name || "Super Administrator",
+          email: payload.email || "",
         })
       );
 
@@ -760,13 +791,18 @@ const MediktoLogin = () => {
                               if (match) extractedToken = match[1];
                             }
                             if (extractedToken && extractedToken.length > 20) {
+                              const payload = decodeJwtPayload(extractedToken);
+                              if (!payload || payload.role !== "superadmin") {
+                                setApiError("Access Denied: The provided token does not belong to an authorized Super Administrator.");
+                                return;
+                              }
                               localStorage.setItem("token", extractedToken);
                               localStorage.setItem("role", "superadmin");
                               localStorage.setItem(
                                 "user",
                                 JSON.stringify({
                                   role: "superadmin",
-                                  name: "Super Administrator",
+                                  name: payload.name || "Super Administrator",
                                 })
                               );
                               navigate("/superadmin/dashboard", { replace: true });

@@ -44,6 +44,8 @@ const userSchema = new mongoose.Schema({
 
   isVerified: { type: Boolean, default: false },
 
+  lastLogoutAt: { type: Date, default: null },
+
    role: {
     type: String,
     enum: [
