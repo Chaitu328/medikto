@@ -390,6 +390,11 @@
   // ================= DASHBOARD =================
   router.get("/adherence", auth, getAdherence);
 
+  // ================= NOTIFICATIONS =================
+  router.get("/notifications", auth, getNotifications);
+  router.put("/notifications/read-all", auth, markAllAsRead);
+  router.put("/notifications/:id/read", auth, markAsRead);
+
   // ================= PAYMENTS (RAZORPAY) =================
   router.post("/payments/create-order", auth, createOrder);
   router.post("/create-order", auth, createOrder);

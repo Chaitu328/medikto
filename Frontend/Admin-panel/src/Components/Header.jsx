@@ -266,35 +266,21 @@
     };
 
     const displayNotifications = useMemo(() => {
-      if (liveNotifications.length > 0) {
-        return liveNotifications.map((n) => ({
-          id: n._id,
-          title: n.title,
-          body: n.body,
-          time: formatRelativeTime(n.createdAt),
-          type: n.type || "alert",
-          isRead: n.isRead,
-          data: n.data || {},           // ← carry machine-readable payload
-        }));
-      }
+      return liveNotifications.map((n) => ({
+        id: n._id,
+        title: n.title,
+        body: n.body,
+        time: formatRelativeTime(n.createdAt),
+        type: n.type || "alert",
+        isRead: Boolean(n.isRead),
+        data: n.data || {},           // ← carry machine-readable payload
+      }));
+    }, [liveNotifications]);
 
-      switch (userRole) {
-        case "superadmin":
-        case "super_admin":
-          return [
-            { title: "System Active", body: "All platform services operating normally", time: "Just now", type: "platform", data: {} },
-          ];
-        case "hospital_admin":
-        case "hospitaladmin":
-          return [
-            { title: "Clinic Ready", body: "Patient connection service is active", time: "Just now", type: "hospital", data: {} },
-          ];
-        default:
-          return [
-            { title: "Welcome to Medikto", body: "Your account is active", time: "Just now", type: "info", data: {} },
-          ];
-      }
-    }, [liveNotifications, userRole]);
+    const unreadCount = useMemo(
+      () => displayNotifications.filter((n) => !n.isRead).length,
+      [displayNotifications]
+    );
 
     // ================= HELP MENU =================
 
@@ -330,7 +316,19 @@
       error: "",
     });
 
-    const handleNotificationClick = (item) => {
+    const handleNotificationClick = async (item) => {
+      if (item?.id && !item.isRead) {
+        // Optimistically mark as read in UI
+        setLiveNotifications((prev) =>
+          prev.map((n) => (n._id === item.id ? { ...n, isRead: true } : n))
+        );
+        try {
+          await api.put(`/notifications/${item.id}/read`);
+        } catch (err) {
+          console.error("Failed to mark notification as read:", err);
+        }
+      }
+
       if (item?.data?.requestType === "hospital_link_request") {
         setShowNotifications(false);
         setLinkApprovalModal({
@@ -399,9 +397,9 @@
               >
                 <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
 
-                {displayNotifications.length > 0 && (
+                {unreadCount > 0 && (
                   <span className="absolute 0.5 top-0.5 right-0.5 sm:-top-1 sm:-right-1 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] sm:text-[10px] flex items-center justify-center font-semibold">
-                    {displayNotifications.length}
+                    {unreadCount}
                   </span>
                 )}
               </button>
@@ -413,9 +411,12 @@
                     <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
                       Notifications
                     </h3>
-                    {liveNotifications.length > 0 && (
+                    {unreadCount > 0 && (
                       <button
                         onClick={async () => {
+                          setLiveNotifications((prev) =>
+                            prev.map((n) => ({ ...n, isRead: true }))
+                          );
                           try {
                             await api.put("/notifications/read-all");
                             fetchLiveNotifications();
@@ -432,52 +433,66 @@
 
                   <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-100">
 
-                    {displayNotifications.map(
-                      (
-                        item,
-                        index
-                      ) => (
-                        <div
-                          key={item.id || index}
-                          onClick={() => handleNotificationClick(item)}
-                          className={`px-5 py-3.5 transition border-l-2 ${
-                            item?.data?.requestType === "hospital_link_request"
-                              ? "border-blue-400 bg-blue-50 hover:bg-blue-100 cursor-pointer"
-                              : "border-transparent hover:bg-gray-50 cursor-default"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-semibold text-gray-900">
-                              {item.title}
-                            </h4>
-                            <div className="flex items-center gap-2">
-                              {item?.data?.requestType === "hospital_link_request" && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 animate-pulse">
-                                  Action Required
+                    {displayNotifications.length === 0 ? (
+                      <div className="px-5 py-8 text-center">
+                        <p className="text-sm font-medium text-gray-500">No notifications</p>
+                        <p className="text-xs text-gray-400 mt-1">You're all caught up.</p>
+                      </div>
+                    ) : (
+                      displayNotifications.map(
+                        (
+                          item,
+                          index
+                        ) => (
+                          <div
+                            key={item.id || index}
+                            onClick={() => handleNotificationClick(item)}
+                            className={`px-5 py-3.5 transition border-l-2 cursor-pointer ${
+                              item?.data?.requestType === "hospital_link_request"
+                                ? "border-blue-400 bg-blue-50 hover:bg-blue-100"
+                                : !item.isRead
+                                ? "border-blue-500 bg-blue-50/40 hover:bg-blue-50/70"
+                                : "border-transparent hover:bg-gray-50 opacity-75"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {!item.isRead && (
+                                  <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                                )}
+                                <h4 className="text-sm font-semibold text-gray-900 truncate">
+                                  {item.title}
+                                </h4>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {item?.data?.requestType === "hospital_link_request" && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 animate-pulse">
+                                    Action Required
+                                  </span>
+                                )}
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                  item.type === "alert" ? "bg-red-50 text-red-600" :
+                                  item.type === "hospital_link" ? "bg-blue-50 text-blue-600" :
+                                  item.type === "reminder" ? "bg-blue-50 text-blue-600" :
+                                  item.type === "security" ? "bg-amber-50 text-amber-600" :
+                                  "bg-gray-100 text-gray-600"
+                                }`}>
+                                  {item.type === "hospital_link" ? "Connection" : item.type}
                                 </span>
-                              )}
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                                item.type === "alert" ? "bg-red-50 text-red-600" :
-                                item.type === "hospital_link" ? "bg-blue-50 text-blue-600" :
-                                item.type === "reminder" ? "bg-blue-50 text-blue-600" :
-                                item.type === "security" ? "bg-amber-50 text-amber-600" :
-                                "bg-gray-100 text-gray-600"
-                              }`}>
-                                {item.type === "hospital_link" ? "Connection" : item.type}
-                              </span>
+                              </div>
                             </div>
-                          </div>
 
-                          {item.body && (
-                            <p className="text-xs text-gray-700 mt-1 leading-relaxed break-words">
-                              {item.body}
+                            {item.body && (
+                              <p className="text-xs text-gray-700 mt-1 leading-relaxed break-words">
+                                {item.body}
+                              </p>
+                            )}
+
+                            <p className="text-[11px] text-gray-400 mt-1.5">
+                              {item.time}
                             </p>
-                          )}
-
-                          <p className="text-[11px] text-gray-400 mt-1.5">
-                            {item.time}
-                          </p>
-                        </div>
+                          </div>
+                        )
                       )
                     )}
                   </div>

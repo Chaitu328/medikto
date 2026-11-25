@@ -355,7 +355,8 @@ const LeftPanel = () => {
 const ErrorToast = ({ message, onClose }) => {
   useEffect(() => {
     const isSecurityError = message.toLowerCase().includes("access denied") || message.toLowerCase().includes("not authorized");
-    const timer = setTimeout(onClose, isSecurityError ? 15000 : 6000);
+    if (isSecurityError) return undefined; // stays until user closes it
+    const timer = setTimeout(onClose, 6000);
     return () => clearTimeout(timer);
   }, [message, onClose]);
 
