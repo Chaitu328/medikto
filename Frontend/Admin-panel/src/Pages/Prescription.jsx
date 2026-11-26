@@ -39,6 +39,7 @@ import {
   getPatientIdentifier,
   recordMatchesPatient,
 } from "../Utils/patientUtils";
+import { openSecureFileInNewTab } from "../Utils/secureFile";
 
 export default function Patients() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -797,11 +798,16 @@ const pendingReviews =
                     {/* ACTIONS */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
 
-                          if (prescription?.fileUrl) {
-                            window.open(prescription.fileUrl, "_blank", "noopener,noreferrer");
+                          if (prescription?.fileUrl && prescription?._id) {
+                            try {
+                              await openSecureFileInNewTab(`/prescriptions/${prescription._id}/file`);
+                            } catch (err) {
+                              console.error("Failed to open prescription file:", err);
+                              notify.error("Access failed", "Unable to load prescription file.");
+                            }
                           } else {
                             notify.warn("File unavailable", "Prescription file not available.");
                           }

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useGuardianPatient } from "./GuardianPatientContext";
 import api from "../../Api/axios";
+import { fetchSecureFile, openSecureFileInNewTab } from "../../Utils/secureFile";
 
 export default function GuardianReports() {
   const { selectedPatientId, selectedPatient } = useGuardianPatient();
@@ -24,7 +25,50 @@ export default function GuardianReports() {
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [previewReport, setPreviewReport] = useState(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
+  const [previewContentType, setPreviewContentType] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    let currentUrl = null;
+
+    if (!previewReport?._id || !previewReport?.fileUrl) {
+      setPreviewBlobUrl(null);
+      setPreviewContentType("");
+      setPreviewLoading(false);
+      return;
+    }
+
+    const loadPreview = async () => {
+      try {
+        setPreviewLoading(true);
+        const { blobUrl, contentType } = await fetchSecureFile(
+          `/reports/${previewReport._id}/file`
+        );
+        if (!active) {
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+        currentUrl = blobUrl;
+        setPreviewBlobUrl(blobUrl);
+        setPreviewContentType(contentType || "");
+      } catch (err) {
+        console.error("[GuardianReports] Failed to load report file:", err);
+        if (active) setPreviewBlobUrl(null);
+      } finally {
+        if (active) setPreviewLoading(false);
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      active = false;
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+    };
+  }, [previewReport?._id, previewReport?.fileUrl]);
 
   const fetchReports = async () => {
     if (!selectedPatientId) {
@@ -254,15 +298,20 @@ export default function GuardianReports() {
                 <p className="text-xs text-gray-500 capitalize">{previewReport.type || "Medical"} Document</p>
               </div>
               <div className="flex items-center gap-2">
-                <a
-                  href={previewReport.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (previewReport?._id && previewReport?.fileUrl) {
+                      openSecureFileInNewTab(`/reports/${previewReport._id}/file`).catch((err) =>
+                        console.error("[GuardianReports] Failed to open file:", err)
+                      );
+                    }
+                  }}
                   className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
                   title="Open in new tab"
                 >
                   <ExternalLink size={18} />
-                </a>
+                </button>
                 <button
                   onClick={() => setPreviewReport(null)}
                   className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -274,15 +323,22 @@ export default function GuardianReports() {
 
             {/* MODAL BODY */}
             <div className="p-4 flex-1 overflow-auto bg-gray-50 flex items-center justify-center min-h-[400px]">
-              {previewReport.fileUrl.endsWith(".pdf") || previewReport.fileUrl.includes(".pdf") ? (
+              {previewLoading ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <RefreshCw size={18} className="animate-spin text-blue-600" />
+                  <span>Loading secure document...</span>
+                </div>
+              ) : !previewBlobUrl ? (
+                <p className="text-sm text-gray-500">Unable to load report document.</p>
+              ) : previewContentType.toLowerCase().includes("pdf") ? (
                 <iframe
-                  src={previewReport.fileUrl}
+                  src={previewBlobUrl}
                   title={previewReport.title}
                   className="w-full h-[600px] rounded-xl border border-gray-200"
                 />
               ) : (
                 <img
-                  src={previewReport.fileUrl}
+                  src={previewBlobUrl}
                   alt={previewReport.title}
                   className="max-h-[600px] object-contain rounded-xl shadow"
                 />

@@ -14,6 +14,19 @@ const {
   shouldPopulateUser,
 } = require("../utils/accessControl");
 
+const isWebPortalRole = (req) => ["admin", "superadmin", "guardian"].includes(req.user?.role);
+
+const resolveReportFileField = async (req, rObj) => {
+  if (!rObj?.fileUrl) return rObj;
+  rObj.hasFile = true;
+  if (isWebPortalRole(req)) {
+    rObj.fileUrl = `/api/reports/${rObj._id}/file`;
+  } else {
+    rObj.fileUrl = await resolveFileUrl(rObj.fileUrl);
+  }
+  return rObj;
+};
+
 const formatDate = (date) => {
   return new Date(date);
 };
@@ -71,9 +84,7 @@ exports.uploadReport = async (req, res) => {
     });
 
     const reportObj = report.toObject();
-    if (reportObj.fileUrl) {
-      reportObj.fileUrl = await resolveFileUrl(reportObj.fileUrl);
-    }
+    await resolveReportFileField(req, reportObj);
 
     res.status(201).json(reportObj);
 
@@ -101,9 +112,7 @@ exports.getReports = async (req, res) => {
     const resolvedReports = await Promise.all(
       reports.map(async (r) => {
         const rObj = r.toObject ? r.toObject() : r;
-        if (rObj.fileUrl) {
-          rObj.fileUrl = await resolveFileUrl(rObj.fileUrl);
-        }
+        await resolveReportFileField(req, rObj);
         if (rObj.user && rObj.user.profilePic) {
           rObj.user.profilePic = await resolveFileUrl(rObj.user.profilePic);
         }
@@ -138,9 +147,7 @@ exports.getReportById = async (req, res) => {
     }
 
     const reportObj = report.toObject();
-    if (reportObj.fileUrl) {
-      reportObj.fileUrl = await resolveFileUrl(reportObj.fileUrl);
-    }
+    await resolveReportFileField(req, reportObj);
     if (reportObj.user && reportObj.user.profilePic) {
       reportObj.user.profilePic = await resolveFileUrl(reportObj.user.profilePic);
     }
@@ -196,9 +203,7 @@ exports.updateReport = async (req, res) => {
     await report.save();
 
     const reportObj = report.toObject();
-    if (reportObj.fileUrl) {
-      reportObj.fileUrl = await resolveFileUrl(reportObj.fileUrl);
-    }
+    await resolveReportFileField(req, reportObj);
 
     res.json(reportObj);
 
@@ -256,9 +261,7 @@ exports.getReportsByType = async (req, res) => {
     const resolvedReports = await Promise.all(
       reports.map(async (r) => {
         const rObj = r.toObject ? r.toObject() : r;
-        if (rObj.fileUrl) {
-          rObj.fileUrl = await resolveFileUrl(rObj.fileUrl);
-        }
+        await resolveReportFileField(req, rObj);
         if (rObj.user && rObj.user.profilePic) {
           rObj.user.profilePic = await resolveFileUrl(rObj.user.profilePic);
         }
@@ -279,7 +282,7 @@ exports.getReportsByType = async (req, res) => {
 exports.downloadReportFile = async (req, res) => {
   try {
     const { id } = req.params;
-    const accessFilter = await buildUserAccessFilter(req);
+    const accessFilter = await buildUserAccessFilter(req, req.query.patientId);
     const report = await Report.findOne({ _id: id, ...accessFilter });
 
     if (!report) {

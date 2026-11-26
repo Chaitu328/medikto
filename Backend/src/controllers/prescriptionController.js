@@ -11,6 +11,19 @@ const {
   shouldPopulateUser,
 } = require("../utils/accessControl");
 
+const isWebPortalRole = (req) => ["admin", "superadmin", "guardian"].includes(req.user?.role);
+
+const resolvePrescriptionFileField = async (req, pObj) => {
+  if (!pObj?.fileUrl) return pObj;
+  pObj.hasFile = true;
+  if (isWebPortalRole(req)) {
+    pObj.fileUrl = `/api/prescriptions/${pObj._id}/file`;
+  } else {
+    pObj.fileUrl = await resolveFileUrl(pObj.fileUrl);
+  }
+  return pObj;
+};
+
 exports.addPrescription = async (req, res) => {
   try {
     const {
@@ -59,9 +72,7 @@ exports.addPrescription = async (req, res) => {
     });
 
     const prescriptionObj = prescription.toObject();
-    if (prescriptionObj.fileUrl) {
-      prescriptionObj.fileUrl = await resolveFileUrl(prescriptionObj.fileUrl);
-    }
+    await resolvePrescriptionFileField(req, prescriptionObj);
 
     res.status(201).json(prescriptionObj);
 
@@ -87,9 +98,7 @@ exports.getPrescriptions = async (req, res) => {
     const resolvedPrescriptions = await Promise.all(
       data.map(async (p) => {
         const pObj = p.toObject ? p.toObject() : p;
-        if (pObj.fileUrl) {
-          pObj.fileUrl = await resolveFileUrl(pObj.fileUrl);
-        }
+        await resolvePrescriptionFileField(req, pObj);
         if (pObj.user && pObj.user.profilePic) {
           pObj.user.profilePic = await resolveFileUrl(pObj.user.profilePic);
         }
@@ -122,9 +131,7 @@ exports.getPrescriptionById = async (req, res) => {
     }
 
     const pObj = data.toObject();
-    if (pObj.fileUrl) {
-      pObj.fileUrl = await resolveFileUrl(pObj.fileUrl);
-    }
+    await resolvePrescriptionFileField(req, pObj);
     if (pObj.user && pObj.user.profilePic) {
       pObj.user.profilePic = await resolveFileUrl(pObj.user.profilePic);
     }
@@ -191,9 +198,7 @@ exports.updatePrescription = async (req, res) => {
     await prescription.save();
 
     const pObj = prescription.toObject();
-    if (pObj.fileUrl) {
-      pObj.fileUrl = await resolveFileUrl(pObj.fileUrl);
-    }
+    await resolvePrescriptionFileField(req, pObj);
 
     res.json(pObj);
 
@@ -227,7 +232,7 @@ exports.deletePrescription = async (req, res) => {
 exports.downloadPrescriptionFile = async (req, res) => {
   try {
     const { id } = req.params;
-    const accessFilter = await buildUserAccessFilter(req);
+    const accessFilter = await buildUserAccessFilter(req, req.query.patientId);
     const prescription = await Prescription.findOne({ _id: id, ...accessFilter });
 
     if (!prescription) {

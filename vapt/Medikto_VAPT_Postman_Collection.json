@@ -30,6 +30,26 @@
       "key": "guardianToken",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "hospitalId",
+      "value": "65f000000000000000000001",
+      "type": "string"
+    },
+    {
+      "key": "prescriptionId",
+      "value": "65f000000000000000000002",
+      "type": "string"
+    },
+    {
+      "key": "reportId",
+      "value": "65f000000000000000000003",
+      "type": "string"
+    },
+    {
+      "key": "victimPrescriptionId",
+      "value": "65f000000000000000000004",
+      "type": "string"
     }
   ],
   "item": [
@@ -247,6 +267,33 @@
               "mode": "raw",
               "raw": "{\n  \"name\": \"Security Tester\",\n  \"email\": \"tester@securityfirm.com\",\n  \"phone\": \"+919999999999\",\n  \"message\": \"Inquiry regarding healthcare platform security\"\n}"
             }
+          }
+        },
+        {
+          "name": "User Logout & Invalidate Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Terminates active session and records lastLogoutAt in database. Invalidates all previously issued JWT tokens immediately."
           }
         }
       ]
@@ -1443,6 +1490,54 @@
               ]
             }
           }
+        },
+        {
+          "name": "Stream Prescription File (Authenticated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions/{{prescriptionId}}/file",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions",
+                "{{prescriptionId}}",
+                "file"
+              ]
+            },
+            "description": "Securely streams prescription file from private S3 bucket. Requires valid authentication and authorization for the patient record."
+          }
+        },
+        {
+          "name": "Stream Medical Report File (Authenticated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/{{reportId}}/file",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "{{reportId}}",
+                "file"
+              ]
+            },
+            "description": "Securely streams diagnostic report file from private S3 bucket. Enforces patient ownership / hospital admin access."
+          }
         }
       ]
     },
@@ -1624,6 +1719,206 @@
               "mode": "raw",
               "raw": "{\n  \"issue\": \"Notification Delay\",\n  \"description\": \"Push reminder received 2 minutes late.\"\n}"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. VAPT Security Re-Test Suite (Findings 1, 2, 3 Verification)",
+      "description": "Targeted test cases designed for Woollemia Infosec to verify remediation of all Critical and High findings reported in November 2026.",
+      "item": [
+        {
+          "name": "Finding 1: Attempt Superadmin Hospital Edit with Admin Token (Expect 403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/{{hospitalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "{{hospitalId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Unauthorized Modification Attempt\",\n  \"address\": \"Test Address\"\n}"
+            },
+            "description": "Tests Finding 1 (BFLA). Lower-privileged hospital admin tokens must be rejected with 403 Forbidden."
+          }
+        },
+        {
+          "name": "Finding 1: Attempt Superadmin Hospital Edit with Guardian Token (Expect 403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{guardianToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/{{hospitalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "{{hospitalId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Guardian Exploit Attempt\",\n  \"address\": \"Test Address\"\n}"
+            },
+            "description": "Tests Finding 1 (BFLA). Guardian tokens must be rejected with 403 Forbidden."
+          }
+        },
+        {
+          "name": "Finding 1: Attempt Guardian Creation with Patient Token (Expect 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guardians/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "guardians",
+                "create"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"name\": \"Malicious Guardian\",\n  \"email\": \"exploit@test.com\",\n  \"phone\": \"+919999999999\"\n}"
+            },
+            "description": "Tests Finding 1. Unprivileged patient accounts must not be allowed to perform administrative guardian creation."
+          }
+        },
+        {
+          "name": "Finding 2: Unauthenticated File Download Attempt (Expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions/{{prescriptionId}}/file",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions",
+                "{{prescriptionId}}",
+                "file"
+              ]
+            },
+            "description": "Tests Finding 2. Requests without authentication header must be rejected with 401 Unauthorized."
+          }
+        },
+        {
+          "name": "Finding 2: Cross-Patient Unauthorized File Download (Expect 404 / 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{patientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions/{{victimPrescriptionId}}/file",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions",
+                "{{victimPrescriptionId}}",
+                "file"
+              ]
+            },
+            "description": "Tests Finding 2. Authenticated patient attempting to access another patient prescription must be blocked."
+          }
+        },
+        {
+          "name": "Finding 3: Invalidate Active Session via Logout (Expect 200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Step 1 of Finding 3 verification: User terminates session, writing lastLogoutAt timestamp to database."
+          }
+        },
+        {
+          "name": "Finding 3: Replay Hospital Request After Logout (Expect 401 Unauthorized)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hospitals/{{hospitalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hospitals",
+                "{{hospitalId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Replay Attack Attempt\",\n  \"address\": \"Should Fail 401\"\n}"
+            },
+            "description": "Step 2 of Finding 3 verification: Replaying pre-logout token must return 401 Unauthorized because session was invalidated."
           }
         }
       ]

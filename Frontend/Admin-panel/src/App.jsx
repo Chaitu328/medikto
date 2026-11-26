@@ -174,15 +174,32 @@ function LegacyRoleRedirect({ subpath }) {
 // ================= GUARDIAN ROUTE GUARD =================
 function GuardianProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
-  const role = (localStorage.getItem("role") || "").toLowerCase();
 
   if (!token) {
     return <Navigate to="/guardian/login" replace />;
   }
 
-  // Prevent non-guardian roles from accessing Guardian portal
-  if (role !== "guardian") {
-    return <Navigate to="/" replace />;
+  const payload = decodeJwtPayload(token);
+  if (!payload) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("user");
+    return <Navigate to="/guardian/login" replace />;
+  }
+
+  if (payload.role === "superadmin") {
+    return <Navigate to="/superadmin/dashboard" replace />;
+  }
+
+  if (payload.role === "admin") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  if (payload.role !== "guardian") {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("user");
+    return <Navigate to="/guardian/login" replace />;
   }
 
   return children;

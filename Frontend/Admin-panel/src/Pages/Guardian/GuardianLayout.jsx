@@ -22,6 +22,7 @@ import {
   GuardianPatientProvider,
   useGuardianPatient,
 } from "./GuardianPatientContext";
+import api from "../../Api/axios";
 
 function GuardianLayoutInner({ children }) {
   const navigate = useNavigate();
@@ -57,7 +58,12 @@ function GuardianLayoutInner({ children }) {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (err) {
+      console.warn("Guardian backend logout failed:", err?.message);
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");

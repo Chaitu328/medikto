@@ -87,6 +87,7 @@ const streamS3Object = async (key, res) => {
     const response = await s3Client.send(command);
 
     res.setHeader("Content-Type", response.ContentType || "application/octet-stream");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
     if (response.ContentLength) {
       res.setHeader("Content-Length", response.ContentLength);
     }

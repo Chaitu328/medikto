@@ -43,6 +43,7 @@ import {
   getPatientIdentifier,
   recordMatchesPatient,
 } from "../Utils/patientUtils";
+import { fetchSecureFile, openSecureFileInNewTab } from "../Utils/secureFile";
 
 export default function ReportsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,6 +63,45 @@ export default function ReportsPage() {
   const [viewMode, setViewMode] = useState("grid");
 
   const [uploading, setUploading] = useState(false);
+
+  const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let currentUrl = null;
+
+    if (!selectedReport?._id || !selectedReport?.fileUrl) {
+      setPreviewBlobUrl(null);
+      setPreviewLoading(false);
+      return;
+    }
+
+    const loadPreview = async () => {
+      try {
+        setPreviewLoading(true);
+        const { blobUrl } = await fetchSecureFile(`/reports/${selectedReport._id}/file`);
+        if (!active) {
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+        currentUrl = blobUrl;
+        setPreviewBlobUrl(blobUrl);
+      } catch (err) {
+        console.error("Failed to load report preview:", err);
+        if (active) setPreviewBlobUrl(null);
+      } finally {
+        if (active) setPreviewLoading(false);
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      active = false;
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+    };
+  }, [selectedReport?._id, selectedReport?.fileUrl]);
 
   // ================= FETCH =================
   useEffect(() => {
@@ -639,16 +679,24 @@ export default function ReportsPage() {
 
                   {/* ACTIONS: VIEW ONLY (Download and Delete removed per requirement 4) */}
                   <div>
-                    <a
-                      href={report?.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (report?._id && report?.fileUrl) {
+                          openSecureFileInNewTab(`/reports/${report._id}/file`).catch((err) => {
+                            console.error("Failed to open report file:", err);
+                            notify.error("Access failed", "Unable to load report file.");
+                          });
+                        } else {
+                          notify.warn("File unavailable", "Report file not available.");
+                        }
+                      }}
                       className="w-full h-10 rounded-xl bg-[#F8FAFC] border border-slate-200 text-sm font-semibold text-[#2563EB] hover:bg-blue-50/50 hover:border-blue-200 hover:text-blue-700 hover:shadow-xs transition-all duration-200 flex items-center justify-center gap-2"
                     >
                       <Eye className="w-4 h-4" />
                       View Report
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -700,11 +748,22 @@ export default function ReportsPage() {
             {selectedReport ? (
               <>
                 <div className="relative rounded-2xl border border-slate-200 overflow-hidden mb-6 bg-[#F8FAFC]">
-                  <iframe
-                    src={selectedReport?.fileUrl}
-                    title="Report Preview"
-                    className="w-full h-[380px]"
-                  />
+                  {previewLoading ? (
+                    <div className="w-full h-[380px] flex items-center justify-center text-[#64748B] text-sm gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" />
+                      Loading secure preview...
+                    </div>
+                  ) : previewBlobUrl ? (
+                    <iframe
+                      src={previewBlobUrl}
+                      title="Report Preview"
+                      className="w-full h-[380px]"
+                    />
+                  ) : (
+                    <div className="w-full h-[380px] flex items-center justify-center text-[#94A3B8] text-sm">
+                      Preview unavailable
+                    </div>
+                  )}
                 </div>
 
                 <h2 className="text-xl font-bold text-[#0F172A] truncate">
@@ -757,15 +816,23 @@ export default function ReportsPage() {
 
                 {/* FOOTER */}
                 <div className="grid grid-cols-2 gap-3 mt-8">
-                  <a
-                    href={selectedReport?.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedReport?._id && selectedReport?.fileUrl) {
+                        openSecureFileInNewTab(`/reports/${selectedReport._id}/file`).catch((err) => {
+                          console.error("Failed to open report file:", err);
+                          notify.error("Access failed", "Unable to load report file.");
+                        });
+                      } else {
+                        notify.warn("File unavailable", "Report file not available.");
+                      }
+                    }}
                     className="h-11 rounded-xl bg-[#F8FAFC] border border-slate-200 text-sm font-semibold text-[#475569] hover:bg-white hover:border-slate-300 hover:text-[#0F172A] transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     View File
-                  </a>
+                  </button>
 
                   <button className="h-11 rounded-xl bg-[#2563EB] text-white text-sm font-semibold shadow-lg shadow-[#2563EB]/20 hover:bg-[#1D4ED8] hover:shadow-xl hover:shadow-[#2563EB]/30 transition-all duration-200 flex items-center justify-center gap-2">
                     <CheckCircle2 className="w-4 h-4" />

@@ -37,7 +37,13 @@ api.interceptors.response.use(
 
       const currentPath = window.location.pathname;
       if (!currentPath.includes("/login")) {
-        window.location.href = "/admin/login";
+        if (currentPath.startsWith("/superadmin")) {
+          window.location.href = "/superadmin/login";
+        } else if (currentPath.startsWith("/guardian")) {
+          window.location.href = "/guardian/login";
+        } else {
+          window.location.href = "/admin/login";
+        }
       }
     }
     return Promise.reject(error);
